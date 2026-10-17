@@ -1,12 +1,12 @@
 {
-  "version": "0.6.0",
-  "notes": "Smarter, steadier Autopilot for games: Falcor now handles the screens every game has by itself (loading, Play, Next, Continue, Retry, free rewards, Skip ad, coin upgrades), remembers a move once it works, and asks Falcor AI far less often. It plays around shop prices and ad offers but can never tap them, reads the real level (not 'Unlock at Level 10'), recovers from a wrong AI answer, and plays games drawn as pictures only.",
-  "publishedAt": "2026-10-17T23:50:49.139Z",
+  "version": "0.7.0",
+  "notes": "Falcor now learns from you: whatever you show it in Teach Falcor (and a game's first-time intro) becomes steps Autopilot repeats on those screens without asking, and buttons your guide warns about are never pressed. Each game's page shows how many steps Falcor knows. Falcor still never watches ads or buys anything.",
+  "publishedAt": "2026-10-17T23:56:14.899Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "9101a8d9e978c55b49570f24471e5ee5771fd3cf61d5e1d7d803d32087fb9c54",
-      "size": 521144
+      "sha256": "bcccb6eeaaab853feb39b3f42a2ba88d7977549d40e3f5e885c8d1f8ab24ebe9",
+      "size": 526897
     },
     {
       "path": "dist/preload.js",
@@ -24,9 +24,9 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-BrkCPtbo.js",
-      "sha256": "c9e03fc7f333ebb4c9c39a8a6489ed5ef01bc9fe0dccd2d714b180652eb11f73",
-      "size": 93110
+      "path": "remote-ui/assets/index-Bxd-aZcs.js",
+      "sha256": "d48410a9a0559d0c936b3d8de792eb9ab87b62795c11b16a5ee8d302182e520e",
+      "size": 93233
     },
     {
       "path": "remote-ui/assets/index-E6jRBlli.css",
@@ -60,13 +60,13 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "c526225097af53d3aaa050f927ce5d95bea0f1d6f3eef1b2351b2967e4fafcee",
+      "sha256": "41b4c2527e6a943063f7f772bc0d53fdc122366d8212114dbc7d0b447e8cc96b",
       "size": 2594
     },
     {
       "path": "ui/app.js",
-      "sha256": "17c45ca4a63353acaade4a96ea17c1d39b24ebe1c2d8b7acfd776f98b78ba602",
-      "size": 93375
+      "sha256": "aa6cdd508d17091a8c321f6341331134ba0268a4b4c1e540e5a995e9f99cf6e6",
+      "size": 93567
     },
     {
       "path": "ui/dragon.png",

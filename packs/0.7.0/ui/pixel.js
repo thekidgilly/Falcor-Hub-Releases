@@ -131,45 +131,117 @@
     return '<svg class="spark" viewBox="0 0 ' + w + ' 12" preserveAspectRatio="none" aria-hidden="true">' + values.map((v, i) => { const hgt = v ? Math.max(1, Math.round(v / max * 12)) : 0; return hgt ? '<rect x="' + (i * 4) + '" y="' + (12 - hgt) + '" width="3" height="' + hgt + '" fill="' + (color || 'currentColor') + '" shape-rendering="crispEdges"/>' : '<rect x="' + (i * 4) + '" y="11" width="3" height="1" fill="currentColor" opacity=".25"/>'; }).join('') + '</svg>';
   }
 
-  // ------------------------------------------------------------------ the launch intro (one canvas, about 3 s)
-  // A night sky of twinkling scrolling stars; the white pixel dragon glitches in at the left, flaps to the centre and
-  // settles; FALCOR.HUB unfolds letter by letter with the version under it; then it fades out in 4 steps. Click to skip.
-  function intro({dragon, version, sub}) {
+  // ------------------------------------------------------------------ the launch intro (one canvas, about 3.5 s)
+  // A pixel night: navy sky, twinkling stars, a moon, slow cloud streaks, mountains and a pine tree line. The white
+  // luckdragon materializes at the left edge as a green glitch inside targeting brackets, flies to the centre leaving a
+  // green pixel trail, flaps and settles; a green line draws under it and the name types in; then it dissolves away.
+  // Drawn on a small canvas scaled up with hard pixels. Click or a key skips it.
+  // The flying dragon, facing right: W white, G light shade, D wing membrane, K eye. Two wing frames.
+  const BODY = [
+    '..........................W.W...',
+    '..........................WWW...',
+    '.........................WWWWW..',
+    '........................WWKWWWW.',
+    '.......................WWWWWWWWW',
+    '..........WWWWW.......WWWW...GG.',
+    '...WW...WWWWWWWWWWWWWWWWW.......',
+    '..WWWW.WWWWWWWWWWWWWWWWW........',
+    '.W..WWWWWWGGGGGGWWWWWW..........',
+    'W....WWWWGG....GGWW.WW..........',
+    '.........WW.....WW...WW.........',
+    '........WW.....WW....W..........',
+  ];
+  const WING_UP = ['DDD...........', '.GGDDD........', '..GGGGDDD.....', '...GGGGGGDDD..', '....GDGGDGGGDW', '.....D..D..GWW'];
+  const WING_DOWN = ['.....GGGGGGGWW', '....GGGGGGDD..', '...GGGGDD.....', '..GDDD........', '.D............'];
+  const COL = {W: '#EDEDED', G: '#BFC3CC', D: '#6F7584', K: '#0A0A0A'};
+  // Each sprite pixel is drawn as Z×Z canvas pixels (the dragon is drawn at twice the scene's pixel size).
+  const Z = 2;
+  function drawRows(g, rows, x, y, map) { rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) { const c = r[i]; if (c !== '.') { g.fillStyle = map ? map(c, i, j) : COL[c]; g.fillRect(x + i * Z, y + j * Z, Z, Z); } } }); }
+  function dragonAt(g, x, y, flap, glitch) {
+    const wing = flap ? WING_DOWN : WING_UP, wy = flap ? y + 6 * Z : y + (6 - WING_UP.length) * Z;
+    const tint = glitch ? (c, i, j) => ((i + j + glitch) % 3 === 0 ? 'rgba(0,0,0,0)' : (i * 7 + j * 3 + glitch) % 5 < 2 ? '#5CE59A' : c === 'K' ? '#0A0A0A' : '#9FF0C4') : null;
+    drawRows(g, BODY, x, y, tint);
+    drawRows(g, wing, x + 8 * Z, wy, tint);
+  }
+  function intro({version, sub, name = 'FALCOR.HUB'}) {
     return new Promise(resolve => {
       if (reduced()) { resolve(); return; }
       const c = document.createElement('canvas'); c.className = 'intro'; document.body.appendChild(c);
-      const W = 240, H = 150; c.width = W; c.height = H;
+      const scale = Math.max(2, Math.round(Math.min(innerWidth, innerHeight * 1.6) / 420));
+      const W = Math.ceil(innerWidth / scale), H = Math.ceil(innerHeight / scale);
+      c.width = W; c.height = H;
       const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
-      const img = new Image(); img.src = dragon;
-      const stars = Array.from({length: 70}, (_, i) => ({x: (i * 97) % W, y: (i * 53) % H, s: i % 7 === 0 ? 2 : 1, t: i % 5}));
-      const word = 'FALCOR.HUB', start = performance.now();
-      let done = false;
-      const end = () => { if (done) return; done = true; c.classList.add('out'); setTimeout(() => { c.remove(); resolve(); }, 260); };
+      let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const stars = Array.from({length: Math.round(W * H / 90)}, () => ({x: rnd() * W, y: rnd() * H * 0.82, b: rnd(), p: rnd() * 6}));
+      const sparkles = stars.filter(s => s.b > 0.975);
+      const clouds = Array.from({length: 6}, () => ({x: rnd() * W, y: H * (0.15 + rnd() * 0.45), w: 10 + rnd() * 18, v: 1 + rnd() * 2}));
+      const peaks = Array.from({length: Math.ceil(W / 60) + 2}, (_, i) => ({x: i * 60 + rnd() * 10, h: 26 + rnd() * 12}));
+      const pines = Array.from({length: Math.ceil(W / 3)}, (_, i) => ({x: i * 3, h: 6 + Math.floor(rnd() * 11)}));
+      const cx = Math.round(W / 2 - 32), cy = Math.round(H * 0.4 - 12), trail = [];
+      const start = performance.now(); let done = false;
+      const end = () => { if (done) return; done = true; c.classList.add('out'); setTimeout(() => { c.remove(); resolve(); }, 320); };
       c.addEventListener('pointerdown', end); window.addEventListener('keydown', end, {once: true});
       const frame = now => {
         if (done) return;
         const t = (now - start) / 1000, f = Math.floor(t * 12);
-        g.fillStyle = '#0A0A0A'; g.fillRect(0, 0, W, H);
-        for (const s of stars) { const on = (f + s.t) % 9 !== 0; g.fillStyle = on ? (s.s > 1 ? '#F5B544' : '#EDEDED') : '#333'; g.globalAlpha = on ? .8 : .4; g.fillRect(Math.floor((s.x - t * 6 * s.s + W) % W), s.y, s.s, s.s); }
-        g.globalAlpha = 1;
-        if (img.complete && img.naturalWidth) {
-          const size = 48, p = Math.min(1, t / 1.3), ease = 1 - Math.pow(1 - p, 2), x = Math.round(8 + (W / 2 - size / 2 - 8) * ease), flap = p < 1 ? (f % 4 < 2 ? -3 : 0) : (f % 24 < 12 ? -1 : 0), y = 28 + flap;
-          if (t < .45) { for (let i = 0; i < 6; i++) { const sh = (f + i) % 3 === 0 ? (i % 2 ? 6 : -6) : 0; g.drawImage(img, 0, i * img.naturalHeight / 6, img.naturalWidth, img.naturalHeight / 6, x + sh, y + i * size / 6, size, size / 6); } }
-          else g.drawImage(img, x, y, size, size);
+        // Sky, a faint dither, stars that twinkle, sparkle crosses.
+        const sky = g.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#090B12'); sky.addColorStop(0.75, '#0E1220'); sky.addColorStop(1, '#121728');
+        g.fillStyle = sky; g.fillRect(0, 0, W, H);
+        g.fillStyle = 'rgba(120,140,190,.05)'; for (let y = 0; y < H; y += 2) for (let x = (y / 2) % 2; x < W; x += 2) if (y > H * 0.5) g.fillRect(x, y, 1, 1);
+        for (const s of stars) { const tw = Math.sin(t * 2 + s.p) > 0.6 ? 1 : 0.55; g.globalAlpha = (0.25 + s.b * 0.6) * tw; g.fillStyle = '#EDEDED'; g.fillRect(Math.floor(s.x), Math.floor(s.y), 1, 1); }
+        g.globalAlpha = 1; g.fillStyle = '#EDEDED';
+        for (const s of sparkles) if (Math.sin(t * 3 + s.p) > -0.2) { const x = Math.floor(s.x), y = Math.floor(s.y); g.fillRect(x - 1, y, 3, 1); g.fillRect(x, y - 1, 1, 3); }
+        // The moon, with a few craters, and slow cloud streaks.
+        const mx = Math.round(W * 0.79), my = Math.round(H * 0.19);
+        for (let y = -7; y <= 7; y++) for (let x = -7; x <= 7; x++) { const d = x * x + y * y; if (d <= 49) { g.fillStyle = d > 36 ? '#C9CDD5' : (x === -2 && y === -2) || (x === 3 && y === 1) || (x === -1 && y === 3) ? '#B4B9C3' : '#E8EAEE'; g.fillRect(mx + x, my + y, 1, 1); } }
+        g.fillStyle = 'rgba(70,80,105,.55)';
+        for (const cl of clouds) { const x = Math.floor((cl.x + t * cl.v) % (W + 40)) - 20; g.fillRect(x, Math.floor(cl.y), Math.floor(cl.w), 2); g.fillRect(x + 3, Math.floor(cl.y) - 1, Math.floor(cl.w * 0.6), 1); }
+        // Mountains, then the pine tree line.
+        for (const pk of peaks) for (let i = -30; i <= 30; i++) { const hgt = Math.max(0, pk.h - Math.abs(i) * pk.h / 30), top = Math.floor(H - 8 - hgt); g.fillStyle = '#161B2A'; g.fillRect(Math.floor(pk.x + i), top, 1, Math.ceil(hgt) + 8); g.fillStyle = '#262D42'; g.fillRect(Math.floor(pk.x + i), top, 1, 1); }
+        g.fillStyle = '#0B0D14';
+        for (const p of pines) { for (let k = 0; k < p.h; k++) { const w = Math.max(1, Math.floor((p.h - k) / 3)); g.fillRect(p.x + 1 - Math.floor(w / 2), H - 4 - k, w, 1); } }
+        g.fillRect(0, H - 4, W, 4);
+        // The dragon: a glitch at the left edge inside brackets, then flight to the centre with a green trail, then a hover.
+        const fly = Math.min(1, Math.max(0, (t - 0.55) / 1.1)), ease = 1 - Math.pow(1 - fly, 3);
+        const x = Math.round(2 + (cx - 2) * ease), bob = fly >= 1 ? (Math.floor(t * 4) % 2 ? -1 : 0) : (f % 4 < 2 ? -1 : 1), y = cy + bob;
+        const glitch = t < 0.55 ? f + 1 : 0;
+        if (t < 0.55) {
+          g.fillStyle = 'rgba(92,229,154,.25)'; g.fillRect(0, y + 8 * Z, W, 1);
+          g.fillStyle = '#C8CCD6';
+          const bx = x - 4, by = y - 12, bw = 32 * Z + 8, bh = 12 * Z + 16;
+          for (const [px, py, dx, dy] of [[bx, by, 1, 1], [bx + bw, by, -1, 1], [bx, by + bh, 1, -1], [bx + bw, by + bh, -1, -1]]) { g.fillRect(px, py, 3 * dx || 1, 1); g.fillRect(px, py, 1, 3 * dy || 1); }
+          for (let i = 0; i < 3; i++) { const sy = y + ((f * 5 + i * 4) % (12 * Z)), sx = (f % 2 ? 3 : -3); g.save(); g.beginPath(); g.rect(0, sy, W, 3); g.clip(); dragonAt(g, x + sx, y, f % 2, glitch); g.restore(); }
         }
-        const shown = Math.max(0, Math.min(word.length, Math.floor((t - 1.1) * 9)));
-        g.font = '14px "Departure Mono", monospace'; g.textAlign = 'center'; g.fillStyle = '#EDEDED';
-        g.fillText(word.slice(0, shown), W / 2, 100);
-        if (shown >= word.length) { g.font = '7px "Departure Mono", monospace'; g.fillStyle = '#5CE59A'; g.fillText((sub || '') + ' ' + (version || ''), W / 2, 114); }
-        if (t > 2.9) { end(); return; }
+        if (t >= 0.45 && fly < 1) trail.push({x: x + 8, y: y + 7 * Z, a: 1});
+        for (const p of trail) { p.a -= 0.045; if (p.a <= 0) continue; for (let k = 0; k < 10; k++) if ((k + Math.floor(p.x)) % 2 === 0) { g.fillStyle = 'rgba(92,229,154,' + (p.a * 0.75).toFixed(2) + ')'; g.fillRect(Math.floor(p.x - k * 2), p.y - 5 + ((k * 3 + Math.floor(p.x)) % 10), 1, 1); } }
+        dragonAt(g, x, y, fly < 1 ? f % 2 : Math.floor(t * 2.5) % 3 === 2 ? 1 : 0, glitch);
+        // The green line draws under it, then the name types in, with the subtitle under it.
+        const mid = cx + 16 * Z, below = cy + 12 * Z;
+        if (t > 1.75) { const lw = Math.min(64, Math.floor((t - 1.75) * 160)); g.fillStyle = '#5CE59A'; g.fillRect(mid - Math.floor(lw / 2), below + 4, lw, 1); }
+        if (t > 2.05) {
+          const shown = Math.min(name.length, Math.floor((t - 2.05) * 16));
+          g.font = '12px "Departure Mono", monospace'; g.textAlign = 'center'; g.textBaseline = 'top';
+          g.fillStyle = '#0A0A0A'; g.fillText(name.slice(0, shown), mid + 1, below + 9);
+          g.fillStyle = '#EDEDED'; g.fillText(name.slice(0, shown), mid, below + 8);
+          if (shown >= name.length && sub) { g.font = '6px "Departure Mono", monospace'; g.fillStyle = '#5CE59A'; g.fillText((sub + (version ? ' ' + version : '')).toUpperCase(), mid, below + 21); }
+        }
+        if (t > 3.45) { end(); return; }
         requestAnimationFrame(frame);
       };
       requestAnimationFrame(frame);
     });
   }
 
+  // ------------------------------------------------------------------ games (the Games tab on both apps)
+  // A game without an icon gets a pixel monogram in one of the four colors (always the same for the same app).
+  const monogram = (name, pkg) => '<b class="mono c' + [...String(pkg)].reduce((n, c) => n + c.charCodeAt(0), 0) % 4 + '">' + esc((String(name).match(/[A-Za-z0-9]/) || ['?'])[0].toUpperCase()) + '</b>';
+  // Earnings per unit, never added across units: earned (confirmed or received) and on the way (claimed or pending).
+  const earnings = units => Object.entries(units || {}).map(([unit, r]) => ({unit, earned: (r.confirmed || 0) + (r.received || 0), coming: (r.claimed || 0) + (r.pending || 0), offered: r.offered || 0, unknown: r.unknownAmounts || 0}));
+  const num = v => Number.isInteger(v) ? v.toLocaleString() : v.toFixed(2);
+  const earnLine = units => earnings(units).filter(e => e.earned || e.coming).map(e => e.earned ? num(e.earned) + ' ' + e.unit + (e.coming ? ' (+' + num(e.coming) + ')' : '') : '+' + num(e.coming) + ' ' + e.unit + ' on the way').join(' · ');
+
   // Pause idle loops while the window or tab is hidden.
   document.addEventListener('visibilitychange', () => document.documentElement.classList.toggle('idle-off', document.hidden));
 
-  window.Pixel = {MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced};
+  window.Pixel = {MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced, monogram, earnings, num, earnLine};
 })();
