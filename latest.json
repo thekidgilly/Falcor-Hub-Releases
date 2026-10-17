@@ -1,17 +1,17 @@
 {
-  "version": "0.2.1",
-  "notes": "The dragon now shows in the top-left corner of the phone app.",
-  "publishedAt": "2026-10-17T17:53:18.160Z",
+  "version": "0.3.0",
+  "notes": "Meet Falcor: a chat on your computer and your phone that runs your whole Hub. Ask about your games, start and approve tasks from either device, or just say stop. Also new: Teach Falcor (play a game on the new fast in-window mirror and Falcor writes a guide), a fresh pixel look with a smaller Stop button, live status lights and new Stats charts.",
+  "publishedAt": "2026-10-17T19:27:36.034Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "bb7231a2233354806720660c704b0deacd9c3034b64c0e1ea94f4259b88e713f",
-      "size": 365476
+      "sha256": "3bbbde817c9dfce0a5b1f752703a23a77b4c93aa646e58c2df3787f21c14c317",
+      "size": 485595
     },
     {
       "path": "dist/preload.js",
-      "sha256": "6ed8855012fd81f7cc3e2a189043050e52f7abea55068e9d18f8dcc48f1f5b03",
-      "size": 738
+      "sha256": "398d2e58d36c6ba5b4ebb712fc7e5243041be25ff9d48ec766f40af13fc74fa7",
+      "size": 1283
     },
     {
       "path": "remote-ui/assets/esm-B7fXffpm.js",
@@ -24,14 +24,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-BgH-Q2xJ.css",
-      "sha256": "b8702a8dcf1b3f95c980ebade104c528a7e770eb6ad781175d4ecaae48308523",
-      "size": 3480
+      "path": "remote-ui/assets/index-C4NLFwFf.css",
+      "sha256": "bd03a5bcc5d254187be57716361a15ba5f87f785b66a8c42c92910e0624181c5",
+      "size": 20894
     },
     {
-      "path": "remote-ui/assets/index-DIp558V5.js",
-      "sha256": "8a5bb387fafd855a98384ce8ea104a9af3caca4d195bcf128396c4d25f3a7a21",
-      "size": 54476
+      "path": "remote-ui/assets/index-Di5_O9vf.js",
+      "sha256": "9573600e1a821f3d9f0587db6158036b736d84250634686a72241029b57b944f",
+      "size": 82585
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -60,13 +60,13 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "5e19a07dad74b99aa3be4532188a0a1d1b3a219e152961c7d482aa1a6b7eeed6",
-      "size": 570
+      "sha256": "b3bc8e3cbdc79145d5981537a9eeeae1dcc49fde5f189e0f01c8cf782a2eb5e9",
+      "size": 2503
     },
     {
       "path": "ui/app.js",
-      "sha256": "664056fc2a54a3defccdc0dff8233fd5fef4f3aae5bd7a99eb079b706709db98",
-      "size": 22745
+      "sha256": "2df94511c73748f02c775012752a546001063dcc659a51ea96428aceb2426bf2",
+      "size": 80398
     },
     {
       "path": "ui/dragon.png",
@@ -95,13 +95,23 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "a883a0fcc8d586481d509259d9c5cd40165e707e904e04cd82cb4adfb49d492b",
-      "size": 8605
+      "sha256": "e4f02111e782343d2ecc11006249e6f2507934e3937ffc989862c56c3c9b2f16",
+      "size": 23853
+    },
+    {
+      "path": "ui/motion.css",
+      "sha256": "2f85086c9015c8d9c449c41d7829424846d340a5d28f9464a4d019db41135760",
+      "size": 11313
+    },
+    {
+      "path": "ui/pixel.js",
+      "sha256": "259fa66bd341f47a729a94586d25c7018d709209ca6a00b609482679a8b78419",
+      "size": 19381
     },
     {
       "path": "ui/style.css",
-      "sha256": "52261928d8f096c391596a95362351ed2ce341d3f05de24b397e47dfaaf39a75",
-      "size": 7461
+      "sha256": "19dcf2ee3d708ad550ae4d489c9a979799d4581b0bf052f3b3e2fb64220a1636",
+      "size": 32930
     }
   ]
 }
