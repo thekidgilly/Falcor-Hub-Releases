@@ -38,7 +38,7 @@ function numbers(root = document) {
 numbers();
 
 // ------------------------------------------------------------------ tabs, keys, intro
-const TABS = ['phone', 'tasks', 'falcor', 'knowledge', 'stats', 'settings'];
+const TABS = ['phone', 'games', 'tasks', 'falcor', 'knowledge', 'stats', 'settings'];
 function go(name, sub) {
   if (!TABS.includes(name)) return;
   if (name !== tab && !P.reduced()) { const w = P.el('<div class="wipe"><i></i><i></i><i></i><i></i></div>'); document.body.appendChild(w); setTimeout(() => w.remove(), 260); }
@@ -57,7 +57,7 @@ const typing = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.ta
 window.addEventListener('keydown', e => {
   if (e.ctrlKey && e.shiftKey && (e.key === 'X' || e.key === 'x')) { e.preventDefault(); void stopAll(); return; }
   if (e.ctrlKey && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); go('falcor'); $('chattext').focus(); return; }
-  if (!typing() && !e.ctrlKey && !e.altKey && !e.metaKey && /^[1-6]$/.test(e.key) && document.activeElement !== $('mirrorbox')) go(TABS[Number(e.key) - 1]);
+  if (!typing() && !e.ctrlKey && !e.altKey && !e.metaKey && /^[1-7]$/.test(e.key) && document.activeElement !== $('mirrorbox')) go(TABS[Number(e.key) - 1]);
 });
 if (!/nointro/.test(location.search)) void P.intro({dragon: 'dragon.png', version: '', sub: 'PHONE CONTROL'});
 setTimeout(placeTabline, 50);
@@ -67,7 +67,7 @@ window.hub.onStatus(s => { if (s) { S = s; render(); } });
 call('status').then(s => { S = s; render(); }).catch(() => {});
 setInterval(() => window.hub.call('status').then(s => { if (s) { S = s; render(); } }).catch(() => {}), 5000);
 const dev = () => S && (S.devices.find(d => d.id === deviceId) || S.devices[0]) || null;
-let wasEmergency = false, prevStates = new Map();
+let wasEmergency = false, prevStates = new Map(), autoSeen = null;
 function render() {
   if (!S) return;
   const d = dev(); deviceId = d ? d.id : null;
@@ -91,9 +91,15 @@ function render() {
   else if (S.whatsNew) { text($('noticetext'), 'What\'s new in ' + S.whatsNew.version + ': ' + (S.whatsNew.notes || 'Improvements and fixes.')); $('updatebtn').hidden = false; $('updatebtn').disabled = false; text($('updatebtn'), 'Got it'); }
   renderStatusbar(d);
   renderTeach();
+  // A Teach session Falcor started for a new task: show the mirror so the owner can play.
+  const learning = S.teaching && S.teaching.auto ? S.teaching.id : null, was = autoSeen;
+  autoSeen = learning;
+  if (learning && learning !== was) { toast('Falcor opened ' + S.teaching.name + ' and is recording. Play it on the mirror; when you leave the game, Falcor studies it and adds it to Games.'); if (tab !== 'phone') return go('phone'); }
+  if (!learning && was) toast('Teaching ended. If you played, Falcor is studying it; the game shows in Games with its guide.');
   // Success moments: a task that just became verified bursts.
   for (const t of S.tasks) { const was = prevStates.get(t.id); if (was && was !== t.state && /VERIFIED|RECEIVED/.test(t.state)) setTimeout(() => P.burst(document.querySelector('.task[data-key="' + t.id + '"]') || $('tiles') || $('logo')), 50); prevStates.set(t.id, t.state); }
   if (tab === 'phone') renderPhone(d);
+  if (tab === 'games') renderGames();
   if (tab === 'tasks') renderTasks();
   if (tab === 'falcor') renderChatMeta();
   if (tab === 'knowledge') renderLearn();
@@ -217,6 +223,8 @@ async function pullFrame() {
   const d = dev();
   if (tab !== 'phone' || !d || !d.connected || !d.authorized || document.hidden) { nextFrame(800); stopVideo(); return; }
   if (vid.on) { nextFrame(800); return; }
+  // After two failed starts the picture mirror stays, but the video is tried again a minute later or on a new phone.
+  if (vid.failed && (Date.now() - vid.failedAt > 60_000 || vid.deviceId !== d.id)) { vid.failed = false; vid.tries = 0; }
   if (!vid.failed && !vid.starting && !S.simulated && S.scrcpy) { void startVideo(d.id); nextFrame(800); return; }
   if (frameBusy) return;
   frameBusy = true;
@@ -236,19 +244,21 @@ let aspect = 9 / 20;
 function setAspect(w, h) { if (w && h && Math.abs(w / h - aspect) > 0.001) { aspect = w / h; fitDevice(); } }
 function fitDevice() {
   const stage = $('stage'); if (!stage || !stage.clientHeight) return;
-  const padX = 24, padY = 40, h = stage.clientHeight, maxW = Math.max(260, window.innerWidth * 0.46);
+  const padX = 24, padY = 40, h = stage.clientHeight, maxW = Math.max(260, Math.min(window.innerWidth * 0.46, window.innerWidth - 2 * 250 - 96));
   let dh = h, dw = (dh - padY) * aspect + padX;
   if (dw > maxW) { dw = maxW; dh = (dw - padX) / aspect + padY; }
-  const g = $('phonegrid'); g.style.setProperty('--mirrorw', Math.max(410, Math.round(dw)) + 'px');
+  // The column is as wide as the phone frame or the toolbar under it, whichever is wider, so no button is ever cut off.
+  const tb = $('toolbar'), need = tb ? [...tb.children].reduce((w, c) => w + c.getBoundingClientRect().width, 0) + (tb.children.length - 1) * 4 + 4 : 0;
+  const g = $('phonegrid'); g.style.setProperty('--mirrorw', Math.ceil(Math.max(300, dw, need)) + 'px');
   $('device').style.setProperty('--devw', Math.round(dw) + 'px'); $('device').style.setProperty('--devh', Math.round(dh) + 'px');
 }
 window.addEventListener('resize', fitDevice);
-new ResizeObserver(fitDevice).observe($('stage'));
+new ResizeObserver(fitDevice).observe($('stage')); new ResizeObserver(fitDevice).observe($('toolbar'));
 nextFrame(300);
 
 // The fast mirror: scrcpy's H.264 video from the phone, decoded here (WebCodecs) and drawn on a canvas. If it cannot
 // start, the picture mirror stays. Screens Falcor must not show are covered by the privacy pause.
-const vid = {on: false, starting: false, failed: false, error: '', deviceId: null, decoder: null, config: null, codec: '', waitKey: true, frames: 0, at: Date.now(), tries: 0};
+const vid = {on: false, starting: false, failed: false, failedAt: 0, error: '', deviceId: null, decoder: null, config: null, codec: '', waitKey: true, frames: 0, at: Date.now(), tries: 0};
 const canvas = $('video'), ctx = canvas.getContext('2d');
 function codecOf(sps) {
   // avc1.PPCCLL from the sequence parameter set (after the 00 00 00 01 / 00 00 01 start code and the 0x67 header).
@@ -290,7 +300,7 @@ async function startVideo(id) {
   if (typeof VideoDecoder === 'undefined') { vid.failed = true; vid.error = 'this window cannot decode video'; return; }
   vid.starting = true; vid.deviceId = id; vid.waitKey = true;
   try { await window.hub.call('videoStart', {deviceId: id}); vid.on = true; vid.tries = 0; }
-  catch (e) { vid.error = errText(e); if (++vid.tries >= 2) vid.failed = true; }
+  catch (e) { vid.error = errText(e); if (++vid.tries >= 2) { vid.failed = true; vid.failedAt = Date.now(); } }
   vid.starting = false;
 }
 function showPictures() { canvas.hidden = true; $('mirror').hidden = false; }
@@ -299,13 +309,13 @@ function endVideo(why) {
   vid.decoder = null; vid.codec = ''; vid.config = null;
   if (vid.on && vid.deviceId) void window.hub.call('videoStop', {deviceId: vid.deviceId}).catch(() => {});
   vid.on = false; showPictures();
-  if (why) { vid.error = why; if (++vid.tries >= 2) vid.failed = true; }
+  if (why) { vid.error = why; if (++vid.tries >= 2) { vid.failed = true; vid.failedAt = Date.now(); } }
 }
 function stopVideo() { if (vid.on) endVideo(null); }
 // The privacy pause over the video (the picture mirror gets its own card from Falcor.Hub).
 setInterval(async () => {
   if (!vid.on || !vid.deviceId) return;
-  const why = await window.hub.call('privacy', {deviceId: vid.deviceId}).catch(() => null);
+  const r = await window.hub.call('privacy', {deviceId: vid.deviceId}).catch(() => null), why = typeof r === 'string' && r ? r : null;
   $('privacy').hidden = !why; text($('privacywhy'), why ? (S && S.teaching ? 'Not recorded · ' : 'Not shown · ') + why : '');
 }, 700);
 
@@ -367,7 +377,7 @@ $('markform').onsubmit = async e => {
   const f = P.el('<div class="flagdrop">' + icon('flag') + '</div>'); f.style.left = lastTouch.x + '%'; f.style.top = lastTouch.y + '%'; $('overlay').appendChild(f); setTimeout(() => f.remove(), 1500);
   toast('Marked.');
 };
-$('recstop').onclick = async () => { const r = await call('teachStop'); showAfter(r.pkg, r.id, r.name, r.screens); };
+$('recstop').onclick = async () => { const r = await call('teachStop'); if (!r.auto) showAfter(r.pkg, r.id, r.name, r.screens); };
 async function showAfter(pkg, id, name, screens) {
   after = {pkg, id, screens}; $('after').hidden = false; text($('aftername'), name); text($('afterest'), 'Working out what it costs…');
   $('afterbody').hidden = false; $('afterwork').hidden = true;
@@ -408,6 +418,80 @@ $('aftertext').onclick = () => writeGuide('text');
 $('afterlocal').onclick = () => writeGuide('local');
 $('afterclose').onclick = () => { $('after').hidden = true; after = null; toast('The recording is saved. Write its guide any time from Knowledge.'); };
 
+// ------------------------------------------------------------------ games: a grid of the owner's games, and a page per game
+let gamePkg = null;
+const icons = new Map();   // pkg → data URL ('' while loading, null when there is none)
+function iconHtml(g) {
+  if (g.icon && !icons.has(g.pkg)) { icons.set(g.pkg, ''); window.hub.call('appIcon', {pkg: g.pkg}).then(u => { icons.set(g.pkg, u || null); if (tab === 'games') renderGames(true); }).catch(() => icons.set(g.pkg, null)); }
+  const u = icons.get(g.pkg);
+  return u ? '<img src="' + esc(u) + '" alt="">' : P.monogram(g.name, g.pkg);
+}
+const gameState = g => g.note ? {label: g.note, mood: 'sand'} : g.tasks.some(t => t.state === 'RUNNING') ? {label: 'Running', mood: 'green'} : g.needsYou ? {label: g.needsYou + ' need' + (g.needsYou === 1 ? 's' : '') + ' you', mood: 'sand'} : g.active ? {label: g.active + ' active', mood: 'green'} : g.tasks.length ? {label: 'All done', mood: 'muted'} : {label: 'Learned', mood: 'muted'};
+function renderGames(force) {
+  const list = S.games || [];
+  if (gamePkg && !list.some(g => g.pkg === gamePkg)) gamePkg = null;
+  $('gamesview').hidden = !!gamePkg; $('gamepage').hidden = !gamePkg;
+  if (gamePkg) return renderGame(list.find(g => g.pkg === gamePkg), force);
+  const box = $('gamegrid');
+  if (!list.length) { htmlOnce(box, '<div class="panel empty" data-empty><img src="dragon.png" alt=""><span>No games yet. Create a task for a game and Falcor opens it so you can show it how to play; it shows here with its icon.</span><button class="primary" data-newgame>' + icon('plus') + 'New task</button></div>'); return; }
+  if (box.querySelector('[data-empty]')) box.innerHTML = '';
+  keyed(box, list, g => g.pkg, () => P.el('<button class="panel gametile"><span class="gicon"></span><b class="nm"></b><span class="m"></span><span class="earn"></span><span class="pill"></span></button>'), (n, g) => {
+    const st = gameState(g);
+    htmlOnce(n.querySelector('.gicon'), iconHtml(g));
+    text(n.querySelector('.nm'), g.name);
+    text(n.querySelector('.m'), g.tasks.length ? g.tasks.length + ' challenge' + (g.tasks.length === 1 ? '' : 's') : 'no challenges yet');
+    text(n.querySelector('.earn'), P.earnLine(g.earnings) || (g.runs ? g.runs + ' runs' : ''));
+    const p = n.querySelector('.pill'); p.className = 'pill ' + st.mood; text(p, st.label);
+    n.title = g.name + ' · ' + g.pkg;
+  });
+}
+function renderGame(g) {
+  const st = gameState(g), d = dev();
+  htmlOnce($('gpicon'), iconHtml(g));
+  text($('gpname'), g.name);
+  htmlOnce($('gpmeta'), '<code>' + esc(g.pkg) + '</code> · <span class="' + st.mood + '">' + esc(st.label) + '</span>' + (g.lastPlayed ? ' · last played ' + new Date(g.lastPlayed).toLocaleString() : '') + (g.installed ? '' : ' · <span class="sand">not on the phone</span>'));
+  $('gpopen').disabled = !d || !g.installed || !!d.running || !!d.emergency;
+  $('gpopen').title = !d ? 'Plug in the phone' : !g.installed ? 'Not installed on the phone' : d.running ? 'A task is running' : d.emergency ? 'Emergency Stop is on' : 'Open it on the phone and take control';
+  $('gpteach').disabled = $('gpopen').disabled || !!S.teaching;
+  $('gpguide').disabled = !g.learned;
+  const tiles = [{k: 'ch', label: 'Challenges', v: g.tasks.length}, {k: 'active', label: 'Active', v: g.active}, {k: 'runs', label: 'Runs', v: g.runs}, {k: 'ver', label: 'Verified', v: g.verified}];
+  keyed($('gptiles'), tiles, t => t.k, () => P.el('<div class="panel tile"><span class="muted small"></span><b></b></div>'), (n, t) => { text(n.querySelector('.muted'), t.label); roll(n.querySelector('b'), t.v, String); });
+  const earn = P.earnings(g.earnings);
+  htmlOnce($('gpearn'), earn.length ? '<div class="earns">' + earn.map(e => '<div class="earn"><span class="u">' + icon(UNIT(e.unit)) + ' ' + esc(e.unit) + '</span><b>' + P.num(e.earned) + '</b><span class="muted small">earned' + (e.coming ? ' · ' + P.num(e.coming) + ' on the way' : '') + (e.offered ? ' · ' + P.num(e.offered) + ' offered' : '') + (e.unknown ? ' · ' + e.unknown + ' amount' + (e.unknown === 1 ? '' : 's') + ' not shown' : '') + '</span></div>').join('') + '</div>' : '<p class="muted small">Nothing earned yet. Earnings show here per unit once a challenge claims a reward.</p>');
+  const box = $('gptasks');
+  if (!g.tasks.length) htmlOnce(box, '<div class="empty" data-empty><span>No challenges for this game yet.</span></div>');
+  else {
+    if (box.querySelector('[data-empty]')) box.innerHTML = '';
+    keyed(box, g.tasks, t => t.id, () => P.el('<div class="gtask"><div class="main"></div><div class="acts"></div></div>'), (n, t) => {
+      const why = t.needs ? 'Needs you: ' + t.needs.reason : t.lastError || '';
+      htmlOnce(n.querySelector('.main'), '<div class="obj">' + icon(TYPEICON[t.type] || 'tasks') + ' ' + esc(t.objective) + '</div><div class="meta"><span>' + esc(TYPE[t.type] || t.type) + '</span>' + (t.targetLevel ? '<span>level ' + esc(t.level ?? 0) + ' of ' + esc(t.targetLevel) + '</span>' : '') + (t.reward !== null ? '<span>' + icon(UNIT(t.unit)) + ' ' + esc(t.reward) + ' ' + esc(t.unit) + '</span>' : '') + (t.nextAt && t.state === 'SCHEDULED' ? '<span>next ' + when(t.nextAt) + '</span>' : '') + '<span class="pill ' + (trackOf(t.state).mood === 'needs' ? 'sand' : trackOf(t.state).mood === 'bad' ? 'red' : 'green') + '">' + esc(t.stateLabel) + '</span></div>' + trackHtml(t.state) + (why ? '<div class="why sand">' + esc(why) + '</div>' : ''));
+      const acts = [];
+      if (!['NEEDS_REVIEW', 'DRAFT', 'RUNNING', 'BLOCKED', 'CANCELLED', 'EXPIRED', 'FAILED', 'RECEIVED', 'INVALIDATED'].includes(t.state)) acts.push('<button class="primary small" data-task="' + esc(t.id) + '" data-act="run">' + icon('play') + 'Run now</button>');
+      if (['SCHEDULED', 'RUNNING', 'READY', 'NEEDS_ATTENTION'].includes(t.state)) acts.push('<button class="small" data-task="' + esc(t.id) + '" data-act="pause">' + icon('pause') + 'Pause</button>');
+      if (t.state === 'PAUSED') acts.push('<button class="small" data-task="' + esc(t.id) + '" data-act="resume">' + icon('play') + 'Resume</button>');
+      acts.push('<button class="small" data-gotask="' + esc(t.id) + '">' + (t.state === 'NEEDS_REVIEW' ? icon('check') + 'Approve in Tasks' : 'Open in Tasks') + '</button>');
+      htmlOnce(n.querySelector('.acts'), acts.join(''));
+    });
+  }
+  const k = g.learned;
+  htmlOnce($('gpknowbody'), k ? '<p>' + esc(k.summary || (k.hasGuide ? 'Guide ready.' : 'Recorded; no guide written yet.')) + '</p><p class="muted small">' + k.sessions + ' teaching session' + (k.sessions === 1 ? '' : 's') + ' · last ' + new Date(k.lastSessionAt).toLocaleDateString() + '</p><button class="small" data-link="knowledge" data-ref="' + esc(g.pkg) + '">' + icon('book') + 'Read the guide</button>'
+    : '<p class="muted small">' + (g.note ? esc(g.note) + '.' : 'Falcor has not learned this game yet. Press Teach again (or Teach on the Phone tab) and play it on the mirror.') + '</p>');
+}
+$('gamegrid').onclick = e => { if (e.target.closest('[data-newgame]')) return openDrawer(); const t = e.target.closest('.gametile'); if (t) { gamePkg = t.dataset.key; renderGames(); $('gamepage').scrollIntoView({block: 'start'}); } };
+$('gamenew').onclick = () => openDrawer();
+$('gameback').onclick = () => { gamePkg = null; renderGames(); };
+$('gpopen').onclick = async () => { await call('openApp', {deviceId, pkg: gamePkg}); go('phone'); toast('Opened. You have control: play it on the mirror, or press Release when you are done.'); };
+$('gpteach').onclick = async () => {
+  const g = S.games.find(x => x.pkg === gamePkg); if (!g) return;
+  await call('openApp', {deviceId, pkg: g.pkg});
+  for (let i = 0; i < 10; i++) { const t = await call('teachTarget', {deviceId}); if (t.pkg === g.pkg) break; await new Promise(r => setTimeout(r, 500)); }
+  await call('teachStart', {deviceId, name: g.name, intent: ''}); go('phone'); toast('Recording. Play it on the mirror; press Stop when you are done.');
+};
+$('gptask').onclick = () => { openDrawer(); draft.app = gamePkg; draft.step = 2; drawStep(); };
+$('gpguide').onclick = () => followLink('knowledge', gamePkg);
+$('gpchat').onclick = () => { const p = gamePkg; go('falcor'); setTimeout(() => setFocus(p), 200); $('chattext').focus(); };
+$('gamepage').addEventListener('click', e => { const l = e.target.closest('[data-link]'); if (l) followLink(l.dataset.link, l.dataset.ref); const t = e.target.closest('[data-gotask]'); if (t) followLink('tasks', t.dataset.gotask); });
+
 // ------------------------------------------------------------------ tasks
 const TYPE = {daily_checkin: 'Daily check-in', game_level: 'Game to a level', free_signup: 'Free signup', reward_monitor: 'Reward balance'};
 const TYPEICON = {daily_checkin: 'checkin', game_level: 'game', free_signup: 'signup', reward_monitor: 'reward'};
@@ -433,6 +517,7 @@ function renderTasks() {
       if (['SCHEDULED', 'RUNNING', 'READY', 'NEEDS_ATTENTION'].includes(t.state)) acts.push('<button class="small" data-task="' + esc(t.id) + '" data-act="pause">' + icon('pause') + 'Pause</button>');
       if (t.state === 'PAUSED') acts.push('<button class="small" data-task="' + esc(t.id) + '" data-act="resume">' + icon('play') + 'Resume</button>');
     }
+    if (['DRAFT', 'NEEDS_REVIEW', 'READY', 'SCHEDULED', 'PAUSED', 'NEEDS_ATTENTION'].includes(t.state)) acts.push('<button class="icon small" title="Edit" data-edit="' + esc(t.id) + '">' + icon('edit') + '</button>');
     if (t.state !== 'RUNNING') acts.push('<button class="icon danger small" title="Remove" data-task="' + esc(t.id) + '" data-act="remove">' + icon('trash') + '</button>');
     htmlOnce(node.querySelector('.acts'), acts.join(''));
     // The approval gate: Approve stays off until the required ticks are done.
@@ -455,10 +540,42 @@ document.addEventListener('click', async e => {
     await call('approveTask', {id: a.dataset.approve, rulesAllow: !!(q('rules') && q('rules').checked), zeroCostConfirmed: !!(q('zero') && q('zero').checked), approvals: q('consent') && q('consent').checked ? ['account_creation', 'terms_acceptance'] : []});
     toast('Approved. Falcor runs it when it is due and Autopilot is on, or press Run now.');
   }
+  const ed = e.target.closest('[data-edit]'); if (ed) { await openEditor(ed.closest('.task'), ed.dataset.edit); return; }
   const u = e.target.closest('[data-unpair]'); if (u) await call('unpairPhone', {id: u.dataset.unpair});
   const p = e.target.closest('[data-unrule]'); if (p) await call('removePolicy', {key: p.dataset.unrule});
   const s = e.target.closest('[data-unsecret]'); if (s) await call('removeSecret', {name: s.dataset.unsecret});
 });
+
+// Edit a task in place: what it does, its target, schedule, reward note and (for a signup) the details it types.
+// A change to what runs sends an approved task back to "Needs review".
+async function openEditor(card, id) {
+  const open = card.querySelector('.editor'); if (open) { open.remove(); return; }
+  const {details: d, fields} = await call('taskFields', {id});
+  const box = P.el('<form class="editor gate"><p class="eyebrow">// EDIT TASK</p><div class="grid">'
+    + '<label class="wide">What should it do?<input name="objective" maxlength="300" required></label>'
+    + (d.type === 'game_level' ? '<label>Target level<input name="targetLevel" type="number" min="1" max="100000"></label>' : '')
+    + (d.hour !== null ? '<label>Resets daily at (hour 0–23)<input name="hour" type="number" min="0" max="23"></label>' : '')
+    + '<label>Reward (as the offer says)<input name="reward" type="number" min="0" step="any"></label><label>Unit<input name="unit" maxlength="24"></label>'
+    + (d.type === 'free_signup' ? '<label class="wide">Signup details (one per line, name=value; a password as vault:name; a hidden one left empty stays as saved)<textarea name="fields" rows="4"></textarea></label>' : '')
+    + '</div><div class="row"><button class="primary">Save</button><button type="button" data-cancel>Cancel</button><span class="muted small">Changing what it does sends an approved task back to Needs review.</span></div></form>');
+  const f = box;
+  f.objective.value = d.objective;
+  if (f.targetLevel) f.targetLevel.value = d.targetLevel ?? '';
+  if (f.hour) f.hour.value = d.hour;
+  f.reward.value = d.reward ?? ''; f.unit.value = d.unit;
+  if (f.fields) f.fields.value = fields.map(x => x.key + '=' + (x.hidden ? '' : x.value)).join('\n');
+  box.querySelector('[data-cancel]').onclick = () => box.remove();
+  box.onsubmit = async ev => {
+    ev.preventDefault();
+    const patch = {id, objective: f.objective.value};
+    if (f.targetLevel && f.targetLevel.value !== String(d.targetLevel ?? '')) patch.targetLevel = Number(f.targetLevel.value);
+    if (f.hour && f.hour.value !== String(d.hour)) { patch.hour = Number(f.hour.value); patch.minute = 0; }
+    if (f.reward.value !== '' && (Number(f.reward.value) !== d.reward || f.unit.value !== d.unit)) { patch.reward = Number(f.reward.value); patch.unit = f.unit.value || 'points'; }
+    if (f.fields) { const out = {}; for (const line of f.fields.value.split('\n')) { const i = line.indexOf('='); if (i > 0) out[line.slice(0, i).trim()] = line.slice(i + 1).trim(); } patch.fields = out; }
+    await call('editTask', patch); box.remove(); toast('Task saved.');
+  };
+  card.appendChild(box); numbers(box); f.objective.focus();
+}
 
 // New task: a drawer in 4 steps (app, type, details, review).
 const draft = {step: 1, app: null, type: null};
@@ -646,7 +763,7 @@ async function loadApp() {
   $('guideedit').hidden = !g; $('guidesave').hidden = true; text($('guideedit'), 'Edit');
   $('guide').innerHTML = g ? guideHtml(g) : ''; P.fix($('guide'));
   $('guide').classList.remove('editing');
-  if (g) for (const img of $('guide').querySelectorAll('img[data-shot]')) window.hub.call('shot', {id: img.dataset.shot}).then(u => { if (u) img.src = u; else img.closest('.thumb').remove(); }).catch(() => {});
+  if (g) for (const img of $('guide').querySelectorAll('img[data-shot]')) window.hub.call('shot', {id: img.dataset.shot}).then(u => { if (typeof u === 'string') img.src = u; else img.closest('.thumb').remove(); }).catch(() => {});
   $('sessions').innerHTML = L.sessions.slice().reverse().map(r => '<details><summary>' + new Date(r.startedAt).toLocaleString() + ' · ' + clock(r.activeMs) + ' · ' + r.screens + ' screens · ' + r.touches + ' touches' + (r.intent ? ' · ' + esc(r.intent) : '') + '</summary>'
     + '<div class="row gap6"><button class="small" data-write="' + esc(r.id) + '" data-screens="' + r.screens + '">' + icon('ai') + 'Write the guide from this session</button></div>'
     + '<ul class="timeline">' + r.timeline.map(m => '<li class="' + (m.what === 'mark' ? 'mark' : '') + '">' + clock(m.at - r.startedAt) + ' ' + chipify(m.line) + '</li>').join('') + '</ul></details>').join('');
@@ -721,10 +838,11 @@ function renderStats() {
     if (t.split) htmlOnce(sb, t.split.map(v => '<i data-style="flex:' + (total ? v / total : 0) + '" title="' + money(v) + '"></i>').join(''));
   });
   const max = Math.max(1, ...days.map(d => d.runs));
+  cls($('bars'), 'nodata', !days.some(d => d.runs));
   htmlOnce($('bars'), days.map(d => '<div class="b" title="' + esc(d.day) + ': ' + d.runs + ' runs"><span>' + esc(d.day.slice(8)) + '</span><i data-style="height:' + (d.verified / max * 100) + '%"></i><i class="s" data-style="height:' + (d.needsYou / max * 100) + '%"></i><i class="r" data-style="height:' + (d.failed / max * 100) + '%"></i></div>').join(''));
   const rate = s.allTime.completionRate;
   meter($('rate'), rate ?? 0, '');
-  htmlOnce($('ratelabel'), '<div class="meterlabel">' + (rate === null || rate === undefined ? '—' : Math.round(rate * 100) + '%') + '</div><p class="muted small">of runs ended verified · ' + s.allTime.runs + ' runs all time' + (s.allTime.minutesPerRun ? ' · ' + s.allTime.minutesPerRun.toFixed(1) + ' min each' : '') + '</p>');
+  htmlOnce($('ratelabel'), '<div class="meterlabel">' + (rate === null || rate === undefined ? 'No runs yet' : Math.round(rate * 100) + '%') + '</div><p class="muted small">of runs ended verified · ' + s.allTime.runs + ' runs all time' + (s.allTime.minutesPerRun ? ' · ' + s.allTime.minutesPerRun.toFixed(1) + ' min each' : '') + '</p>');
   htmlOnce($('spend'), '<p class="small">' + money(total) + ' Kimi this month' + (S.limit !== null ? ' of ' + money(S.limit) : '') + ' · teaching ' + money(sp.teach) + ' · chat ' + money(sp.chat) + ' · Autopilot ' + money(sp.autopilot) + '</p><p class="muted small">' + sp.tokens.toLocaleString() + ' tokens. Prices are Kimi\'s list prices; your Kimi account shows the exact bill.</p>');
   const units = Object.entries(s.rewards), STAGES = ['offered', 'claimed', 'pending', 'confirmed', 'received'];
   htmlOnce($('rewards'), units.length ? units.map(([u, r]) => '<div class="pipeline"><span>' + icon(UNIT(u)) + ' ' + esc(u) + '</span>' + STAGES.map(k => '<div class="st ' + (r[k] ? 'on' : '') + '"><i></i><span>' + k + ' ' + r[k] + '</span></div>').join('') + '</div>').join('') : '<div class="empty"><img src="dragon.png" alt=""><span>No rewards recorded yet. They show here per unit once a task claims one.</span></div>');

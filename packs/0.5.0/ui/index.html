@@ -22,12 +22,13 @@
 <div class="ebar" id="ebar" hidden><span class="led bad"></span><span>Emergency Stop is on. Autopilot and tasks are stopped.</span><button id="clear">Clear</button></div>
 <div class="noticebar" id="notice" hidden><span class="led on"></span><span id="noticetext"></span><button class="primary" id="updatebtn">Restart to update</button></div>
 <nav class="tabs" id="tabs">
-  <button data-tab="phone" class="on"><svg class="ico"><use href="#i-phone"></use></svg>Phone<kbd>1</kbd></button>
-  <button data-tab="tasks"><svg class="ico"><use href="#i-tasks"></use></svg>Tasks<span class="badge" id="badge-tasks" hidden></span><kbd>2</kbd></button>
-  <button data-tab="falcor"><img class="tabdragon" src="dragon.png" alt="">Falcor<span class="badge" id="badge-falcor" hidden></span><kbd>3</kbd></button>
-  <button data-tab="knowledge"><svg class="ico"><use href="#i-book"></use></svg>Knowledge<kbd>4</kbd></button>
-  <button data-tab="stats"><svg class="ico"><use href="#i-stats"></use></svg>Stats<kbd>5</kbd></button>
-  <button data-tab="settings"><svg class="ico"><use href="#i-settings"></use></svg>Settings<kbd>6</kbd></button>
+  <button data-tab="phone" title="Key 1" class="on"><svg class="ico"><use href="#i-phone"></use></svg>Phone</button>
+  <button data-tab="games" title="Key 2"><svg class="ico"><use href="#i-game"></use></svg>Games</button>
+  <button data-tab="tasks" title="Key 3"><svg class="ico"><use href="#i-tasks"></use></svg>Tasks<span class="badge" id="badge-tasks" hidden></span></button>
+  <button data-tab="falcor" title="Key 4"><img class="tabdragon" src="dragon.png" alt="">Falcor<span class="badge" id="badge-falcor" hidden></span></button>
+  <button data-tab="knowledge" title="Key 5"><svg class="ico"><use href="#i-book"></use></svg>Knowledge</button>
+  <button data-tab="stats" title="Key 6"><svg class="ico"><use href="#i-stats"></use></svg>Stats</button>
+  <button data-tab="settings" title="Key 7"><svg class="ico"><use href="#i-settings"></use></svg>Settings</button>
   <span class="tabline" id="tabline"></span>
 </nav>
 
@@ -58,35 +59,7 @@
           <button class="icon danger" id="recstop" title="Stop and save"><svg class="ico"><use href="#i-stop"></use></svg></button>
         </div>
     <div class="phonegrid" id="phonegrid" hidden>
-      <div class="mirrorcol">
-        <div class="stage" id="stage">
-          <div class="device" id="device">
-            <div class="brackets"><i></i><i></i><i></i><i></i></div>
-            <span class="devtag" id="devtag" hidden></span>
-            <span class="speaker"></span>
-            <div class="screen" id="mirrorbox" tabindex="0">
-              <img id="mirror" alt="The phone's screen" draggable="false"><canvas id="video" hidden></canvas>
-              <div class="overlay" id="overlay"></div>
-              <div class="privacy" id="privacy" hidden><svg class="ico big"><use href="#i-lock"></use></svg><b>Private screen</b><span id="privacywhy">Not shown and not recorded</span></div>
-              <div class="waiting" id="mirrorwait"><span class="load10"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="muted small">Waiting for the phone's screen…</span></div>
-            </div>
-          </div>
-        </div>
-        <div class="toolbar">
-          <button class="icon" data-key="BACK" title="Back"><svg class="ico"><use href="#i-back"></use></svg></button>
-          <button class="icon" data-key="HOME" title="Home"><svg class="ico"><use href="#i-home"></use></svg></button>
-          <button class="icon" data-key="APP_SWITCH" title="Apps"><svg class="ico"><use href="#i-apps"></use></svg></button>
-          <button class="icon" id="kbd" title="Type into the phone"><svg class="ico"><use href="#i-keyboard"></use></svg></button>
-          <span class="sep"></span>
-          <button id="take" class="primary"><svg class="ico"><use href="#i-control"></use></svg>Take Control</button><button id="release" hidden><svg class="ico"><use href="#i-control"></use></svg>Release</button>
-          <button id="teach" title="Play an app on the mirror while Falcor watches and learns it"><svg class="ico"><use href="#i-rec"></use></svg>Teach</button>
-          <button class="icon" id="viewer" title="Full-speed scrcpy window"><svg class="ico"><use href="#i-speed"></use></svg></button>
-          <button class="icon" id="askfalcor" title="Ask Falcor about the app in front"><svg class="ico"><use href="#i-chat"></use></svg></button>
-        </div>
-        <p class="hint" id="hint" hidden>Click tap · drag swipe · hold long-press · wheel scroll · type</p>
-        <form class="typeform" id="typeform" hidden><input id="typetext" placeholder="Type into the phone" maxlength="500" autocomplete="off"><button>Send</button></form>
-      </div>
-      <div class="sidecol">
+      <div class="sidecol leftcol" id="sidecol">
         <form class="panel teachform rise" id="teachform" hidden>
           <p class="eyebrow">// TEACH FALCOR</p>
           <h2>Teach Falcor</h2>
@@ -108,11 +81,67 @@
           <p class="eyebrow">// LIVE MISSION</p>
           <div id="missionbody"></div>
         </div>
+      </div>
+      <div class="mirrorcol">
+        <div class="stage" id="stage">
+          <div class="device" id="device">
+            <div class="brackets"><i></i><i></i><i></i><i></i></div>
+            <span class="devtag" id="devtag" hidden></span>
+            <span class="speaker"></span>
+            <div class="screen" id="mirrorbox" tabindex="0">
+              <img id="mirror" alt="The phone's screen" draggable="false"><canvas id="video" hidden></canvas>
+              <div class="overlay" id="overlay"></div>
+              <div class="privacy" id="privacy" hidden><svg class="ico big"><use href="#i-lock"></use></svg><b>Private screen</b><span id="privacywhy">Not shown and not recorded</span></div>
+              <div class="waiting" id="mirrorwait"><span class="load10"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="muted small">Waiting for the phone's screen…</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="toolbar" id="toolbar">
+          <button class="icon" data-key="BACK" title="Back"><svg class="ico"><use href="#i-back"></use></svg></button>
+          <button class="icon" data-key="HOME" title="Home"><svg class="ico"><use href="#i-home"></use></svg></button>
+          <button class="icon" data-key="APP_SWITCH" title="Apps"><svg class="ico"><use href="#i-apps"></use></svg></button>
+          <button class="icon" id="kbd" title="Type into the phone"><svg class="ico"><use href="#i-keyboard"></use></svg></button>
+          <span class="sep"></span>
+          <button id="take" class="primary"><svg class="ico"><use href="#i-control"></use></svg>Take Control</button><button id="release" hidden><svg class="ico"><use href="#i-control"></use></svg>Release</button>
+          <button id="teach" title="Play an app on the mirror while Falcor watches and learns it"><svg class="ico"><use href="#i-rec"></use></svg>Teach</button>
+          <button class="icon" id="viewer" title="Full-speed scrcpy window"><svg class="ico"><use href="#i-speed"></use></svg></button>
+          <button class="icon" id="askfalcor" title="Ask Falcor about the app in front"><svg class="ico"><use href="#i-chat"></use></svg></button>
+        </div>
+        <p class="hint" id="hint" hidden>Click tap · drag swipe · hold press · wheel scroll</p>
+        <form class="typeform" id="typeform" hidden><input id="typetext" placeholder="Type into the phone" maxlength="500" autocomplete="off"><button>Send</button></form>
+      </div>
+      <div class="sidecol rightcol" id="rightcol">
         <div class="panel grow console">
           <div class="top"><p class="eyebrow">// ACTIVITY</p><div class="seg" id="logfilter"><button data-f="all" class="on">All</button><button data-f="FALCOR">Falcor</button><button data-f="YOU">Me</button><button data-f="problems">Problems</button></div></div>
           <ul class="log" id="log"></ul>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- GAMES -->
+  <section data-pane="games" class="pane" hidden>
+    <div id="gamesview">
+      <div class="toolrow"><div><p class="eyebrow">// GAMES</p><h2>Your games and challenges</h2></div><span class="grow"></span><button class="primary" id="gamenew"><svg class="ico"><use href="#i-plus"></use></svg>New task</button></div>
+      <div class="gamegrid" id="gamegrid"></div>
+    </div>
+    <div class="gamepage" id="gamepage" hidden>
+      <div class="toolrow"><button id="gameback"><svg class="ico"><use href="#i-back"></use></svg>All games</button></div>
+      <div class="panel gamehead">
+        <span class="gicon big" id="gpicon"></span>
+        <div class="gtitle"><p class="eyebrow">// GAME</p><h2 id="gpname"></h2><p class="muted small" id="gpmeta"></p></div>
+        <div class="row gacts">
+          <button class="primary" id="gpopen"><svg class="ico"><use href="#i-play"></use></svg>Open game</button>
+          <button id="gpteach" title="Open the game and record while you play it"><svg class="ico"><use href="#i-rec"></use></svg>Teach again</button>
+          <button id="gptask"><svg class="ico"><use href="#i-plus"></use></svg>New challenge</button>
+          <button class="icon" id="gpguide" title="The guide in Knowledge"><svg class="ico"><use href="#i-book"></use></svg></button>
+          <button class="icon" id="gpchat" title="Ask Falcor about this game"><svg class="ico"><use href="#i-chat"></use></svg></button>
+        </div>
+      </div>
+      <div class="tiles gtiles" id="gptiles"></div>
+      <div class="panel"><p class="eyebrow">// TOTAL EARNINGS</p><p class="muted small">Per unit, never added across units. Earned means confirmed or received; nothing counts as cash without proof.</p><div id="gpearn"></div></div>
+      <div class="panel"><p class="eyebrow">// CHALLENGES</p><div class="tasklist" id="gptasks"></div></div>
+      <div class="panel" id="gpknow"><p class="eyebrow">// WHAT FALCOR KNOWS</p><div id="gpknowbody"></div></div>
     </div>
   </section>
 
