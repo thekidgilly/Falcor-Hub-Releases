@@ -1,11 +1,11 @@
 {
-  "version": "0.2.0",
-  "notes": "Falcor.Hub now updates itself: new versions download in the background and install with Restart to update. The phone app's screens come from this computer, so they update too.",
-  "publishedAt": "2026-10-17T17:40:39.015Z",
+  "version": "0.2.1",
+  "notes": "The dragon now shows in the top-left corner of the phone app.",
+  "publishedAt": "2026-10-17T17:53:18.160Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "4736dfd4e6a60089b09a2ebd57becc987bb3dfc47dc8ef9e734b697fe1d2af2f",
+      "sha256": "bb7231a2233354806720660c704b0deacd9c3034b64c0e1ea94f4259b88e713f",
       "size": 365476
     },
     {
@@ -29,14 +29,9 @@
       "size": 3480
     },
     {
-      "path": "remote-ui/assets/index-WF4-3UdP.js",
-      "sha256": "86c4b4444242b23dc61c4c5301576117c0ab7d94e7a82f3ea90905211c5c1bbf",
-      "size": 14435
-    },
-    {
-      "path": "remote-ui/dragon.png",
-      "sha256": "ebd39660f8f6738a2cf67217cba5ed78f78226d03bb2b464ee643f6fe4618af9",
-      "size": 314323
+      "path": "remote-ui/assets/index-DIp558V5.js",
+      "sha256": "8a5bb387fafd855a98384ce8ea104a9af3caca4d195bcf128396c4d25f3a7a21",
+      "size": 54476
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,8 +60,8 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "eb40276c7450a0bfd202018646659de97f9fd32a4b9694001cf1bd0446af8af7",
-      "size": 579
+      "sha256": "5e19a07dad74b99aa3be4532188a0a1d1b3a219e152961c7d482aa1a6b7eeed6",
+      "size": 570
     },
     {
       "path": "ui/app.js",
