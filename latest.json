@@ -1,11 +1,11 @@
 {
-  "version": "0.3.2",
-  "notes": "Status lights now stay solid: green when connected, sand when something needs you, red when stopped. No more blinking.",
-  "publishedAt": "2026-10-17T19:51:22.501Z",
+  "version": "0.3.3",
+  "notes": "A new launch intro on the computer and the phone: a pixel night sky where the white luckdragon glitches in, flies to the middle and the name appears.",
+  "publishedAt": "2026-10-17T20:01:39.581Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "9e90e1e787236290170a3f75d2fb2b0f98163ab38477de1dea4504f50b295faa",
+      "sha256": "7041acdf23f460bf641e09dcde65b053afa8b795a4fe0e302cf0097c1143fb71",
       "size": 485617
     },
     {
@@ -24,14 +24,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-CZMXbquH.css",
-      "sha256": "803092c203b31101a2e7367a47fda3a8e240d1dc7fe8808244e95cb4b8d71659",
+      "path": "remote-ui/assets/index-CljFrEsz.css",
+      "sha256": "e597085bd899c6709ccd6242ab2b7ba3560633fd006dddb37658e499ca5f3925",
       "size": 20750
     },
     {
-      "path": "remote-ui/assets/index-otURRUJW.js",
-      "sha256": "9573600e1a821f3d9f0587db6158036b736d84250634686a72241029b57b944f",
-      "size": 82585
+      "path": "remote-ui/assets/index-CtLwO9is.js",
+      "sha256": "f7770b992bbf3d50de0dc0b6ab1c2429e826b7242ca1d9df660f88acd33b876e",
+      "size": 85950
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -60,7 +60,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "94ce40f8375f3225a7019d426f686c7f39e55a2e80c27f25e40a5d8208fcd600",
+      "sha256": "d6516b63232bdb56750aefc8ee5c7047159c3adeb865e0b371c26dc7afa26291",
       "size": 2503
     },
     {
@@ -100,13 +100,13 @@
     },
     {
       "path": "ui/motion.css",
-      "sha256": "9578e4f9fa2a04218615a9ab95d385d1ef5d8da907348f955f756e2909a60d0a",
+      "sha256": "d9908c53c1fc7ed485e7e5e19464a2c9c5adb8202da85599f04b7884e03e453c",
       "size": 11290
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "259fa66bd341f47a729a94586d25c7018d709209ca6a00b609482679a8b78419",
-      "size": 19381
+      "sha256": "307d1602b7e953282190d19bcf2c140259bb3a7b9e6869d22d77b3f90b6afdef",
+      "size": 25236
     },
     {
       "path": "ui/style.css",
