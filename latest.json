@@ -1,12 +1,12 @@
 {
-  "version": "0.5.0",
-  "notes": "New Games tab on the computer and the phone: a grid of your games with their icons; tap one to see its total earnings, every challenge's status and an Open game button. When you create a task for a game Falcor hasn't learned yet, Falcor opens it and records while you play on the mirror; when you leave the game it writes the guide and adds the game to Games.",
-  "publishedAt": "2026-10-17T23:09:04.734Z",
+  "version": "0.6.0",
+  "notes": "Smarter, steadier Autopilot for games: Falcor now handles the screens every game has by itself (loading, Play, Next, Continue, Retry, free rewards, Skip ad, coin upgrades), remembers a move once it works, and asks Falcor AI far less often. It plays around shop prices and ad offers but can never tap them, reads the real level (not 'Unlock at Level 10'), recovers from a wrong AI answer, and plays games drawn as pictures only.",
+  "publishedAt": "2026-10-17T23:50:49.139Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "a2a3824aec68d6e3e954d69a013fbca46cd2f83b59aed4a81480f410bcde9bd7",
-      "size": 510767
+      "sha256": "9101a8d9e978c55b49570f24471e5ee5771fd3cf61d5e1d7d803d32087fb9c54",
+      "size": 521144
     },
     {
       "path": "dist/preload.js",
