@@ -1,12 +1,12 @@
 {
-  "version": "0.3.0",
-  "notes": "Meet Falcor: a chat on your computer and your phone that runs your whole Hub. Ask about your games, start and approve tasks from either device, or just say stop. Also new: Teach Falcor (play a game on the new fast in-window mirror and Falcor writes a guide), a fresh pixel look with a smaller Stop button, live status lights and new Stats charts.",
-  "publishedAt": "2026-10-17T19:27:36.034Z",
+  "version": "0.3.1",
+  "notes": "Fixes: the phone mirror no longer says Private screen on normal screens. The mirror now sits in the middle, with your phone's details on the left and activity on the right, and its buttons are never cut off. The tab numbers are gone.",
+  "publishedAt": "2026-10-17T19:37:11.480Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "3bbbde817c9dfce0a5b1f752703a23a77b4c93aa646e58c2df3787f21c14c317",
-      "size": 485595
+      "sha256": "ef3add670c58ba0dc0b936af7ce922c4c5d529c089f12b847ec4ef1908920deb",
+      "size": 485617
     },
     {
       "path": "dist/preload.js",
@@ -65,8 +65,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "2df94511c73748f02c775012752a546001063dcc659a51ea96428aceb2426bf2",
-      "size": 80398
+      "sha256": "5c778b196c3bb835055a9d3181aab98fe89e89793ec4ab577b7397127d6723f9",
+      "size": 80898
     },
     {
       "path": "ui/dragon.png",
@@ -95,8 +95,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "e4f02111e782343d2ecc11006249e6f2507934e3937ffc989862c56c3c9b2f16",
-      "size": 23853
+      "sha256": "9fd6ca4d166099d4b07908b43f0f2b5a2a4276edf36c8845bcf1db9fe75b1d50",
+      "size": 23950
     },
     {
       "path": "ui/motion.css",
@@ -110,8 +110,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "19dcf2ee3d708ad550ae4d489c9a979799d4581b0bf052f3b3e2fb64220a1636",
-      "size": 32930
+      "sha256": "dd7f915943e00568f454211e5dafb653095e55c1a85f78de0d27d22e4eeff13a",
+      "size": 33411
     }
   ]
 }
