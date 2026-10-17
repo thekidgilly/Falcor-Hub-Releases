@@ -1,11 +1,11 @@
 {
-  "version": "0.3.1",
-  "notes": "Fixes: the phone mirror no longer says Private screen on normal screens. The mirror now sits in the middle, with your phone's details on the left and activity on the right, and its buttons are never cut off. The tab numbers are gone.",
-  "publishedAt": "2026-10-17T19:37:11.480Z",
+  "version": "0.3.2",
+  "notes": "Status lights now stay solid: green when connected, sand when something needs you, red when stopped. No more blinking.",
+  "publishedAt": "2026-10-17T19:51:22.501Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "ef3add670c58ba0dc0b936af7ce922c4c5d529c089f12b847ec4ef1908920deb",
+      "sha256": "9e90e1e787236290170a3f75d2fb2b0f98163ab38477de1dea4504f50b295faa",
       "size": 485617
     },
     {
@@ -24,12 +24,12 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-C4NLFwFf.css",
-      "sha256": "bd03a5bcc5d254187be57716361a15ba5f87f785b66a8c42c92910e0624181c5",
-      "size": 20894
+      "path": "remote-ui/assets/index-CZMXbquH.css",
+      "sha256": "803092c203b31101a2e7367a47fda3a8e240d1dc7fe8808244e95cb4b8d71659",
+      "size": 20750
     },
     {
-      "path": "remote-ui/assets/index-Di5_O9vf.js",
+      "path": "remote-ui/assets/index-otURRUJW.js",
       "sha256": "9573600e1a821f3d9f0587db6158036b736d84250634686a72241029b57b944f",
       "size": 82585
     },
@@ -60,7 +60,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "b3bc8e3cbdc79145d5981537a9eeeae1dcc49fde5f189e0f01c8cf782a2eb5e9",
+      "sha256": "94ce40f8375f3225a7019d426f686c7f39e55a2e80c27f25e40a5d8208fcd600",
       "size": 2503
     },
     {
@@ -100,8 +100,8 @@
     },
     {
       "path": "ui/motion.css",
-      "sha256": "2f85086c9015c8d9c449c41d7829424846d340a5d28f9464a4d019db41135760",
-      "size": 11313
+      "sha256": "9578e4f9fa2a04218615a9ab95d385d1ef5d8da907348f955f756e2909a60d0a",
+      "size": 11290
     },
     {
       "path": "ui/pixel.js",
