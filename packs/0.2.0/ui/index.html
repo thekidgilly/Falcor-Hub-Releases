@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; font-src 'self'">
+<title>Falcor.Hub</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><img src="dragon.png" alt=""><div><h1>FALCOR.HUB</h1><p class="eyebrow">Phone control</p></div></div>
+  <div class="pills" id="pills"></div>
+  <button class="stop" id="stop">EMERGENCY STOP</button>
+</header>
+<div class="banner red" id="banner" hidden></div>
+<div class="update" id="update" hidden><span id="updatetext"></span><button class="primary" id="updatebtn">Restart to update</button></div>
+<div class="whatsnew" id="whatsnew" hidden><div><b>What's new in <span id="wnversion"></span></b><pre id="wnnotes"></pre></div><button id="wnclose">Got it</button></div>
+<nav id="tabs"><button data-tab="phone" class="on">Phone</button><button data-tab="tasks">Tasks</button><button data-tab="stats">Stats</button><button data-tab="settings">Settings</button></nav>
+
+<main>
+  <!-- PHONE -->
+  <section data-pane="phone">
+    <div class="card" id="setup" hidden>
+      <h2>Plug in your phone</h2>
+      <p class="muted">Use the phone that will run the games, not your everyday phone. Each step ticks itself off.</p>
+      <ol class="checks" id="checks"></ol>
+      <details><summary>Settings for total control</summary>
+        <ul class="steps">
+          <li><b>USB debugging:</b> Settings → About phone → Software information → tap Build number 7 times, then Settings → Developer options → USB debugging on.</li>
+          <li><b>Allow this computer:</b> on "Allow USB debugging?" tick Always allow from this computer, then Allow.</li>
+          <li><b>Samsung Auto Blocker off:</b> Settings → Security and privacy → Auto Blocker → Off (otherwise taps never arrive).</li>
+          <li><b>Stay awake:</b> Developer options → Stay awake on, so the screen stays on while it charges.</li>
+          <li><b>Xiaomi / Redmi / POCO:</b> also Developer options → USB debugging (Security settings) on.</li>
+          <li><b>Leave it unlocked:</b> Falcor never unlocks your phone.</li>
+        </ul>
+      </details>
+    </div>
+    <div class="phonegrid" id="phonegrid" hidden>
+      <div class="mirrorcol">
+        <div class="mirror" id="mirrorbox" tabindex="0"><img id="mirror" alt="The phone's screen" draggable="false"><p class="muted" id="mirrorwait">Waiting for the phone's screen…</p></div>
+        <div class="row controls">
+          <button data-key="BACK">◁ Back</button><button data-key="HOME">○ Home</button><button data-key="APP_SWITCH">▢ Apps</button>
+          <button id="take" class="primary">Take Control</button><button id="release" hidden>Release Control</button>
+          <button id="viewer" title="Opens scrcpy: full speed, mouse and keyboard">Full-speed window</button>
+        </div>
+        <form class="row" id="typeform"><input id="typetext" placeholder="Type into the phone (Take Control first)" maxlength="500" autocomplete="off"><button>Send text</button></form>
+        <p class="muted small" id="mirrorinfo"></p>
+      </div>
+      <div class="sidecol">
+        <div class="card">
+          <div class="top"><h2 id="devname">Phone</h2><span class="pill" id="devstate"></span></div>
+          <dl id="devinfo"></dl>
+          <div class="row"><button id="autopilot" class="primary">Start Autopilot</button><select id="devpick" hidden></select></div>
+          <p class="muted small">Autopilot runs your approved tasks when they are due. Take Control pauses it on this phone.</p>
+        </div>
+        <div class="card"><h2>Running now</h2><div id="running" class="muted">Nothing is running.</div></div>
+        <div class="card grow"><h2>Activity</h2><ul class="log" id="log"></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TASKS -->
+  <section data-pane="tasks" hidden>
+    <div class="card">
+      <h2>New task</h2>
+      <form id="taskform" class="grid">
+        <label>Type<select name="type"><option value="daily_checkin">Daily check-in</option><option value="game_level">Game to a level</option><option value="free_signup">Free signup</option><option value="reward_monitor">Check a reward balance</option></select></label>
+        <label>App<select name="appPackage" id="apppick"></select></label>
+        <label>Name (optional)<input name="appLabel" placeholder="e.g. Coin Master" maxlength="80"></label>
+        <label class="wide">What should it do?<input name="objective" placeholder="Collect the daily coins" maxlength="300" required></label>
+        <label data-for="game_level">Target level<input name="targetLevel" type="number" min="1" max="100000"></label>
+        <label>Reward (as the offer says)<input name="advertised" type="number" min="0" step="any" placeholder="optional"></label>
+        <label>Unit<input name="unit" placeholder="points, coins, usd" maxlength="24"></label>
+        <label data-for="free_signup" class="wide">Signup details (one per line, name=value; a password as vault:name)<textarea name="fields" rows="3" placeholder="email=me@example.com&#10;password=vault:freequest"></textarea></label>
+        <div class="wide row"><button class="primary">Create task</button><button type="button" id="refreshapps">Refresh app list</button></div>
+      </form>
+      <p class="muted small">Every app needs your approval before Falcor touches it. Payments, cards, codes sent to you, CAPTCHAs and ID checks always come back to you. Mistplay stays manual (its rules forbid automated play).</p>
+    </div>
+    <div class="card"><h2>Tasks</h2><div id="tasklist"></div></div>
+  </section>
+
+  <!-- STATS -->
+  <section data-pane="stats" hidden>
+    <div class="tiles" id="tiles"></div>
+    <div class="card"><h2>Rewards</h2><p class="muted small">Per unit, never added across units. Nothing counts as cash without proof.</p><table id="rewards"></table></div>
+    <div class="card"><h2>Recent runs</h2><ul class="list" id="runs"></ul></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section data-pane="settings" hidden>
+    <div class="card">
+      <h2>Kimi (Falcor's AI)</h2>
+      <p class="muted">Falcor asks Kimi for the next step on a screen it does not know. Your key is sealed on this computer and only ever sent to Kimi.</p>
+      <p id="kimistate" class="small"></p>
+      <form class="row" id="kimiform"><input id="kimikey" type="password" placeholder="sk-…" autocomplete="off"><input id="kimimodel" placeholder="kimi-k3"><button class="primary">Save</button><button type="button" id="kimitest">Test connection</button><button type="button" id="kimiremove">Remove key</button></form>
+    </div>
+    <div class="card">
+      <h2>Your everyday phone (Falcor.Hub Remote)</h2>
+      <p class="muted">Install Falcor.Hub Remote on your own phone to start Autopilot, see stats and press Emergency Stop from anywhere in the house. It works on the same Wi-Fi as this computer.</p>
+      <div class="row"><button class="primary" id="pair">Pair a phone</button><button id="firewall">Let my phone through Windows Firewall</button></div>
+      <div id="pairbox" hidden><img id="qr" alt="Pairing QR code"><div><p>Code: <code id="paircode"></code></p><p class="small">Address: <code id="pairurl"></code></p><p class="muted small" id="pairexp"></p></div></div>
+      <ul class="list" id="remotes"></ul>
+    </div>
+    <div class="card">
+      <h2>App rules</h2>
+      <p class="muted">Record what an app's own rules say about automation. ALLOWED needs where you read it.</p>
+      <form class="row" id="policyform"><input name="key" placeholder="app package, e.g. com.example.game" required><select name="status"><option>ALLOWED</option><option>MANUAL_REVIEW</option><option>PROHIBITED</option></select><input name="source" placeholder="where the rules say so"><button>Save rule</button></form>
+      <ul class="list" id="policies"></ul>
+    </div>
+    <div class="card">
+      <h2>Signup secrets</h2>
+      <p class="muted">A password a signup needs, kept sealed here. Use it in a task as vault:name. It never leaves this computer.</p>
+      <form class="row" id="secretform"><input name="name" placeholder="name" required><input name="value" type="password" placeholder="value" required><button>Save</button></form>
+      <ul class="list" id="secrets"></ul>
+    </div>
+    <div class="card"><h2>Updates</h2><p class="muted small" id="about"></p><p class="small" id="updstate"></p><button id="updcheck">Check for updates</button></div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

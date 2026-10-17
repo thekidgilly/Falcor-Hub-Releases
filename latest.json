@@ -1,0 +1,112 @@
+{
+  "version": "0.2.0",
+  "notes": "Falcor.Hub now updates itself: new versions download in the background and install with Restart to update. The phone app's screens come from this computer, so they update too.",
+  "publishedAt": "2026-10-17T17:40:39.015Z",
+  "files": [
+    {
+      "path": "dist/main.js",
+      "sha256": "4736dfd4e6a60089b09a2ebd57becc987bb3dfc47dc8ef9e734b697fe1d2af2f",
+      "size": 365476
+    },
+    {
+      "path": "dist/preload.js",
+      "sha256": "6ed8855012fd81f7cc3e2a189043050e52f7abea55068e9d18f8dcc48f1f5b03",
+      "size": 738
+    },
+    {
+      "path": "remote-ui/assets/esm-B7fXffpm.js",
+      "sha256": "d620c7d9f5069c4146d59442034319884ccddb55b0eb5f1151b116a06d17700a",
+      "size": 410060
+    },
+    {
+      "path": "remote-ui/assets/esm-CdKaPvjx.js",
+      "sha256": "f27061cfee88e4caddc5ab92e0b377e99d5297d7f65bd988ecbfecd232ce92e7",
+      "size": 26196
+    },
+    {
+      "path": "remote-ui/assets/index-BgH-Q2xJ.css",
+      "sha256": "b8702a8dcf1b3f95c980ebade104c528a7e770eb6ad781175d4ecaae48308523",
+      "size": 3480
+    },
+    {
+      "path": "remote-ui/assets/index-WF4-3UdP.js",
+      "sha256": "86c4b4444242b23dc61c4c5301576117c0ab7d94e7a82f3ea90905211c5c1bbf",
+      "size": 14435
+    },
+    {
+      "path": "remote-ui/dragon.png",
+      "sha256": "ebd39660f8f6738a2cf67217cba5ed78f78226d03bb2b464ee643f6fe4618af9",
+      "size": 314323
+    },
+    {
+      "path": "remote-ui/fonts/DepartureMono-OFL.txt",
+      "sha256": "b65e42750f3cb65437a97f4dfd781c58f199259949db2341012be60e32500e83",
+      "size": 4357
+    },
+    {
+      "path": "remote-ui/fonts/DepartureMono-Regular.woff2",
+      "sha256": "5b4fed1daa90708aa9c6ee1190abca9dc22164a1c1def0020386e46b61038cfb",
+      "size": 22496
+    },
+    {
+      "path": "remote-ui/fonts/GeistMono-OFL.txt",
+      "sha256": "cc815ed4fc045f0e991abb10395b7932bd028c6a067deb13316d6002105074e6",
+      "size": 4498
+    },
+    {
+      "path": "remote-ui/fonts/GeistMono-Regular.woff2",
+      "sha256": "3f98383b122fe015a48536cd4a1cda855a201718923ffe74931a01597107b9b5",
+      "size": 9864
+    },
+    {
+      "path": "remote-ui/icon.png",
+      "sha256": "c347fcaa994d1660a9313487cbf2f8ce205734bef14fd4b192dbd3ddf7ecf19e",
+      "size": 184066
+    },
+    {
+      "path": "remote-ui/index.html",
+      "sha256": "eb40276c7450a0bfd202018646659de97f9fd32a4b9694001cf1bd0446af8af7",
+      "size": 579
+    },
+    {
+      "path": "ui/app.js",
+      "sha256": "664056fc2a54a3defccdc0dff8233fd5fef4f3aae5bd7a99eb079b706709db98",
+      "size": 22745
+    },
+    {
+      "path": "ui/dragon.png",
+      "sha256": "ebd39660f8f6738a2cf67217cba5ed78f78226d03bb2b464ee643f6fe4618af9",
+      "size": 314323
+    },
+    {
+      "path": "ui/fonts/DepartureMono-OFL.txt",
+      "sha256": "b65e42750f3cb65437a97f4dfd781c58f199259949db2341012be60e32500e83",
+      "size": 4357
+    },
+    {
+      "path": "ui/fonts/DepartureMono-Regular.woff2",
+      "sha256": "5b4fed1daa90708aa9c6ee1190abca9dc22164a1c1def0020386e46b61038cfb",
+      "size": 22496
+    },
+    {
+      "path": "ui/fonts/GeistMono-OFL.txt",
+      "sha256": "cc815ed4fc045f0e991abb10395b7932bd028c6a067deb13316d6002105074e6",
+      "size": 4498
+    },
+    {
+      "path": "ui/fonts/GeistMono-Regular.woff2",
+      "sha256": "3f98383b122fe015a48536cd4a1cda855a201718923ffe74931a01597107b9b5",
+      "size": 9864
+    },
+    {
+      "path": "ui/index.html",
+      "sha256": "a883a0fcc8d586481d509259d9c5cd40165e707e904e04cd82cb4adfb49d492b",
+      "size": 8605
+    },
+    {
+      "path": "ui/style.css",
+      "sha256": "52261928d8f096c391596a95362351ed2ce341d3f05de24b397e47dfaaf39a75",
+      "size": 7461
+    }
+  ]
+}
