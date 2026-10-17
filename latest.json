@@ -1,17 +1,17 @@
 {
-  "version": "0.3.3",
-  "notes": "A new launch intro on the computer and the phone: a pixel night sky where the white luckdragon glitches in, flies to the middle and the name appears.",
-  "publishedAt": "2026-10-17T20:01:39.581Z",
+  "version": "0.4.0",
+  "notes": "Smarter Autopilot: Falcor AI can now play games that have no built-in player (checked against the level on screen), follows the buttons you showed it in Teach Falcor, and sees a small picture of screens drawn without text. You can edit tasks with the pencil button, private screens are covered on the live video too, and the phone app's home screen fits better.",
+  "publishedAt": "2026-10-17T22:33:56.254Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "7041acdf23f460bf641e09dcde65b053afa8b795a4fe0e302cf0097c1143fb71",
-      "size": 485617
+      "sha256": "f69186e87e5d7e8d8511b0f687997d1cc1ff6a6d902bc33363d8b2175e31fd64",
+      "size": 493144
     },
     {
       "path": "dist/preload.js",
-      "sha256": "398d2e58d36c6ba5b4ebb712fc7e5243041be25ff9d48ec766f40af13fc74fa7",
-      "size": 1283
+      "sha256": "4ec89815ed690c1f7881604ad82ecad8731c3a3e546cb70ac1b25e943d98ecc6",
+      "size": 1313
     },
     {
       "path": "remote-ui/assets/esm-B7fXffpm.js",
@@ -24,14 +24,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-CljFrEsz.css",
-      "sha256": "e597085bd899c6709ccd6242ab2b7ba3560633fd006dddb37658e499ca5f3925",
-      "size": 20750
+      "path": "remote-ui/assets/index-CdhotvU9.js",
+      "sha256": "4786dee59ff6702dc614d07370feca92db973e56576d65a4a290dcca7ece26d8",
+      "size": 86037
     },
     {
-      "path": "remote-ui/assets/index-CtLwO9is.js",
-      "sha256": "f7770b992bbf3d50de0dc0b6ab1c2429e826b7242ca1d9df660f88acd33b876e",
-      "size": 85950
+      "path": "remote-ui/assets/index-DTDcT1dO.css",
+      "sha256": "752b75cd01b635b9a2520a0ee83a012d49b4fab6dfa63cea887ad3851818a826",
+      "size": 21052
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -60,13 +60,13 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "d6516b63232bdb56750aefc8ee5c7047159c3adeb865e0b371c26dc7afa26291",
+      "sha256": "d3eae6170ca381e45f05aea90d96b1337bff66b29350f81c8b15aeb09fee5adf",
       "size": 2503
     },
     {
       "path": "ui/app.js",
-      "sha256": "5c778b196c3bb835055a9d3181aab98fe89e89793ec4ab577b7397127d6723f9",
-      "size": 80898
+      "sha256": "05b3b509bac72d9a495179879c70ff97ad7ed8b371692b1bf3cee08e8bf8cf63",
+      "size": 84248
     },
     {
       "path": "ui/dragon.png",
@@ -110,8 +110,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "dd7f915943e00568f454211e5dafb653095e55c1a85f78de0d27d22e4eeff13a",
-      "size": 33411
+      "sha256": "b11ed0aef480c3909076950b8e534c5c567b276af6c4c9769488175f2939e734",
+      "size": 33450
     }
   ]
 }
