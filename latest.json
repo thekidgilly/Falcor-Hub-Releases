@@ -1,17 +1,17 @@
 {
-  "version": "0.7.0",
-  "notes": "Falcor now learns from you: whatever you show it in Teach Falcor (and a game's first-time intro) becomes steps Autopilot repeats on those screens without asking, and buttons your guide warns about are never pressed. Each game's page shows how many steps Falcor knows. Falcor still never watches ads or buys anything.",
-  "publishedAt": "2026-10-17T23:56:14.899Z",
+  "version": "0.8.0",
+  "notes": "Rewarded ads: turn them on per game in the Games tab (two ticks). When a game offers a reward for an ad, Falcor plays it while you're at the computer or in the phone app, waits for the reward, then closes it. It never taps inside an ad or buys anything.",
+  "publishedAt": "2026-10-18T00:03:13.978Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "bcccb6eeaaab853feb39b3f42a2ba88d7977549d40e3f5e885c8d1f8ab24ebe9",
-      "size": 526897
+      "sha256": "7c8c3d244a82595a0198c7feeb03cbb056286c019ee230986b8596df8bb5fec6",
+      "size": 534422
     },
     {
       "path": "dist/preload.js",
-      "sha256": "0f3d3f176badb17075edf73cff83f3a7961186b94be28d69c994e727d04bb6d0",
-      "size": 1339
+      "sha256": "0b0bb7b405a519280b22294bce00b1a31a8e0b32460fa548bc51492c75975d14",
+      "size": 1351
     },
     {
       "path": "remote-ui/assets/esm-B7fXffpm.js",
@@ -24,9 +24,9 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-Bxd-aZcs.js",
-      "sha256": "d48410a9a0559d0c936b3d8de792eb9ab87b62795c11b16a5ee8d302182e520e",
-      "size": 93233
+      "path": "remote-ui/assets/index-B9ry6EBc.js",
+      "sha256": "5b99ec57d5cd699cae8895d5fa2ac442d9e6192c1df5489d4e3cf45f6ba928d3",
+      "size": 93343
     },
     {
       "path": "remote-ui/assets/index-E6jRBlli.css",
@@ -60,13 +60,13 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "41b4c2527e6a943063f7f772bc0d53fdc122366d8212114dbc7d0b447e8cc96b",
+      "sha256": "0018b825c65c24bf918dccb7e1655f9f7519809ff5f6a3e6f69bfb7d211d080f",
       "size": 2594
     },
     {
       "path": "ui/app.js",
-      "sha256": "aa6cdd508d17091a8c321f6341331134ba0268a4b4c1e540e5a995e9f99cf6e6",
-      "size": 93567
+      "sha256": "22216df97e98342363ba97b88b94754c53828cc0d2f04eaa2c52e66ff0f742a5",
+      "size": 95555
     },
     {
       "path": "ui/dragon.png",
@@ -95,8 +95,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "810c3187a552b0346bbe49f814fffa89359cdda3cc7e75bb4dfcdb776a4c0ef2",
-      "size": 26058
+      "sha256": "5331388121cf30ec90b29b910b60511a42e8d3e00d13d4417ac03dabb060ee67",
+      "size": 26165
     },
     {
       "path": "ui/motion.css",

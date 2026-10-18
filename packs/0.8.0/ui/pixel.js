@@ -232,8 +232,16 @@
     });
   }
 
+  // ------------------------------------------------------------------ games (the Games tab on both apps)
+  // A game without an icon gets a pixel monogram in one of the four colors (always the same for the same app).
+  const monogram = (name, pkg) => '<b class="mono c' + [...String(pkg)].reduce((n, c) => n + c.charCodeAt(0), 0) % 4 + '">' + esc((String(name).match(/[A-Za-z0-9]/) || ['?'])[0].toUpperCase()) + '</b>';
+  // Earnings per unit, never added across units: earned (confirmed or received) and on the way (claimed or pending).
+  const earnings = units => Object.entries(units || {}).map(([unit, r]) => ({unit, earned: (r.confirmed || 0) + (r.received || 0), coming: (r.claimed || 0) + (r.pending || 0), offered: r.offered || 0, unknown: r.unknownAmounts || 0}));
+  const num = v => Number.isInteger(v) ? v.toLocaleString() : v.toFixed(2);
+  const earnLine = units => earnings(units).filter(e => e.earned || e.coming).map(e => e.earned ? num(e.earned) + ' ' + e.unit + (e.coming ? ' (+' + num(e.coming) + ')' : '') : '+' + num(e.coming) + ' ' + e.unit + ' on the way').join(' · ');
+
   // Pause idle loops while the window or tab is hidden.
   document.addEventListener('visibilitychange', () => document.documentElement.classList.toggle('idle-off', document.hidden));
 
-  window.Pixel = {MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced};
+  window.Pixel = {MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced, monogram, earnings, num, earnLine};
 })();
