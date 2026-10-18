@@ -52,6 +52,11 @@ var CALLS = [
   "appIcon",
   "openApp",
   "setAds",
+  "captureOffer",
+  "installedApps",
+  "saveOffer",
+  "tickOffer",
+  "removeOffer",
   "chatThreads",
   "chatRead",
   "chatNew",
@@ -60,7 +65,8 @@ var CALLS = [
   "chatRename",
   "chatPin",
   "chatDelete",
-  "chatFocus"
+  "chatFocus",
+  "sandbox"
 ];
 import_electron.contextBridge.exposeInMainWorld("hub", {
   call: (name, args) => {

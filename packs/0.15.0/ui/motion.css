@@ -136,3 +136,23 @@ canvas.intro.out { animation: fadeout .32s steps(6) forwards; } @keyframes fadeo
 .objs { list-style: none; margin: 0 0 8px; padding: 0; font-size: 13px; } .objs li { padding: 2px 0; }
 .lvbar { display: flex; gap: 2px; margin-top: 6px; max-width: 360px; } .lvbar i { flex: 1; height: 6px; background: rgba(255,255,255,.1); } .lvbar i.on { background: #5CE59A; }
 @media (max-width: 520px) { .rhist li { grid-template-columns: auto auto 1fr; } .rhist li .muted { grid-column: 1 / -1; } }
+
+/* Offers from earning apps (both apps). */
+.offer { border: 1px solid rgba(255,255,255,.10); border-radius: 6px; padding: 10px 12px; display: grid; gap: 6px; }
+.offer + .offer { margin-top: 8px; }
+.ounit { font-size: 13px; } .ounit b { color: #5CE59A; font-size: 16px; } .ounit .rbar { display: flex; height: 6px; background: rgba(255,255,255,.08); margin-top: 4px; } .ounit .rbar i { display: block; } .ounit .rbar i.c { background: #5CE59A; }
+.mstones { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.mstones li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; font-size: 13px; }
+.mstones li.done span { color: rgba(237,237,237,.58); text-decoration: line-through; } .mstones li b { font-weight: 400; color: #5CE59A; white-space: nowrap; }
+.mstones li em { grid-column: 1 / -1; font-style: normal; font-size: 11px; } .mstones label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+
+/* Sandbox blocks (both apps): a dropped block clicks in while its slot opens in 4 steps, the connector flashes green;
+   the step being run glows with a scanline; done steps tick, a failed one flashes red. */
+.blk.dropin { animation: dropin .24s steps(4) both; } @keyframes dropin { 0% { transform: translateY(-10px) scaleX(.4); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.dz.flash::before, .dz.flash { animation: zflash .5s steps(2) 2; } @keyframes zflash { 0%, 49% { border-top-color: #5CE59A; } 50%, 100% { border-top-color: transparent; } }
+.blk.now { border-color: #F5B544; box-shadow: 0 0 0 1px #F5B544, 0 0 12px rgba(245,181,68,.35); overflow: hidden; }
+.blk.now::after { content: ''; position: absolute; left: 0; right: 0; height: 2px; background: rgba(245,181,68,.6); animation: scan 1.2s steps(8) infinite; } @keyframes scan { from { top: 0; } to { top: 100%; } }
+.blk.done::before { content: ''; position: absolute; right: 3px; top: 3px; width: 6px; height: 3px; border: solid #5CE59A; border-width: 0 0 2px 2px; transform: rotate(-45deg); animation: rise .2s steps(3) both; }
+.blk.fail { border-color: #F0544F; animation: failflash .6s steps(2) 3; } @keyframes failflash { 0%, 49% { background: rgba(240,84,79,.25); } 50%, 100% { background: transparent; } }
+.pin.drop { animation: pindrop .2s steps(4) both; } @keyframes pindrop { from { transform: translateY(-12px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .blk.dropin, .dz.flash, .blk.now::after, .blk.done::before, .blk.fail, .pin.drop { animation: none !important; } }

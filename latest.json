@@ -1,17 +1,17 @@
 {
-  "version": "0.14.0",
-  "notes": "Custom tasks. In Teach Falcor, tick \"Save it as a custom task\", do the task once on the mirror and press Stop: the phone goes back to its home screen and the task waits in Tasks with its steps in plain words. Once you approve it, Autopilot repeats those taps round after round (once or every day). It closes pop-ups in the way, finds its place again and goes Home when done.",
-  "publishedAt": "2026-10-18T02:26:12.953Z",
+  "version": "0.15.0",
+  "notes": "Sandbox: build your own phone routines from blocks on the live mirror (tap, swipe, wait, loops, checks), record them with Teach, test, run and schedule them, also from the phone app. New ouroboros icon for the next installer.",
+  "publishedAt": "2026-10-18T03:25:44.502Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "e60c788f742b51b2ef520f64fe8e277b26ddab54ac2d5882c89d07c5ea553521",
-      "size": 595096
+      "sha256": "718e12d9f310d56370ca320b6ee8a553876e1a822e35e2653a527e4eb380289b",
+      "size": 721062
     },
     {
       "path": "dist/preload.js",
-      "sha256": "f152e27d6158759f173e01eae9ae21d763b970a1bb06ed8e429ad51d99b0a37e",
-      "size": 1435
+      "sha256": "49ad31d442a145e16d69951e26e37546ee896fce9a481d4afba89056351deb36",
+      "size": 1448
     },
     {
       "path": "remote-ui/assets/esm-B7fXffpm.js",
@@ -24,14 +24,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-C1gcBFWl.css",
-      "sha256": "4fec841a1113b2e038fce3ad28ab2dc969b9a2f025106351f5c33dfb7a3e2c9f",
-      "size": 24504
+      "path": "remote-ui/assets/index-D_WPm9j_.js",
+      "sha256": "a0a62426399464360e7c43d436e68132b0a66d75f30d7efd9957b7b0ec71f511",
+      "size": 118755
     },
     {
-      "path": "remote-ui/assets/index-D1lbXBvJ.js",
-      "sha256": "b29b8a2a36dcdafbaa7a1dcca3a44861f834f5348150ee73b447e2e4d0037b6a",
-      "size": 98182
+      "path": "remote-ui/assets/index-YGkSH5sM.css",
+      "sha256": "2920bdc52e70b8dbb3a5c9214436bcc16483409645a6d511cace823bcf694bf6",
+      "size": 29079
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -55,18 +55,18 @@
     },
     {
       "path": "remote-ui/icon.png",
-      "sha256": "c347fcaa994d1660a9313487cbf2f8ce205734bef14fd4b192dbd3ddf7ecf19e",
-      "size": 184066
+      "sha256": "77ebee6c9a57fff6b7807a76da322ecee830e0ae590545b1364fe867199ebe05",
+      "size": 5353
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "e365cc19627adfcb6c2af2a466c30abd5df0dcceee5b62d1e12c76a26a000073",
-      "size": 2594
+      "sha256": "32cf8620f5bf696251949bcbceba9f73ae468121267830d8f6f2cd5dcb41a9a5",
+      "size": 2692
     },
     {
       "path": "ui/app.js",
-      "sha256": "1d13d19e5bd09e5230bfc6f3b044abbe26e8e1b0872356afb5c50137ced28248",
-      "size": 104619
+      "sha256": "d9f7f9d85ba148b23b5ea6fda98a547fb4f494971a212446d86f1d6ee0e1d742",
+      "size": 106642
     },
     {
       "path": "ui/dragon.png",
@@ -95,23 +95,28 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "b4db7eda344428af71ca7be37c4204c6a2408d887cf96def9a8eea7a3d082dc7",
-      "size": 29303
+      "sha256": "b3dcfa4ce621473544df2ff7cdc1dc197bcc61c747977174ec1aa3e494d283de",
+      "size": 36470
     },
     {
       "path": "ui/motion.css",
-      "sha256": "351263b3d36f8116fcc3411b69b887e6317a578d5e21d02750ae939ff12fe943",
-      "size": 14286
+      "sha256": "0ac4aba7e67fc37b34eb4dd5c5e230939c6e029c8c350cb9f29f8d29e5784903",
+      "size": 15889
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "5741dbf132fc77590a87e04a942772aa2a9a989c377e38a31dcef6b60f24c98c",
-      "size": 31824
+      "sha256": "bbc98704a95e1a3930face3e7f5c61cace779a69d896c66c1a1af91c6d900f61",
+      "size": 34897
+    },
+    {
+      "path": "ui/sandbox.js",
+      "sha256": "f704cadab95f290e7aa6a0b8c74b0c75c0880db702fe826cd73eb8c6b1fbd9e0",
+      "size": 95453
     },
     {
       "path": "ui/style.css",
-      "sha256": "07ec67b79b0ede34e29076741d6432af0dfdd1f15df9ec91a43f666c7afbb604",
-      "size": 36334
+      "sha256": "204e8da8d3452cd6380fd994f83677ceb25baaceb0e2973f9e7c4fd31f4b7ed3",
+      "size": 49302
     }
   ]
 }

@@ -23,12 +23,13 @@
 <div class="noticebar" id="notice" hidden><span class="led on"></span><span id="noticetext"></span><button class="primary" id="updatebtn">Restart to update</button></div>
 <nav class="tabs" id="tabs">
   <button data-tab="phone" title="Key 1" class="on"><svg class="ico"><use href="#i-phone"></use></svg>Phone</button>
-  <button data-tab="games" title="Key 2"><svg class="ico"><use href="#i-game"></use></svg>Games</button>
-  <button data-tab="tasks" title="Key 3"><svg class="ico"><use href="#i-tasks"></use></svg>Tasks<span class="badge" id="badge-tasks" hidden></span></button>
-  <button data-tab="falcor" title="Key 4"><img class="tabdragon" src="dragon.png" alt="">Falcor<span class="badge" id="badge-falcor" hidden></span></button>
-  <button data-tab="knowledge" title="Key 5"><svg class="ico"><use href="#i-book"></use></svg>Knowledge</button>
-  <button data-tab="stats" title="Key 6"><svg class="ico"><use href="#i-stats"></use></svg>Stats</button>
-  <button data-tab="settings" title="Key 7"><svg class="ico"><use href="#i-settings"></use></svg>Settings</button>
+  <button data-tab="sandbox" title="Key 2"><svg class="ico"><use href="#i-sandbox"></use></svg>Sandbox<span class="badge" id="badge-sandbox" hidden></span></button>
+  <button data-tab="games" title="Key 3"><svg class="ico"><use href="#i-game"></use></svg>Games</button>
+  <button data-tab="tasks" title="Key 4"><svg class="ico"><use href="#i-tasks"></use></svg>Tasks<span class="badge" id="badge-tasks" hidden></span></button>
+  <button data-tab="falcor" title="Key 5"><img class="tabdragon" src="dragon.png" alt="">Falcor<span class="badge" id="badge-falcor" hidden></span></button>
+  <button data-tab="knowledge" title="Key 6"><svg class="ico"><use href="#i-book"></use></svg>Knowledge</button>
+  <button data-tab="stats" title="Key 7"><svg class="ico"><use href="#i-stats"></use></svg>Stats</button>
+  <button data-tab="settings" title="Key 8"><svg class="ico"><use href="#i-settings"></use></svg>Settings</button>
   <span class="tabline" id="tabline"></span>
 </nav>
 
@@ -51,24 +52,8 @@
         </ul>
       </details>
     </div>
-    <div class="teachstrip" id="rec" hidden>
-          <span class="led rec"></span><b id="rectitle">TEACHING</b><span class="timer" id="rectime">0:00</span><span class="muted small" id="recinfo"></span>
-          <span class="grow"></span>
-          <form class="markform" id="markform"><input id="marknote" placeholder="Note (optional)" maxlength="200" autocomplete="off"><button class="icon" title="Mark this moment"><svg class="ico"><use href="#i-flag"></use></svg></button></form>
-          <button class="icon" id="recpause" title="Pause"><svg class="ico"><use href="#i-pause"></use></svg></button>
-          <button class="icon danger" id="recstop" title="Stop and save"><svg class="ico"><use href="#i-stop"></use></svg></button>
-        </div>
     <div class="phonegrid" id="phonegrid" hidden>
       <div class="sidecol leftcol" id="sidecol">
-        <form class="panel teachform rise" id="teachform" hidden>
-          <p class="eyebrow">// TEACH FALCOR</p>
-          <h2>Teach Falcor</h2>
-          <p class="muted small">Play the app here on the mirror. Falcor records the screens, their text and where you touch. Password, card, ID and code screens are never recorded.</p>
-          <p class="small">App in front: <b id="teachapp"></b> <code id="teachpkg"></code></p>
-          <label>Call it<input id="teachname" maxlength="80" required></label>
-          <label>What are you about to show? (optional)<input id="teachintent" maxlength="300" placeholder="e.g. the daily check-in, how to finish a level"></label>
-          <div class="row"><button class="primary"><svg class="ico"><use href="#i-rec"></use></svg>Start recording</button><button type="button" id="teachcancel">Cancel</button></div>
-        </form>
         <div class="panel" id="devicepanel">
           <p class="eyebrow">// DEVICE</p>
           <div class="top"><h2><svg class="ico"><use href="#i-phone"></use></svg><span id="devname">Phone</span></h2><span class="state" id="devstate"><span class="led"></span><span></span></span></div>
@@ -90,7 +75,7 @@
             <span class="speaker"></span>
             <div class="screen" id="mirrorbox" tabindex="0">
               <img id="mirror" alt="The phone's screen" draggable="false"><canvas id="video" hidden></canvas>
-              <div class="overlay" id="overlay"></div>
+              <div class="overlay" id="overlay"></div><div class="sbpins" id="sbpins" hidden></div><span class="offtag" id="offtag" hidden>OFFLINE REFERENCE</span>
               <div class="privacy" id="privacy" hidden><svg class="ico big"><use href="#i-lock"></use></svg><b>Private screen</b><span id="privacywhy">Not shown and not recorded</span></div>
               <div class="waiting" id="mirrorwait"><span class="load10"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="muted small">Waiting for the phone's screen…</span></div>
             </div>
@@ -119,10 +104,126 @@
     </div>
   </section>
 
+  <!-- SANDBOX -->
+  <section data-pane="sandbox" class="pane sandbox" hidden>
+    <div class="sbhead" id="sbhead">
+      <div class="sbname"><svg class="ico"><use href="#i-sandbox"></use></svg><input id="sbtitle" maxlength="80" placeholder="No sequence open" aria-label="Sequence name"><span class="dirty" id="sbdirty" title="Unsaved changes" hidden></span><span class="muted small" id="sbrev"></span></div>
+      <select id="sbdev" title="The phone it runs on"></select>
+      <span class="grow"></span>
+      <div class="sbacts">
+        <button class="small" id="sbnew" title="New sequence (Ctrl+N)"><svg class="ico"><use href="#i-plus"></use></svg>New</button>
+        <button class="small" id="sbopen" title="My sequences (Ctrl+O)"><svg class="ico"><use href="#i-book"></use></svg>Open</button>
+        <button class="small" id="sbsave" title="Save a new version (Ctrl+S)"><svg class="ico"><use href="#i-check"></use></svg>Save</button>
+        <button class="small" id="sbsaveas" title="Save as a new sequence">Save As</button>
+        <button class="small icon" id="sbundo" title="Undo (Ctrl+Z)"><svg class="ico"><use href="#i-undo"></use></svg></button>
+        <button class="small icon" id="sbredo" title="Redo (Ctrl+Y)"><svg class="ico"><use href="#i-redo"></use></svg></button>
+        <span class="sep"></span>
+        <button class="small" id="sbtest" title="Run only the selected step (T)"><svg class="ico"><use href="#i-target"></use></svg>Test step</button>
+        <button class="small" id="sbpreview" title="Run it once while you watch, labelled as a preview"><svg class="ico"><use href="#i-eye"></use></svg>Preview</button>
+        <button class="small primary" id="sbstart" title="Save and run (Ctrl+Enter)"><svg class="ico"><use href="#i-play"></use></svg>Start</button>
+        <button class="small" id="sbpause" hidden><svg class="ico"><use href="#i-pause"></use></svg>Pause</button>
+        <button class="small" id="sbskip" title="Skip the step it waits on" hidden>Skip</button>
+        <button class="small" id="sbafter" title="Finish the group or loop it is in, then stop" hidden>Stop after group</button>
+        <button class="small danger" id="sbstop" title="Stop the run" hidden><svg class="ico"><use href="#i-stop"></use></svg>Stop</button>
+        <span class="sep"></span>
+        <button class="small icon" id="sbsched" title="Schedule"><svg class="ico"><use href="#i-calendar"></use></svg></button>
+        <button class="small icon" id="sbprefs" title="Sandbox settings"><svg class="ico"><use href="#i-settings"></use></svg></button>
+        <button class="small icon" id="sbhelp" title="Help and shortcuts (?)"><svg class="ico"><use href="#i-help"></use></svg></button>
+      </div>
+    </div>
+    <div class="teachstrip" id="rec" hidden>
+          <span class="led rec"></span><b id="rectitle">TEACHING</b><span class="timer" id="rectime">0:00</span><span class="muted small" id="recinfo"></span>
+          <span class="grow"></span>
+          <form class="markform" id="markform"><input id="marknote" placeholder="Note (optional)" maxlength="200" autocomplete="off"><button class="icon" title="Mark this moment"><svg class="ico"><use href="#i-flag"></use></svg></button></form>
+          <button class="icon" id="recpause" title="Pause"><svg class="ico"><use href="#i-pause"></use></svg></button>
+          <button class="icon danger" id="recstop" title="Stop and save"><svg class="ico"><use href="#i-stop"></use></svg></button>
+        </div>
+    <div class="sbgrid" id="sbgrid">
+      <aside class="panel sblib" id="sblib">
+        <div class="top"><p class="eyebrow">// BLOCKS</p><button class="ghost small icon" id="sblibfold" title="Fold the library"><svg class="ico"><use href="#i-chevron"></use></svg></button></div>
+        <input id="sblibq" placeholder="Search blocks" autocomplete="off">
+        <div class="cats" id="sbcats"></div>
+        <div class="liblist" id="sbliblist"></div>
+      </aside>
+      <div class="sbcenter">
+        <div class="sbmodes">
+          <div class="seg" id="sbmodes">
+            <button data-mode="view" class="on" title="Look only (V)"><svg class="ico"><use href="#i-eye"></use></svg>View</button>
+            <button data-mode="control" title="Touch the phone yourself (C)"><svg class="ico"><use href="#i-control"></use></svg>Control</button>
+            <button data-mode="target" title="Click the mirror to set the selected step's point (P)"><svg class="ico"><use href="#i-target"></use></svg>Pick target</button>
+            <button data-mode="gesture" title="Drag on the mirror to draw a swipe or path (G)"><svg class="ico"><use href="#i-swipe"></use></svg>Pick gesture</button>
+            <button data-mode="teach" title="Record what you do as blocks (R)"><svg class="ico"><use href="#i-rec"></use></svg>Teach</button>
+            <button data-mode="run" title="A run is playing" disabled><svg class="ico"><use href="#i-play"></use></svg>Run</button>
+          </div>
+          <div class="sbchips" id="sbchips"></div>
+          <span class="grow"></span>
+          <button class="small icon" data-sbkey="BACK" title="Back"><svg class="ico"><use href="#i-back"></use></svg></button>
+          <button class="small icon" data-sbkey="HOME" title="Home"><svg class="ico"><use href="#i-home"></use></svg></button>
+          <button class="small icon" data-sbkey="APP_SWITCH" title="Recent apps"><svg class="ico"><use href="#i-apps"></use></svg></button>
+          <button class="small icon" id="sbgridbtn" title="Grid over the mirror"><svg class="ico"><use href="#i-grid"></use></svg></button>
+        </div>
+        <div class="sbstage" id="sbstage"><div class="sbempty" id="sbnophone" hidden><svg class="ico big"><use href="#i-usb"></use></svg><b>No phone</b><span class="muted small">Plug in the phone (see the Phone tab). You can still build a sequence.</span></div></div>
+        <p class="hint" id="sbhint"></p>
+      </div>
+      <aside class="panel sbinsp" id="sbinsp">
+        <form class="panel teachform sbsheetpanel rise" id="teachform" hidden>
+          <p class="eyebrow">// TEACH FALCOR</p>
+          <h2>Teach Falcor</h2>
+          <p class="muted small">Play the app here on the mirror. Falcor records the screens, their text and where you touch. Password, card, ID and code screens are never recorded.</p>
+          <p class="small">App in front: <b id="teachapp"></b> <code id="teachpkg"></code></p>
+          <label>Call it<input id="teachname" maxlength="80" required></label>
+          <label>What are you about to show? (optional)<input id="teachintent" maxlength="300" placeholder="e.g. the daily check-in, how to finish a level"></label>
+          <label class="check"><input type="checkbox" id="teachcustom"> Save it as a custom task: Falcor repeats these taps until it ends the way you show</label>
+          <div class="customopts" id="customopts" hidden>
+            <div class="row"><label>Rounds<input id="customtimes" type="number" min="1" max="50" value="1"></label><label>Runs<select id="customrepeat"><option value="once">once</option><option value="daily">every day</option></select></label></div>
+            <label>Stop early when the screen says (optional)<input id="customuntil" maxlength="80" placeholder="e.g. No energy left"></label>
+            <label class="check"><input type="checkbox" id="customhome" checked> Go back to the phone's home screen when done</label>
+          </div>
+          <div class="sbinto" id="teachsb" hidden>
+            <label class="check"><input type="checkbox" id="teachsbon" checked> Add what I show to <b id="teachsbname"></b> as blocks</label>
+            <div class="row"><label class="check"><input type="checkbox" id="teachsblaunch" checked> Start by opening the app</label><label class="check"><input type="checkbox" id="teachsbwaits"> Keep my pauses as Wait blocks</label><label class="check"><input type="checkbox" id="teachsbcheck" checked> End with a check of the last screen</label></div>
+          </div>
+          <div class="row"><button class="primary"><svg class="ico"><use href="#i-rec"></use></svg>Start recording</button><button type="button" id="teachcancel">Cancel</button></div>
+        </form>
+        <div class="top"><p class="eyebrow" id="sbinsptitle">// SEQUENCE</p><div class="seg" id="sbinsptabs"><button data-t="basic" class="on">Basic</button><button data-t="advanced">Advanced</button></div></div>
+        <div class="inspbody" id="sbinspbody"></div>
+      </aside>
+    </div>
+    <div class="panel sbtl" id="sbtl">
+      <div class="top">
+        <div class="seg" id="sbviews"><button data-v="flow" class="on">Flow</button><button data-v="tree">Tree</button><button data-v="log">Run log</button></div>
+        <span class="muted small" id="sbsum"></span>
+        <span class="grow"></span>
+        <div class="sbrun" id="sbrun" hidden><span class="led"></span><b id="sbrunstate"></b><span class="muted small" id="sbrunstep"></span><span class="muted small timer" id="sbruntime"></span></div>
+      </div>
+      <div class="steps flow" id="sbsteps" tabindex="0"></div>
+      <div class="runlog" id="sblog" hidden></div>
+    </div>
+  </section>
+
   <!-- GAMES -->
   <section data-pane="games" class="pane" hidden>
     <div id="gamesview">
-      <div class="toolrow"><div><p class="eyebrow">// GAMES</p><h2>Your games and challenges</h2></div><span class="grow"></span><button class="primary" id="gamenew"><svg class="ico"><use href="#i-plus"></use></svg>New task</button></div>
+      <div class="toolrow"><div><p class="eyebrow">// GAMES</p><h2>Your games and challenges</h2></div><span class="grow"></span><button id="offeradd"><svg class="ico"><use href="#i-reward"></use></svg>Add offer</button><button class="primary" id="gamenew"><svg class="ico"><use href="#i-plus"></use></svg>New task</button></div>
+      <form class="panel offerform" id="offerform" hidden>
+        <p class="eyebrow">// OFFER FROM AN EARNING APP</p>
+        <div class="row" id="offerstart"><button type="button" class="primary" id="offercapture"><svg class="ico"><use href="#i-eye"></use></svg>Capture from the phone</button><button type="button" id="offerhand"><svg class="ico"><use href="#i-edit"></use></svg>Enter by hand</button><span class="muted small">Open the game's offer in your earning app on the phone, then Capture. Mistplay's screen is not read: enter its offers by hand.</span></div>
+        <div id="offerfields" hidden>
+          <p class="muted small" id="offerwhere"></p>
+          <div class="grid">
+            <label>Earning app<input name="source" maxlength="60" required placeholder="Mistplay, Coin Quest…"></label>
+            <label>Game<input name="game" maxlength="80" required></label>
+            <label>Game app on the phone<select name="pkg"></select></label>
+            <label>Ends in (days)<input name="days" type="number" min="0" max="365" step="any" placeholder="optional"></label>
+            <label>The app says: up to<input name="total" type="number" min="0" step="any" placeholder="optional"></label>
+            <label>Unit<input name="totalunit" maxlength="24" placeholder="points, coins, usd"></label>
+          </div>
+          <p class="eyebrow" data-gap>// MILESTONES</p>
+          <div class="mrows" id="offerrows"></div>
+          <div class="row"><button type="button" class="small ghost" id="offerrow"><svg class="ico"><use href="#i-plus"></use></svg>Milestone</button></div>
+          <div class="row"><button class="primary" id="offersave">Save offer</button><button type="button" id="offercancel">Cancel</button></div>
+        </div>
+      </form>
       <div class="gamegrid" id="gamegrid"></div>
     </div>
     <div class="gamepage" id="gamepage" hidden>
@@ -139,6 +240,7 @@
         </div>
       </div>
       <div class="tiles gtiles" id="gptiles"></div>
+      <div class="panel" id="gpofferbox" hidden><p class="eyebrow">// OFFERS FROM EARNING APPS</p><div id="gpoffers"></div></div>
       <div class="panel"><p class="eyebrow">// TOTAL EARNINGS</p><p class="muted small">Per unit, never added across units. Collected means the game showed it claimed or credited; pending means the game says it is on its way.</p><div id="gpearn"></div></div>
       <div class="panel"><p class="eyebrow">// CHALLENGES</p><div class="tasklist" id="gptasks"></div></div>
       <div class="panel"><p class="eyebrow">// REWARD TRACKER</p><div id="gphist"></div></div>
@@ -313,14 +415,17 @@
   <div class="panel costpanel">
     <p class="eyebrow">// WRITE THE GUIDE</p>
     <h2>Guide for <span id="aftername"></span></h2>
+    <p class="small learned" id="afterlearned" hidden></p>
     <div id="afterbody"><p class="small" id="afterest">Working out what it costs…</p><div class="meter" id="aftermeter"></div></div>
     <div class="thinkingbox" id="afterwork" hidden><span class="load10"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span id="afterworktext">Falcor is studying the screens…</span></div>
     <div class="row"><button class="primary" id="afterfull"><svg class="ico"><use href="#i-ai"></use></svg>Write guide</button><button id="aftertext">Text only (cheaper)</button><button id="afterlocal" title="Free: built on this computer from the recording, no AI">Save without AI</button><span class="grow"></span><button id="afterclose">Cancel</button></div>
   </div>
 </div>
+<div class="modal sbsheet" id="sbsheet" hidden><div class="panel sheetbody" id="sbsheetbody"></div></div>
 <footer class="statusbar" id="statusbar"></footer>
 <div class="toasts" id="toasts"></div>
 <script src="pixel.js"></script>
 <script src="app.js"></script>
+<script src="sandbox.js"></script>
 </body>
 </html>

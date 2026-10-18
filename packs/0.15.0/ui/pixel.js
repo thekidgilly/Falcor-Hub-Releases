@@ -48,6 +48,21 @@
     gem: ['............', '..########..', '.#..#..#..#.', '############', '#...#..#...#', '.#..#..#..#.', '..#.#..#.#..', '...##..##...', '....#..#....', '.....##.....', '............', '............'],
     cash: ['............', '############', '#..........#', '#.#..##..#.#', '#...#..#...#', '#...#..#...#', '#.#..##..#.#', '#..........#', '############', '............', '............', '............'],
     gift: ['...##..##...', '..#..##..#..', '############', '#....##....#', '############', '.#....#...#.', '.#....#...#.', '.#....#...#.', '.#....#...#.', '.#....#...#.', '.##########.', '............'],
+    sandbox: ['....####....', '...#....#...', '..#..##..#..', '.#..#..#..#.', '#..#....#..#', '#.#..##..#.#', '#.#..##..#.#', '#..#....#..#', '.#..#..#..#.', '..#..##..#..', '...#....#...', '....####....'],
+    swipe: ['............', '.........#..', '.........##.', '############', '.........##.', '.........#..', '............', '..#.........', '.##.........', '############', '.##.........', '..#.........'],
+    wait: ['############', '.#........#.', '.#........#.', '..#......#..', '...#....#...', '....#..#....', '....#..#....', '...#.##.#...', '..#.####.#..', '.#.######.#.', '.#.######.#.', '############'],
+    loop: ['....####....', '..##....##..', '.#........#.', '.#.........#', '#.........##', '#.........#.', '#...........', '#..........#', '.#........#.', '.#........#.', '..##....##..', '....####....'],
+    branch: ['..##........', '..##........', '..##.....##.', '..##.....##.', '..##....##..', '..##...##...', '..##..##....', '..##.##.....', '..####......', '..###.......', '..##........', '..##........'],
+    camera: ['............', '....####....', '.##########.', '#..........#', '#...####...#', '#..#....#..#', '#..#.##.#..#', '#..#.##.#..#', '#..#....#..#', '#...####...#', '#..........#', '.##########.'],
+    var: ['............', '..##....##..', '.#........#.', '.#.#...#..#.', '.#..#.#...#.', '#....#.....#', '#....#.....#', '.#..#.#...#.', '.#.#...#..#.', '.#........#.', '..##....##..', '............'],
+    undo: ['............', '...#........', '..##........', '.#########..', '..##......#.', '...#.......#', '...........#', '...........#', '..........#.', '.....#####..', '............', '............'],
+    redo: ['............', '........#...', '........##..', '..#########.', '.#......##..', '#.......#...', '#...........', '#...........', '.#..........', '..#####.....', '............', '............'],
+    star: ['.....##.....', '.....##.....', '....####....', '....####....', '############', '.##########.', '..########..', '...######...', '..########..', '..###..###..', '.###....###.', '.##......##.'],
+    calendar: ['..#.....#...', '############', '#..........#', '############', '#..........#', '#.##.##.##.#', '#.##.##.##.#', '#..........#', '#.##.##.##.#', '#.##.##.##.#', '#..........#', '############'],
+    target: ['.....##.....', '...######...', '..#..##..#..', '.#...##...#.', '.#..####..#.', '######..####', '######..####', '.#..####..#.', '.#...##...#.', '..#..##..#..', '...######...', '.....##.....'],
+    help: ['...######...', '..##....##..', '.##......##.', '.......##...', '......##....', '.....##.....', '.....##.....', '.....##.....', '............', '.....##.....', '.....##.....', '............'],
+    copy: ['.#######....', '.#.....#....', '.#..#######.', '.#..#.....#.', '.#..#.....#.', '.#..#.....#.', '.####.....#.', '....#.....#.', '....#.....#.', '....#.....#.', '....#######.', '............'],
+    grid: ['#..#..#..#..', '............', '............', '#..#..#..#..', '............', '............', '#..#..#..#..', '............', '............', '#..#..#..#..', '............', '............'],
   };
   const pathOf = rows => { let d = ''; rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] === '#') { let w = 1; while (r[x + w] === '#') w++; d += 'M' + (x + 2) + ' ' + (y + 2) + 'h' + w + 'v1h-' + w + 'z'; x += w - 1; } }); return d; };
   // The sprite: one <symbol> per icon. Use with icon('stop').
@@ -240,11 +255,23 @@
   const num = v => Number.isInteger(v) ? v.toLocaleString() : Number(v).toFixed(2);
   const unitIcon = u => /coin|gold/i.test(u) ? 'coin' : /gem|diamond/i.test(u) ? 'gem' : /cash|usd|\$|dollar/i.test(u) ? 'cash' : /gift/i.test(u) ? 'gift' : 'reward';
   const day = at => new Date(at).toLocaleDateString([], {month: 'short', day: 'numeric'}) + ' ' + new Date(at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-  // A tile's one line: what it collected, else what is pending, else what it offers.
+  // A tile's one line: what it collected, else an earning app's offer (collected of possible), else what is pending,
+  // else what its challenges offer.
   const earnLine = g => {
-    const r = g.rewards || [], got = r.filter(x => x.collected), wait = r.filter(x => x.pending);
-    return got.length ? got.map(x => num(x.collected) + ' ' + x.unit).join(' · ') : wait.length ? wait.map(x => '+' + num(x.pending) + ' ' + x.unit + ' pending').join(' · ') : Object.entries(g.offers || {}).map(([u, a]) => 'offers ' + num(a) + ' ' + u).join(' · ');
+    const r = g.rewards || [], got = r.filter(x => x.collected), wait = r.filter(x => x.pending), offer = (g.earning || [])[0];
+    return got.length ? got.map(x => num(x.collected) + ' ' + x.unit).join(' · ')
+      : offer ? 'via ' + offer.source.name + (offer.progress.units[0] ? ' · ' + num(offer.progress.units[0].collected) + ' / ' + num(offer.progress.units[0].possible) + ' ' + offer.progress.units[0].unit : '')
+      : wait.length ? wait.map(x => '+' + num(x.pending) + ' ' + x.unit + ' pending').join(' · ') : Object.entries(g.offers || {}).map(([u, a]) => 'offers ' + num(a) + ' ' + u).join(' · ');
   };
+  // Offers from earning apps: where from, what each milestone pays, what is done, the earnings so far and the deadline.
+  // Each milestone's box ticks it done (data-offer, data-i); edit: Edit and Remove buttons (the computer).
+  const ends = at => { const d = Math.round((at - Date.now()) / 86_400_000), h = Math.round((at - Date.now()) / 3_600_000); return at < Date.now() ? '<span class="red">ended</span>' : d >= 2 ? 'ends in ' + d + ' days' : 'ends in ' + Math.max(1, h) + ' h'; };
+  const offersHtml = (g, edit) => (g.earning || []).map(o => '<div class="offer"><div class="top"><b>via ' + esc(o.source.name) + '</b><span class="muted small">' + (o.manual ? '<span class="pill sand">you play it</span> ' : '') + (o.expiresAt ? ends(o.expiresAt) + ' · ' : '') + o.progress.done + ' of ' + o.progress.of + ' done</span></div>'
+    + o.progress.units.map(u => '<div class="ounit">' + icon(unitIcon(u.unit)) + ' <b>' + num(u.collected) + '</b> of ' + num(u.possible) + ' ' + esc(u.unit) + '<span class="rbar"><i class="c" data-style="flex:' + u.collected + '"></i><i data-style="flex:' + Math.max(0, u.possible - u.collected) + '"></i></span></div>').join('')
+    + (o.total ? '<p class="muted small">The app says: up to ' + num(o.total.amount) + ' ' + esc(o.total.unit) + '</p>' : '')
+    + '<ul class="mstones">' + o.milestones.map((m, i) => '<li class="' + (m.done ? 'done' : '') + '"><label><input type="checkbox" data-offer="' + esc(o.id) + '" data-i="' + i + '"' + (m.done ? ' checked' : '') + '> <span>' + esc(m.text) + '</span></label><b>' + (m.amount === null ? '' : num(m.amount) + ' ' + esc(m.unit)) + '</b>'
+      + (m.paid ? '<em class="sand">needs a purchase: yours to decide</em>' : m.reached ? '<em class="green">level seen: confirm it in ' + esc(o.source.name) + '</em>' : '') + '</li>').join('') + '</ul>'
+    + (edit ? '<div class="row"><button class="small" data-offer-edit="' + esc(o.id) + '">' + icon('edit') + 'Edit</button><button class="small danger" data-offer-remove="' + esc(o.id) + '">' + icon('trash') + 'Remove</button></div>' : '') + '</div>').join('');
   const rewardsHtml = g => (g.rewards || []).length ? '<div class="earns">' + g.rewards.map(x => '<div class="earn"><span class="u">' + icon(unitIcon(x.unit)) + ' ' + esc(x.unit) + '</span><b>' + num(x.collected) + '</b><span class="muted small">collected'
     + (x.pending ? ' · ' + num(x.pending) + ' pending' : '') + (x.offered ? ' · offer ' + num(x.offered) : '') + (x.unknown ? ' · ' + x.unknown + ' without an amount' : '') + '</span>'
     + '<span class="rbar">' + (x.collected + x.pending ? '<i class="c" data-style="flex:' + x.collected + '"></i><i class="p" data-style="flex:' + x.pending + '"></i>' : '<i></i>') + '</span></div>').join('') + '</div>'
@@ -260,5 +287,5 @@
   // Pause idle loops while the window or tab is hidden.
   document.addEventListener('visibilitychange', () => document.documentElement.classList.toggle('idle-off', document.hidden));
 
-  window.Pixel = {MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced, monogram, num, unitIcon, earnLine, rewardsHtml, historyHtml, tiersHtml, progressHtml};
+  window.Pixel = {MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced, monogram, num, unitIcon, earnLine, offersHtml, rewardsHtml, historyHtml, tiersHtml, progressHtml};
 })();
