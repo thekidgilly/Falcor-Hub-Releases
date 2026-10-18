@@ -1,12 +1,12 @@
 {
-  "version": "0.16.3",
-  "notes": "Capture game now reads the game's real title (not a category like \"Gaming\"), keeps the game's own icon from the offer page, reads the offer ID and the boosted total correctly, and links a store title like \"Word Pizza: Crossword Games\" to the installed app. Press Refresh offer on a game captured before to fix its name and picture.",
-  "publishedAt": "2026-10-18T22:08:48.044Z",
+  "version": "0.16.4",
+  "notes": "The Falcor.Hub shortcuts on your Desktop and Start menu now show the Falcor ouroboros icon, like the phone app (it changes the first time 0.16.4 starts).",
+  "publishedAt": "2026-10-18T22:16:16.323Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "6406c07a36664e646524af079782429b723c5ea1cd412a6ecef149e966b81f67",
-      "size": 838908
+      "sha256": "9d84d0023d96ee9fc92727671b254ada4f035460ad1f0c5a5b4ca62ab7c97fdd",
+      "size": 840134
     },
     {
       "path": "dist/preload.js",
@@ -69,9 +69,19 @@
       "size": 3756
     },
     {
+      "path": "ui/app.ico",
+      "sha256": "62e8a8aef198cedf95a47a1080d39488e28a747dc08949a4a55a46fa6abc8e33",
+      "size": 40679
+    },
+    {
       "path": "ui/app.js",
       "sha256": "bbc8acf5009f332e82122ef744d2b6bf4a3329799d3680f8dc75a67ea3612e41",
       "size": 125709
+    },
+    {
+      "path": "ui/app.png",
+      "sha256": "77ebee6c9a57fff6b7807a76da322ecee830e0ae590545b1364fe867199ebe05",
+      "size": 5353
     },
     {
       "path": "ui/boot-flight.png",
