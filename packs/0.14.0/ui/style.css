@@ -292,6 +292,8 @@ section[data-pane="falcor"] { height: 100%; display: flex; flex-direction: colum
 .history { display: grid; gap: var(--s2); } .history div { border-top: 1px solid var(--line); padding-top: var(--s2); font-size: var(--t13); }
 
 /* Games */
+.offerform { display: grid; gap: var(--s2); } .offerform .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2) var(--s3); }
+.mrows { display: grid; gap: var(--s1); } .mrow { display: grid; grid-template-columns: 1fr 140px 120px auto auto; gap: var(--s2); align-items: center; }
 .gamegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--s3); }
 .gametile { display: grid; justify-items: center; text-align: center; gap: var(--s1); padding: var(--s4) var(--s3); white-space: normal; font: inherit; background: var(--panel); border-radius: var(--r2); }
 .gametile:hover { border-color: var(--green); box-shadow: 0 0 0 1px var(--glow-green); }
@@ -320,3 +322,11 @@ section[data-pane="falcor"] { height: 100%; display: flex; flex-direction: colum
 .bars.nodata { position: relative; } .bars.nodata::after { content: 'No runs in the last 14 days yet.'; position: absolute; inset: 0 0 24px; display: grid; place-items: center; color: var(--muted); font-size: var(--t12); }
 .rightcol > .console { flex: 1; }
 .task .editor { grid-column: 2 / -1; }
+
+/* What a Teach session taught, shown when it ends. */
+.learned { border-left: 2px solid var(--green); padding: 6px 10px; margin: 0 0 10px; color: var(--text); }
+.learnedbox { border: 1px solid var(--line); border-left: 2px solid var(--green); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; }
+.learnedbox h3 { margin: 0 0 6px; font: 400 13px 'Departure Mono', monospace; display: flex; gap: 6px; align-items: center; }
+.learnedbox ul { margin: 0; padding-left: 18px; font-size: 12.5px; }
+.routine { margin-top: 6px; line-height: 1.5; }
+.customopts { border-left: 2px solid var(--green); padding-left: 10px; display: grid; gap: 8px; }

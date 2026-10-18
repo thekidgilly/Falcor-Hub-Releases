@@ -67,6 +67,12 @@
           <p class="small">App in front: <b id="teachapp"></b> <code id="teachpkg"></code></p>
           <label>Call it<input id="teachname" maxlength="80" required></label>
           <label>What are you about to show? (optional)<input id="teachintent" maxlength="300" placeholder="e.g. the daily check-in, how to finish a level"></label>
+          <label class="check"><input type="checkbox" id="teachcustom"> Save it as a custom task: Falcor repeats these taps until it ends the way you show</label>
+          <div class="customopts" id="customopts" hidden>
+            <div class="row"><label>Rounds<input id="customtimes" type="number" min="1" max="50" value="1"></label><label>Runs<select id="customrepeat"><option value="once">once</option><option value="daily">every day</option></select></label></div>
+            <label>Stop early when the screen says (optional)<input id="customuntil" maxlength="80" placeholder="e.g. No energy left"></label>
+            <label class="check"><input type="checkbox" id="customhome" checked> Go back to the phone's home screen when done</label>
+          </div>
           <div class="row"><button class="primary"><svg class="ico"><use href="#i-rec"></use></svg>Start recording</button><button type="button" id="teachcancel">Cancel</button></div>
         </form>
         <div class="panel" id="devicepanel">
@@ -122,7 +128,26 @@
   <!-- GAMES -->
   <section data-pane="games" class="pane" hidden>
     <div id="gamesview">
-      <div class="toolrow"><div><p class="eyebrow">// GAMES</p><h2>Your games and challenges</h2></div><span class="grow"></span><button class="primary" id="gamenew"><svg class="ico"><use href="#i-plus"></use></svg>New task</button></div>
+      <div class="toolrow"><div><p class="eyebrow">// GAMES</p><h2>Your games and challenges</h2></div><span class="grow"></span><button id="offeradd"><svg class="ico"><use href="#i-reward"></use></svg>Add offer</button><button class="primary" id="gamenew"><svg class="ico"><use href="#i-plus"></use></svg>New task</button></div>
+      <form class="panel offerform" id="offerform" hidden>
+        <p class="eyebrow">// OFFER FROM AN EARNING APP</p>
+        <div class="row" id="offerstart"><button type="button" class="primary" id="offercapture"><svg class="ico"><use href="#i-eye"></use></svg>Capture from the phone</button><button type="button" id="offerhand"><svg class="ico"><use href="#i-edit"></use></svg>Enter by hand</button><span class="muted small">Open the game's offer in your earning app on the phone, then Capture. Mistplay's screen is not read: enter its offers by hand.</span></div>
+        <div id="offerfields" hidden>
+          <p class="muted small" id="offerwhere"></p>
+          <div class="grid">
+            <label>Earning app<input name="source" maxlength="60" required placeholder="Mistplay, Coin Quest…"></label>
+            <label>Game<input name="game" maxlength="80" required></label>
+            <label>Game app on the phone<select name="pkg"></select></label>
+            <label>Ends in (days)<input name="days" type="number" min="0" max="365" step="any" placeholder="optional"></label>
+            <label>The app says: up to<input name="total" type="number" min="0" step="any" placeholder="optional"></label>
+            <label>Unit<input name="totalunit" maxlength="24" placeholder="points, coins, usd"></label>
+          </div>
+          <p class="eyebrow" data-gap>// MILESTONES</p>
+          <div class="mrows" id="offerrows"></div>
+          <div class="row"><button type="button" class="small ghost" id="offerrow"><svg class="ico"><use href="#i-plus"></use></svg>Milestone</button></div>
+          <div class="row"><button class="primary" id="offersave">Save offer</button><button type="button" id="offercancel">Cancel</button></div>
+        </div>
+      </form>
       <div class="gamegrid" id="gamegrid"></div>
     </div>
     <div class="gamepage" id="gamepage" hidden>
@@ -139,8 +164,11 @@
         </div>
       </div>
       <div class="tiles gtiles" id="gptiles"></div>
-      <div class="panel"><p class="eyebrow">// TOTAL EARNINGS</p><p class="muted small">Per unit, never added across units. Earned means confirmed or received; nothing counts as cash without proof.</p><div id="gpearn"></div></div>
+      <div class="panel" id="gpofferbox" hidden><p class="eyebrow">// OFFERS FROM EARNING APPS</p><div id="gpoffers"></div></div>
+      <div class="panel"><p class="eyebrow">// TOTAL EARNINGS</p><p class="muted small">Per unit, never added across units. Collected means the game showed it claimed or credited; pending means the game says it is on its way.</p><div id="gpearn"></div></div>
       <div class="panel"><p class="eyebrow">// CHALLENGES</p><div class="tasklist" id="gptasks"></div></div>
+      <div class="panel"><p class="eyebrow">// REWARD TRACKER</p><div id="gphist"></div></div>
+      <div class="panel" id="gptierbox" hidden><p class="eyebrow">// REWARDS IN THIS GAME</p><p class="muted small">From what Falcor learned while you played it.</p><div id="gptiers"></div></div>
       <div class="panel" id="gpknow"><p class="eyebrow">// WHAT FALCOR KNOWS</p><div id="gpknowbody"></div></div>
       <div class="panel" id="gpads"><p class="eyebrow">// REWARDED ADS</p><div id="gpadsbody"></div></div>
     </div>
@@ -311,6 +339,7 @@
   <div class="panel costpanel">
     <p class="eyebrow">// WRITE THE GUIDE</p>
     <h2>Guide for <span id="aftername"></span></h2>
+    <p class="small learned" id="afterlearned" hidden></p>
     <div id="afterbody"><p class="small" id="afterest">Working out what it costs…</p><div class="meter" id="aftermeter"></div></div>
     <div class="thinkingbox" id="afterwork" hidden><span class="load10"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span id="afterworktext">Falcor is studying the screens…</span></div>
     <div class="row"><button class="primary" id="afterfull"><svg class="ico"><use href="#i-ai"></use></svg>Write guide</button><button id="aftertext">Text only (cheaper)</button><button id="afterlocal" title="Free: built on this computer from the recording, no AI">Save without AI</button><span class="grow"></span><button id="afterclose">Cancel</button></div>

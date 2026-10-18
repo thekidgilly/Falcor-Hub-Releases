@@ -235,13 +235,42 @@
   // ------------------------------------------------------------------ games (the Games tab on both apps)
   // A game without an icon gets a pixel monogram in one of the four colors (always the same for the same app).
   const monogram = (name, pkg) => '<b class="mono c' + [...String(pkg)].reduce((n, c) => n + c.charCodeAt(0), 0) % 4 + '">' + esc((String(name).match(/[A-Za-z0-9]/) || ['?'])[0].toUpperCase()) + '</b>';
-  // Earnings per unit, never added across units: earned (confirmed or received) and on the way (claimed or pending).
-  const earnings = units => Object.entries(units || {}).map(([unit, r]) => ({unit, earned: (r.confirmed || 0) + (r.received || 0), coming: (r.claimed || 0) + (r.pending || 0), offered: r.offered || 0, unknown: r.unknownAmounts || 0}));
-  const num = v => Number.isInteger(v) ? v.toLocaleString() : v.toFixed(2);
-  const earnLine = units => earnings(units).filter(e => e.earned || e.coming).map(e => e.earned ? num(e.earned) + ' ' + e.unit + (e.coming ? ' (+' + num(e.coming) + ')' : '') : '+' + num(e.coming) + ' ' + e.unit + ' on the way').join(' · ');
+  // The Games tab's reward parts, the same on both apps. g.rewards: per unit {unit, collected, pending, offered, unknown}
+  // (collected: the app showed it claimed or credited; never added across units).
+  const num = v => Number.isInteger(v) ? v.toLocaleString() : Number(v).toFixed(2);
+  const unitIcon = u => /coin|gold/i.test(u) ? 'coin' : /gem|diamond/i.test(u) ? 'gem' : /cash|usd|\$|dollar/i.test(u) ? 'cash' : /gift/i.test(u) ? 'gift' : 'reward';
+  const day = at => new Date(at).toLocaleDateString([], {month: 'short', day: 'numeric'}) + ' ' + new Date(at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+  // A tile's one line: what it collected, else an earning app's offer (collected of possible), else what is pending,
+  // else what its challenges offer.
+  const earnLine = g => {
+    const r = g.rewards || [], got = r.filter(x => x.collected), wait = r.filter(x => x.pending), offer = (g.earning || [])[0];
+    return got.length ? got.map(x => num(x.collected) + ' ' + x.unit).join(' · ')
+      : offer ? 'via ' + offer.source.name + (offer.progress.units[0] ? ' · ' + num(offer.progress.units[0].collected) + ' / ' + num(offer.progress.units[0].possible) + ' ' + offer.progress.units[0].unit : '')
+      : wait.length ? wait.map(x => '+' + num(x.pending) + ' ' + x.unit + ' pending').join(' · ') : Object.entries(g.offers || {}).map(([u, a]) => 'offers ' + num(a) + ' ' + u).join(' · ');
+  };
+  // Offers from earning apps: where from, what each milestone pays, what is done, the earnings so far and the deadline.
+  // Each milestone's box ticks it done (data-offer, data-i); edit: Edit and Remove buttons (the computer).
+  const ends = at => { const d = Math.round((at - Date.now()) / 86_400_000), h = Math.round((at - Date.now()) / 3_600_000); return at < Date.now() ? '<span class="red">ended</span>' : d >= 2 ? 'ends in ' + d + ' days' : 'ends in ' + Math.max(1, h) + ' h'; };
+  const offersHtml = (g, edit) => (g.earning || []).map(o => '<div class="offer"><div class="top"><b>via ' + esc(o.source.name) + '</b><span class="muted small">' + (o.manual ? '<span class="pill sand">you play it</span> ' : '') + (o.expiresAt ? ends(o.expiresAt) + ' · ' : '') + o.progress.done + ' of ' + o.progress.of + ' done</span></div>'
+    + o.progress.units.map(u => '<div class="ounit">' + icon(unitIcon(u.unit)) + ' <b>' + num(u.collected) + '</b> of ' + num(u.possible) + ' ' + esc(u.unit) + '<span class="rbar"><i class="c" data-style="flex:' + u.collected + '"></i><i data-style="flex:' + Math.max(0, u.possible - u.collected) + '"></i></span></div>').join('')
+    + (o.total ? '<p class="muted small">The app says: up to ' + num(o.total.amount) + ' ' + esc(o.total.unit) + '</p>' : '')
+    + '<ul class="mstones">' + o.milestones.map((m, i) => '<li class="' + (m.done ? 'done' : '') + '"><label><input type="checkbox" data-offer="' + esc(o.id) + '" data-i="' + i + '"' + (m.done ? ' checked' : '') + '> <span>' + esc(m.text) + '</span></label><b>' + (m.amount === null ? '' : num(m.amount) + ' ' + esc(m.unit)) + '</b>'
+      + (m.paid ? '<em class="sand">needs a purchase: yours to decide</em>' : m.reached ? '<em class="green">level seen: confirm it in ' + esc(o.source.name) + '</em>' : '') + '</li>').join('') + '</ul>'
+    + (edit ? '<div class="row"><button class="small" data-offer-edit="' + esc(o.id) + '">' + icon('edit') + 'Edit</button><button class="small danger" data-offer-remove="' + esc(o.id) + '">' + icon('trash') + 'Remove</button></div>' : '') + '</div>').join('');
+  const rewardsHtml = g => (g.rewards || []).length ? '<div class="earns">' + g.rewards.map(x => '<div class="earn"><span class="u">' + icon(unitIcon(x.unit)) + ' ' + esc(x.unit) + '</span><b>' + num(x.collected) + '</b><span class="muted small">collected'
+    + (x.pending ? ' · ' + num(x.pending) + ' pending' : '') + (x.offered ? ' · offer ' + num(x.offered) : '') + (x.unknown ? ' · ' + x.unknown + ' without an amount' : '') + '</span>'
+    + '<span class="rbar">' + (x.collected + x.pending ? '<i class="c" data-style="flex:' + x.collected + '"></i><i class="p" data-style="flex:' + x.pending + '"></i>' : '<i></i>') + '</span></div>').join('') + '</div>'
+    : '<p class="muted small">Nothing collected yet. Each reward the game shows claimed, credited or pending is added here per unit.</p>';
+  const STAGE = {claimed: 'collected', confirmed: 'credited', received: 'received', pending: 'pending'};
+  const historyHtml = g => (g.history || []).length ? '<ul class="rhist">' + g.history.map(h => '<li><time>' + esc(day(h.at)) + '</time><b class="' + (h.stage === 'pending' ? 'sand' : 'green') + '">' + (h.amount === null ? '?' : '+' + num(h.amount)) + ' ' + esc(h.unit) + '</b><span class="pill ' + (h.stage === 'pending' ? 'sand' : 'green') + '">' + esc(STAGE[h.stage] || h.stage) + '</span><span class="muted small">' + esc(h.task) + (h.source ? ' · ' + esc(h.source) : '') + '</span></li>').join('') + '</ul>'
+    : '<p class="muted small">No rewards yet.</p>';
+  const tiersHtml = g => ((g.objectives || []).length ? '<ul class="objs">' + g.objectives.map(o => '<li>' + icon('check') + ' ' + esc(o) + '</li>').join('') + '</ul>' : '')
+    + ((g.tiers || []).length ? '<table class="tiers"><tr><th>Tier</th><th>To get it</th><th>Reward</th><th>Time</th></tr>' + g.tiers.map(t => '<tr><td>' + esc(t.tier) + '</td><td>' + esc(t.requirement) + '</td><td>' + esc(t.reward) + (t.amount !== null && t.amount !== undefined ? ' · ' + icon(unitIcon(t.unit)) + ' ' + num(t.amount) + ' ' + esc(t.unit) : '') + '</td><td>' + esc(t.timeLimit || '—') + '</td></tr>').join('') + '</table>' : '');
+  // A level challenge's progress: level now of the target, as blocks (at most 20).
+  const progressHtml = t => { if (!t.targetLevel) return ''; const n = Math.min(20, t.targetLevel), on = Math.round(Math.min(1, (t.level || 0) / t.targetLevel) * n); return '<div class="lvbar" title="Level ' + (t.level ?? 0) + ' of ' + t.targetLevel + '">' + Array.from({length: n}, (_, i) => '<i class="' + (i < on ? 'on' : '') + '"></i>').join('') + '</div>'; };
 
   // Pause idle loops while the window or tab is hidden.
   document.addEventListener('visibilitychange', () => document.documentElement.classList.toggle('idle-off', document.hidden));
 
-  window.Pixel = {MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced, monogram, earnings, num, earnLine};
+  window.Pixel = {MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced, monogram, num, unitIcon, earnLine, offersHtml, rewardsHtml, historyHtml, tiersHtml, progressHtml};
 })();
