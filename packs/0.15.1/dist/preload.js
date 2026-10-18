@@ -65,7 +65,8 @@ var CALLS = [
   "chatRename",
   "chatPin",
   "chatDelete",
-  "chatFocus"
+  "chatFocus",
+  "sandbox"
 ];
 import_electron.contextBridge.exposeInMainWorld("hub", {
   call: (name, args) => {

@@ -104,7 +104,12 @@ button.primary:hover:not(:disabled)::after { animation: sweep .45s steps(6) 1; }
 .toast { animation: toastin .2s steps(4) both; } @keyframes toastin { from { transform: translateX(16px); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* The intro canvas and its fade in 4 steps. */
-canvas.intro { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 2000; image-rendering: pixelated; background: #0A0A0A; cursor: pointer; }
+canvas.intro { position: fixed; left: 0; top: 0; z-index: 2000; image-rendering: pixelated; background: #0A0A0A; cursor: pointer; }
+body:has(canvas.intro) { background-color: #090B12; }
+.introtext { position: fixed; z-index: 2001; transform: translateX(-50%); display: grid; justify-items: center; gap: 10px; pointer-events: none; font-family: 'Departure Mono', monospace; -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
+.introtext b { font-weight: 400; font-size: clamp(28px, 4.2vw, 48px); letter-spacing: .12em; color: #EDEDED; text-shadow: 2px 2px 0 #0A0A0A; white-space: nowrap; }
+.introtext span { font-size: clamp(11px, 1.2vw, 14px); letter-spacing: .3em; color: #5CE59A; }
+.introtext.out { animation: fadeout .32s steps(6) forwards; }
 canvas.intro.out { animation: fadeout .32s steps(6) forwards; } @keyframes fadeout { to { opacity: 0; } }
 
 /* The dragon thinking: breathing while Falcor works. */
@@ -145,3 +150,14 @@ canvas.intro.out { animation: fadeout .32s steps(6) forwards; } @keyframes fadeo
 .mstones li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; font-size: 13px; }
 .mstones li.done span { color: rgba(237,237,237,.58); text-decoration: line-through; } .mstones li b { font-weight: 400; color: #5CE59A; white-space: nowrap; }
 .mstones li em { grid-column: 1 / -1; font-style: normal; font-size: 11px; } .mstones label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+
+/* Sandbox blocks (both apps): a dropped block clicks in while its slot opens in 4 steps, the connector flashes green;
+   the step being run glows with a scanline; done steps tick, a failed one flashes red. */
+.blk.dropin { animation: dropin .24s steps(4) both; } @keyframes dropin { 0% { transform: translateY(-10px) scaleX(.4); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.dz.flash::before, .dz.flash { animation: zflash .5s steps(2) 2; } @keyframes zflash { 0%, 49% { border-top-color: #5CE59A; } 50%, 100% { border-top-color: transparent; } }
+.blk.now { border-color: #F5B544; box-shadow: 0 0 0 1px #F5B544, 0 0 12px rgba(245,181,68,.35); overflow: hidden; }
+.blk.now::after { content: ''; position: absolute; left: 0; right: 0; height: 2px; background: rgba(245,181,68,.6); animation: scan 1.2s steps(8) infinite; } @keyframes scan { from { top: 0; } to { top: 100%; } }
+.blk.done::before { content: ''; position: absolute; right: 3px; top: 3px; width: 6px; height: 3px; border: solid #5CE59A; border-width: 0 0 2px 2px; transform: rotate(-45deg); animation: rise .2s steps(3) both; }
+.blk.fail { border-color: #F0544F; animation: failflash .6s steps(2) 3; } @keyframes failflash { 0%, 49% { background: rgba(240,84,79,.25); } 50%, 100% { background: transparent; } }
+.pin.drop { animation: pindrop .2s steps(4) both; } @keyframes pindrop { from { transform: translateY(-12px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .blk.dropin, .dz.flash, .blk.now::after, .blk.done::before, .blk.fail, .pin.drop { animation: none !important; } }

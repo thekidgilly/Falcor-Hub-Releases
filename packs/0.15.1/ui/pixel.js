@@ -48,6 +48,21 @@
     gem: ['............', '..########..', '.#..#..#..#.', '############', '#...#..#...#', '.#..#..#..#.', '..#.#..#.#..', '...##..##...', '....#..#....', '.....##.....', '............', '............'],
     cash: ['............', '############', '#..........#', '#.#..##..#.#', '#...#..#...#', '#...#..#...#', '#.#..##..#.#', '#..........#', '############', '............', '............', '............'],
     gift: ['...##..##...', '..#..##..#..', '############', '#....##....#', '############', '.#....#...#.', '.#....#...#.', '.#....#...#.', '.#....#...#.', '.#....#...#.', '.##########.', '............'],
+    sandbox: ['....####....', '...#....#...', '..#..##..#..', '.#..#..#..#.', '#..#....#..#', '#.#..##..#.#', '#.#..##..#.#', '#..#....#..#', '.#..#..#..#.', '..#..##..#..', '...#....#...', '....####....'],
+    swipe: ['............', '.........#..', '.........##.', '############', '.........##.', '.........#..', '............', '..#.........', '.##.........', '############', '.##.........', '..#.........'],
+    wait: ['############', '.#........#.', '.#........#.', '..#......#..', '...#....#...', '....#..#....', '....#..#....', '...#.##.#...', '..#.####.#..', '.#.######.#.', '.#.######.#.', '############'],
+    loop: ['....####....', '..##....##..', '.#........#.', '.#.........#', '#.........##', '#.........#.', '#...........', '#..........#', '.#........#.', '.#........#.', '..##....##..', '....####....'],
+    branch: ['..##........', '..##........', '..##.....##.', '..##.....##.', '..##....##..', '..##...##...', '..##..##....', '..##.##.....', '..####......', '..###.......', '..##........', '..##........'],
+    camera: ['............', '....####....', '.##########.', '#..........#', '#...####...#', '#..#....#..#', '#..#.##.#..#', '#..#.##.#..#', '#..#....#..#', '#...####...#', '#..........#', '.##########.'],
+    var: ['............', '..##....##..', '.#........#.', '.#.#...#..#.', '.#..#.#...#.', '#....#.....#', '#....#.....#', '.#..#.#...#.', '.#.#...#..#.', '.#........#.', '..##....##..', '............'],
+    undo: ['............', '...#........', '..##........', '.#########..', '..##......#.', '...#.......#', '...........#', '...........#', '..........#.', '.....#####..', '............', '............'],
+    redo: ['............', '........#...', '........##..', '..#########.', '.#......##..', '#.......#...', '#...........', '#...........', '.#..........', '..#####.....', '............', '............'],
+    star: ['.....##.....', '.....##.....', '....####....', '....####....', '############', '.##########.', '..########..', '...######...', '..########..', '..###..###..', '.###....###.', '.##......##.'],
+    calendar: ['..#.....#...', '############', '#..........#', '############', '#..........#', '#.##.##.##.#', '#.##.##.##.#', '#..........#', '#.##.##.##.#', '#.##.##.##.#', '#..........#', '############'],
+    target: ['.....##.....', '...######...', '..#..##..#..', '.#...##...#.', '.#..####..#.', '######..####', '######..####', '.#..####..#.', '.#...##...#.', '..#..##..#..', '...######...', '.....##.....'],
+    help: ['...######...', '..##....##..', '.##......##.', '.......##...', '......##....', '.....##.....', '.....##.....', '.....##.....', '............', '.....##.....', '.....##.....', '............'],
+    copy: ['.#######....', '.#.....#....', '.#..#######.', '.#..#.....#.', '.#..#.....#.', '.#..#.....#.', '.####.....#.', '....#.....#.', '....#.....#.', '....#.....#.', '....#######.', '............'],
+    grid: ['#..#..#..#..', '............', '............', '#..#..#..#..', '............', '............', '#..#..#..#..', '............', '............', '#..#..#..#..', '............', '............'],
   };
   const pathOf = rows => { let d = ''; rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] === '#') { let w = 1; while (r[x + w] === '#') w++; d += 'M' + (x + 2) + ' ' + (y + 2) + 'h' + w + 'v1h-' + w + 'z'; x += w - 1; } }); return d; };
   // The sprite: one <symbol> per icon. Use with icon('stop').
@@ -136,40 +151,49 @@
   // luckdragon materializes at the left edge as a green glitch inside targeting brackets, flies to the centre leaving a
   // green pixel trail, flaps and settles; a green line draws under it and the name types in; then it dissolves away.
   // Drawn on a small canvas scaled up with hard pixels. Click or a key skips it.
-  // The flying dragon, facing right: W white, G light shade, D wing membrane, K eye. Two wing frames.
+  // Falcor the luckdragon, facing right: W white fur, G its shade and mane, F the fringe, P the tongue, K the eye.
+  // A dark outline is worked out around it so it reads clearly on the night sky; the body ripples as it flies.
   const BODY = [
-    '..........................W.W...',
-    '..........................WWW...',
-    '.........................WWWWW..',
-    '........................WWKWWWW.',
-    '.......................WWWWWWWWW',
-    '..........WWWWW.......WWWW...GG.',
-    '...WW...WWWWWWWWWWWWWWWWW.......',
-    '..WWWW.WWWWWWWWWWWWWWWWW........',
-    '.W..WWWWWWGGGGGGWWWWWW..........',
-    'W....WWWWGG....GGWW.WW..........',
-    '.........WW.....WW...WW.........',
-    '........WW.....WW....W..........',
-  ];
-  const WING_UP = ['DDD...........', '.GGDDD........', '..GGGGDDD.....', '...GGGGGGDDD..', '....GDGGDGGGDW', '.....D..D..GWW'];
-  const WING_DOWN = ['.....GGGGGGGWW', '....GGGGGGDD..', '...GGGGDD.....', '..GDDD........', '.D............'];
-  const COL = {W: '#EDEDED', G: '#BFC3CC', D: '#6F7584', K: '#0A0A0A'};
+'..........................................G.G.......',
+'.........................................WWWWW......',
+'.................G.G.G.................GWWWWWWW.....',
+'................GWGWGWG...............GWWWWWWWWW....',
+'..............GWWWWWWWWWG............GGWWWWWKWWWW...',
+'............GWWWWWWWWWWWWWG.........GGGWWWWWWWWWWWW.',
+'..G.......GWWWWWWWWWWWWWWWWWG.G.G..GGG.WWWWWWWWWWWWW',
+'.GWG.....GWWWWWGGGGGGGWWWWWWWGWGWGWWG.WWWWWWWWW.PPP.',
+'GWWWG...WWWWWGG.......GGWWWWWWWWWWWWWWWWWWWWG.......',
+'WWGWWW.WWWWGG...........GGWWWWWWWWWWWWWWWGG.........',
+'W..WWWWWWWG...............GGWWWWWWWWWWGG............',
+'....GWWWWG...................GGWWWWGG...............',
+'.....FGGF.......................FGGF................',
+'......F..........................F..................',
+];
+  const SW = BODY[0].length, SH = BODY.length;
+  const COL = {W: '#F4F4F4', G: '#BFC3CC', F: '#8E95A6', P: '#F0A8B8', K: '#0A0A0A'};
+  const OUTLINE = (() => { const on = (i, j) => BODY[j] && BODY[j][i] && BODY[j][i] !== '.', out = []; for (let j = -1; j <= SH; j++) for (let i = -1; i <= SW; i++) if (!on(i, j) && (on(i + 1, j) || on(i - 1, j) || on(i, j + 1) || on(i, j - 1))) out.push([i, j]); return out; })();
   // Each sprite pixel is drawn as Z×Z canvas pixels (the dragon is drawn at twice the scene's pixel size).
-  const Z = 2;
-  function drawRows(g, rows, x, y, map) { rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) { const c = r[i]; if (c !== '.') { g.fillStyle = map ? map(c, i, j) : COL[c]; g.fillRect(x + i * Z, y + j * Z, Z, Z); } } }); }
-  function dragonAt(g, x, y, flap, glitch) {
-    const wing = flap ? WING_DOWN : WING_UP, wy = flap ? y + 6 * Z : y + (6 - WING_UP.length) * Z;
-    const tint = glitch ? (c, i, j) => ((i + j + glitch) % 3 === 0 ? 'rgba(0,0,0,0)' : (i * 7 + j * 3 + glitch) % 5 < 2 ? '#5CE59A' : c === 'K' ? '#0A0A0A' : '#9FF0C4') : null;
-    drawRows(g, BODY, x, y, tint);
-    drawRows(g, wing, x + 8 * Z, wy, tint);
+  let Z = 2;
+  function dragonAt(g, x, y, phase, glitch) {
+    // The head (the last 16 columns) stays level; the body behind it ripples by one sprite pixel.
+    const dy = i => i >= SW - 16 ? 0 : Math.round(Math.sin(phase * 1.6 - i * 0.28) * 1.2);
+    g.fillStyle = glitch ? 'rgba(92,229,154,.35)' : '#1B1E26';
+    for (const [i, j] of OUTLINE) g.fillRect(x + i * Z, y + (j + dy(i)) * Z, Z, Z);
+    BODY.forEach((r, j) => { for (let i = 0; i < SW; i++) { const c = r[i]; if (c === '.') continue;
+      g.fillStyle = glitch ? ((i + j + glitch) % 3 === 0 ? 'rgba(0,0,0,0)' : (i * 7 + j * 3 + glitch) % 5 < 2 ? '#5CE59A' : c === 'K' ? '#0A0A0A' : '#9FF0C4') : COL[c];
+      g.fillRect(x + i * Z, y + (j + dy(i)) * Z, Z, Z); } });
   }
+  const P_text = (n, v) => { if (n.textContent !== v) n.textContent = v; };
   function intro({version, sub, name = 'FALCOR.HUB'}) {
     return new Promise(resolve => {
       if (reduced()) { resolve(); return; }
       const c = document.createElement('canvas'); c.className = 'intro'; document.body.appendChild(c);
-      const scale = Math.max(2, Math.round(Math.min(innerWidth, innerHeight * 1.6) / 420));
-      const W = Math.ceil(innerWidth / scale), H = Math.ceil(innerHeight / scale);
-      c.width = W; c.height = H;
+      // Whole device pixels per scene pixel, so every pixel is the same size and sharp (also on a phone's 2.6× screen).
+      const dpr = window.devicePixelRatio || 1, scale = Math.max(2, Math.round(Math.min(innerWidth, innerHeight * 1.6) * dpr / 420));
+      const W = Math.ceil(innerWidth * dpr / scale), H = Math.ceil(innerHeight * dpr / scale);
+      c.width = W; c.height = H; c.style.width = W * scale / dpr + 'px'; c.style.height = H * scale / dpr + 'px';
+      // The name is real text over the canvas (a font drawn into a small canvas and scaled up is blurry).
+      const label = document.createElement('div'); label.className = 'introtext'; label.innerHTML = '<b></b><span></span>'; document.body.appendChild(label);
       const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
       let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
       const stars = Array.from({length: Math.round(W * H / 90)}, () => ({x: rnd() * W, y: rnd() * H * 0.82, b: rnd(), p: rnd() * 6}));
@@ -177,9 +201,10 @@
       const clouds = Array.from({length: 6}, () => ({x: rnd() * W, y: H * (0.15 + rnd() * 0.45), w: 10 + rnd() * 18, v: 1 + rnd() * 2}));
       const peaks = Array.from({length: Math.ceil(W / 60) + 2}, (_, i) => ({x: i * 60 + rnd() * 10, h: 26 + rnd() * 12}));
       const pines = Array.from({length: Math.ceil(W / 3)}, (_, i) => ({x: i * 3, h: 6 + Math.floor(rnd() * 11)}));
-      const cx = Math.round(W / 2 - 32), cy = Math.round(H * 0.4 - 12), trail = [];
+      Z = Math.max(2, Math.min(3, Math.round(W * 0.5 / SW)));
+      const cx = Math.round(W / 2 - SW * Z / 2), cy = Math.round(H * 0.4 - SH * Z / 2), trail = [];
       const start = performance.now(); let done = false;
-      const end = () => { if (done) return; done = true; c.classList.add('out'); setTimeout(() => { c.remove(); resolve(); }, 320); };
+      const end = () => { if (done) return; done = true; c.classList.add('out'); label.classList.add('out'); setTimeout(() => { c.remove(); label.remove(); resolve(); }, 320); };
       c.addEventListener('pointerdown', end); window.addEventListener('keydown', end, {once: true});
       const frame = now => {
         if (done) return;
@@ -208,22 +233,21 @@
         if (t < 0.55) {
           g.fillStyle = 'rgba(92,229,154,.25)'; g.fillRect(0, y + 8 * Z, W, 1);
           g.fillStyle = '#C8CCD6';
-          const bx = x - 4, by = y - 12, bw = 32 * Z + 8, bh = 12 * Z + 16;
+          const bx = x - 4, by = y - 12, bw = SW * Z + 8, bh = SH * Z + 16;
           for (const [px, py, dx, dy] of [[bx, by, 1, 1], [bx + bw, by, -1, 1], [bx, by + bh, 1, -1], [bx + bw, by + bh, -1, -1]]) { g.fillRect(px, py, 3 * dx || 1, 1); g.fillRect(px, py, 1, 3 * dy || 1); }
-          for (let i = 0; i < 3; i++) { const sy = y + ((f * 5 + i * 4) % (12 * Z)), sx = (f % 2 ? 3 : -3); g.save(); g.beginPath(); g.rect(0, sy, W, 3); g.clip(); dragonAt(g, x + sx, y, f % 2, glitch); g.restore(); }
+          for (let i = 0; i < 3; i++) { const sy = y + ((f * 5 + i * 4) % (SH * Z)), sx = (f % 2 ? 3 : -3); g.save(); g.beginPath(); g.rect(0, sy, W, 3); g.clip(); dragonAt(g, x + sx, y, t * 4, glitch); g.restore(); }
         }
-        if (t >= 0.45 && fly < 1) trail.push({x: x + 8, y: y + 7 * Z, a: 1});
+        if (t >= 0.45 && fly < 1) trail.push({x: x + 8, y: y + 9 * Z, a: 1});
         for (const p of trail) { p.a -= 0.045; if (p.a <= 0) continue; for (let k = 0; k < 10; k++) if ((k + Math.floor(p.x)) % 2 === 0) { g.fillStyle = 'rgba(92,229,154,' + (p.a * 0.75).toFixed(2) + ')'; g.fillRect(Math.floor(p.x - k * 2), p.y - 5 + ((k * 3 + Math.floor(p.x)) % 10), 1, 1); } }
-        dragonAt(g, x, y, fly < 1 ? f % 2 : Math.floor(t * 2.5) % 3 === 2 ? 1 : 0, glitch);
+        dragonAt(g, x, y, t * 4, glitch);
         // The green line draws under it, then the name types in, with the subtitle under it.
-        const mid = cx + 16 * Z, below = cy + 12 * Z;
-        if (t > 1.75) { const lw = Math.min(64, Math.floor((t - 1.75) * 160)); g.fillStyle = '#5CE59A'; g.fillRect(mid - Math.floor(lw / 2), below + 4, lw, 1); }
+        const mid = cx + SW * Z / 2, below = cy + SH * Z;
+        if (t > 1.75) { const lw = Math.min(80, Math.floor((t - 1.75) * 160)); g.fillStyle = '#5CE59A'; g.fillRect(Math.round(mid - lw / 2), below + 4, lw, 1); }
         if (t > 2.05) {
           const shown = Math.min(name.length, Math.floor((t - 2.05) * 16));
-          g.font = '12px "Departure Mono", monospace'; g.textAlign = 'center'; g.textBaseline = 'top';
-          g.fillStyle = '#0A0A0A'; g.fillText(name.slice(0, shown), mid + 1, below + 9);
-          g.fillStyle = '#EDEDED'; g.fillText(name.slice(0, shown), mid, below + 8);
-          if (shown >= name.length && sub) { g.font = '6px "Departure Mono", monospace'; g.fillStyle = '#5CE59A'; g.fillText((sub + (version ? ' ' + version : '')).toUpperCase(), mid, below + 21); }
+          if (!label.style.top) { label.style.top = (below + 8) * scale / dpr + 'px'; label.style.left = mid * scale / dpr + 'px'; }
+          P_text(label.firstChild, name.slice(0, shown));
+          if (shown >= name.length && sub) P_text(label.lastChild, (sub + (version ? ' ' + version : '')).toUpperCase());
         }
         if (t > 3.45) { end(); return; }
         requestAnimationFrame(frame);

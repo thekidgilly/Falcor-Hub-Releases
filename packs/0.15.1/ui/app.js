@@ -38,7 +38,7 @@ function numbers(root = document) {
 numbers();
 
 // ------------------------------------------------------------------ tabs, keys, intro
-const TABS = ['phone', 'games', 'tasks', 'falcor', 'knowledge', 'stats', 'settings'];
+const TABS = ['phone', 'sandbox', 'games', 'tasks', 'falcor', 'knowledge', 'stats', 'settings'];
 function go(name, sub) {
   if (!TABS.includes(name)) return;
   if (name !== tab && !P.reduced()) { const w = P.el('<div class="wipe"><i></i><i></i><i></i><i></i></div>'); document.body.appendChild(w); setTimeout(() => w.remove(), 260); }
@@ -46,6 +46,7 @@ function go(name, sub) {
   document.querySelectorAll('.tabs button').forEach(x => cls(x, 'on', x.dataset.tab === tab));
   document.querySelectorAll('[data-pane]').forEach(p => { p.hidden = p.dataset.pane !== tab; });
   if (sub) setSub(sub);
+  if (window.sbPlace) sbPlace(tab);
   placeTabline(); render();
   if (tab === 'falcor') openChat();
 }
@@ -57,7 +58,7 @@ const typing = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.ta
 window.addEventListener('keydown', e => {
   if (e.ctrlKey && e.shiftKey && (e.key === 'X' || e.key === 'x')) { e.preventDefault(); void stopAll(); return; }
   if (e.ctrlKey && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); go('falcor'); $('chattext').focus(); return; }
-  if (!typing() && !e.ctrlKey && !e.altKey && !e.metaKey && /^[1-7]$/.test(e.key) && document.activeElement !== $('mirrorbox')) go(TABS[Number(e.key) - 1]);
+  if (!typing() && !e.ctrlKey && !e.altKey && !e.metaKey && /^[1-8]$/.test(e.key) && document.activeElement !== $('mirrorbox')) go(TABS[Number(e.key) - 1]);
 });
 if (!/nointro/.test(location.search)) void P.intro({dragon: 'dragon.png', version: '', sub: 'PHONE CONTROL'});
 setTimeout(placeTabline, 50);
@@ -94,11 +95,12 @@ function render() {
   // A Teach session Falcor started for a new task: show the mirror so the owner can play.
   const learning = S.teaching && S.teaching.auto ? S.teaching.id : null, was = autoSeen;
   autoSeen = learning;
-  if (learning && learning !== was) { toast('Falcor opened ' + S.teaching.name + ' and is recording. Play it on the mirror; when you leave the game, Falcor studies it and adds it to Games.'); if (tab !== 'phone') return go('phone'); }
+  if (learning && learning !== was) { toast('Falcor opened ' + S.teaching.name + ' and is recording. Play it on the mirror; when you leave the game, Falcor studies it and adds it to Games.'); if (tab !== 'sandbox') { go('sandbox'); if (window.sbMode) sbMode('teach'); return; } }
   if (!learning && was) toast('Teaching ended. If you played, Falcor is studying it; the game shows in Games with its guide.');
   // Success moments: a task that just became verified bursts.
   for (const t of S.tasks) { const was = prevStates.get(t.id); if (was && was !== t.state && /VERIFIED|RECEIVED/.test(t.state)) setTimeout(() => P.burst(document.querySelector('.task[data-key="' + t.id + '"]') || $('tiles') || $('logo')), 50); prevStates.set(t.id, t.state); }
   if (tab === 'phone') renderPhone(d);
+  if (tab === 'sandbox' && window.renderSandbox) renderSandbox(d);
   if (tab === 'games') renderGames();
   if (tab === 'tasks') renderTasks();
   if (tab === 'falcor') renderChatMeta();
@@ -217,11 +219,11 @@ function renderEyes(d) {
 }
 
 // The live mirror (pictures), the fallback when the video mirror cannot start.
-let frameBusy = false, frameTimer = null, frames = 0, fpsAt = Date.now();
+let frameAt = 0, frameBusy = false, frameTimer = null, frames = 0, fpsAt = Date.now();
 function nextFrame(delay) { clearTimeout(frameTimer); frameTimer = setTimeout(pullFrame, delay); }
 async function pullFrame() {
   const d = dev();
-  if (tab !== 'phone' || !d || !d.connected || !d.authorized || document.hidden) { nextFrame(800); stopVideo(); return; }
+  if ((tab !== 'phone' && tab !== 'sandbox') || !d || !d.connected || !d.authorized || document.hidden) { nextFrame(800); stopVideo(); return; }
   if (vid.on) { nextFrame(800); return; }
   // After two failed starts the picture mirror stays, but the video is tried again a minute later or on a new phone.
   if (vid.failed && (Date.now() - vid.failedAt > 60_000 || vid.deviceId !== d.id)) { vid.failed = false; vid.tries = 0; }
@@ -231,7 +233,7 @@ async function pullFrame() {
   try {
     const f = await window.hub.call('frame', {deviceId: d.id});
     const img = $('mirror'); img.src = 'data:' + f.mime + ';base64,' + f.data; img.dataset.w = f.width; img.dataset.h = f.height;
-    setAspect(f.width, f.height);
+    setAspect(f.width, f.height); frameAt = Date.now();
     $('mirrorwait').hidden = true;
     $('privacy').hidden = !f.paused; text($('privacywhy'), f.paused ? (S.teaching ? 'Not recorded · ' : 'Not shown · ') + f.paused : '');
     frames++; if (Date.now() - fpsAt > 2000) { setFps((frames / ((Date.now() - fpsAt) / 1000)).toFixed(1) + ' pictures/s' + (vid.failed && vid.error ? ' · picture mirror (' + vid.error + ')' : '')); frames = 0; fpsAt = Date.now(); }
@@ -243,6 +245,16 @@ async function pullFrame() {
 let aspect = 9 / 20;
 function setAspect(w, h) { if (w && h && Math.abs(w / h - aspect) > 0.001) { aspect = w / h; fitDevice(); } }
 function fitDevice() {
+  // In the Sandbox the device frame is as large as fits the Sandbox's stage.
+  const host = $('device').parentElement;
+  if (host && host.id === 'sbstage') {
+    if (!host.clientHeight) return;
+    let dh = host.clientHeight - 4, dw = (dh - 40) * aspect + 24;
+    if (dw > host.clientWidth - 4) { dw = host.clientWidth - 4; dh = (dw - 24) / aspect + 40; }
+    $('device').style.setProperty('--devw', Math.round(dw) + 'px'); $('device').style.setProperty('--devh', Math.round(dh) + 'px');
+    if (window.sbPins) sbPins();
+    return;
+  }
   const stage = $('stage'); if (!stage || !stage.clientHeight) return;
   const padX = 24, padY = 40, h = stage.clientHeight, maxW = Math.max(260, Math.min(window.innerWidth * 0.46, window.innerWidth - 2 * 250 - 96));
   let dh = h, dw = (dh - padY) * aspect + padX;
@@ -253,7 +265,7 @@ function fitDevice() {
   $('device').style.setProperty('--devw', Math.round(dw) + 'px'); $('device').style.setProperty('--devh', Math.round(dh) + 'px');
 }
 window.addEventListener('resize', fitDevice);
-new ResizeObserver(fitDevice).observe($('stage')); new ResizeObserver(fitDevice).observe($('toolbar'));
+new ResizeObserver(fitDevice).observe($('stage')); new ResizeObserver(fitDevice).observe($('sbstage')); new ResizeObserver(fitDevice).observe($('toolbar'));
 nextFrame(300);
 
 // The fast mirror: scrcpy's H.264 video from the phone, decoded here (WebCodecs) and drawn on a canvas. If it cannot
@@ -269,7 +281,7 @@ function videoDecoder() {
   return new VideoDecoder({
     output: frame => {
       if (canvas.width !== frame.displayWidth || canvas.height !== frame.displayHeight) { canvas.width = frame.displayWidth; canvas.height = frame.displayHeight; setAspect(canvas.width, canvas.height); }
-      ctx.drawImage(frame, 0, 0); frame.close();
+      ctx.drawImage(frame, 0, 0); frame.close(); frameAt = Date.now();
       if (canvas.hidden) { canvas.hidden = false; $('mirror').hidden = true; $('mirrorwait').hidden = true; }
       vid.frames++; const now = Date.now(); if (now - vid.at > 1000) { setFps(canvas.width + '×' + canvas.height + ' · video ' + Math.round(vid.frames * 1000 / (now - vid.at)) + ' fps'); vid.frames = 0; vid.at = now; }
     },
@@ -324,8 +336,11 @@ setInterval(async () => {
 const at = e => { const el = e.currentTarget, r = el.getBoundingClientRect(); const iw = Number(el.dataset.w) || el.width || r.width, ih = Number(el.dataset.h) || el.height || r.height; const sc = Math.min(r.width / iw, r.height / ih), dw = iw * sc, dh = ih * sc, ox = (r.width - dw) / 2, oy = (r.height - dh) / 2; return {x: Math.min(1, Math.max(0, (e.clientX - r.left - ox) / dw)), y: Math.min(1, Math.max(0, (e.clientY - r.top - oy) / dh))}; };
 let down = null;
 for (const surface of [$('mirror'), canvas]) {
-  surface.addEventListener('pointerdown', e => { if (!controlling) { toast('Take Control first to touch the phone.', 'warn'); return; } down = {...at(e), t: Date.now()}; surface.setPointerCapture(e.pointerId); });
+  // The Sandbox's pointer modes (view, pick a target or a gesture, a run playing) take the mouse; Control and Teach touch.
+  surface.addEventListener('pointermove', e => { if (window.sbPointer && tab === 'sandbox') sbPointer('move', at(e), e); });
+  surface.addEventListener('pointerdown', e => { if (window.sbPointer && tab === 'sandbox' && sbPointer('down', at(e), e)) return; if (!controlling) { toast('Take Control first to touch the phone.', 'warn'); return; } down = {...at(e), t: Date.now()}; surface.setPointerCapture(e.pointerId); });
   surface.addEventListener('pointerup', e => {
+    if (window.sbPointer && tab === 'sandbox' && sbPointer('up', at(e), e)) return;
     if (!down) return; const up = at(e), ms = Date.now() - down.t, moved = Math.hypot(up.x - down.x, up.y - down.y);
     const a = moved > 0.03 ? {kind: 'swipe', x: down.x, y: down.y, toX: up.x, toY: up.y, ms: Math.min(2000, Math.max(120, ms))} : ms > 600 ? {kind: 'long_press', x: down.x, y: down.y, ms: Math.min(3000, ms)} : {kind: 'tap', x: down.x, y: down.y};
     if (a.kind === 'swipe') P.trail($('overlay'), down.x * 100, down.y * 100, up.x * 100, up.y * 100); else P.tapMark($('overlay'), down.x * 100, down.y * 100, false);
@@ -358,18 +373,29 @@ function renderTeach() {
 }
 function tickRec() { if (!teachSeen) return; text($('rectime'), clock(teachSeen.ms + (teachSeen.state === 'recording' ? Date.now() - teachSeen.at : 0))); }
 setInterval(tickRec, 500);
-$('teach').onclick = async () => {
+// Teach lives in the Sandbox (it is the Sandbox's recording mode): the Phone tab's Teach opens it there.
+$('teach').onclick = () => { go('sandbox'); openTeach(); };
+async function openTeach() {
   const t = await call('teachTarget', {deviceId});
-  if (!t.pkg || /launcher|systemui/.test(t.pkg)) { toast('Open the app you want to teach on the phone first (Take Control and tap it on the mirror).', 'warn'); return; }
-  text($('teachpkg'), t.pkg); text($('teachapp'), t.name); $('teachname').value = t.name; $('teachintent').value = '';
+  // On the home screen: Falcor records how the owner opens the app too, and learns the app from the first one opened.
+  const home = !t.pkg || /launcher|systemui/.test(t.pkg);
+  $('teachname').required = !home; $('teachname').placeholder = home ? 'Named after the app you open' : '';
+  text($('teachpkg'), home ? 'Start here, then open the app on the mirror' : t.pkg); text($('teachapp'), home ? 'The home screen' : t.name); $('teachname').value = home ? '' : t.name; $('teachintent').value = '';
+  const into = window.sbRecordTarget ? sbRecordTarget() : null;
+  $('teachsb').hidden = !into; if (into) text($('teachsbname'), '"' + into.title + '"');
   $('teachform').hidden = false; $('teachname').focus();
-};
+}
 $('teachcancel').onclick = () => { $('teachform').hidden = true; };
+$('teachcustom').onchange = () => { $('customopts').hidden = !$('teachcustom').checked; };
 $('teachform').onsubmit = async e => {
   e.preventDefault();
-  await call('teachStart', {deviceId, name: $('teachname').value, intent: $('teachintent').value});
+  const custom = $('teachcustom').checked ? {name: $('teachname').value || $('teachintent').value, times: Number($('customtimes').value) || 1, repeat: $('customrepeat').value, untilText: $('customuntil').value, home: $('customhome').checked} : null;
+  // Recording into the open Sandbox sequence: it is saved first, so the blocks land on the version the owner sees.
+  let sandbox = null;
+  if (!$('teachsb').hidden && $('teachsbon').checked && window.sbBeforeTeach) { const id = await sbBeforeTeach(); if (id) sandbox = {sequenceId: id, launch: $('teachsblaunch').checked, waits: $('teachsbwaits').checked, check: $('teachsbcheck').checked}; }
+  await call('teachStart', {deviceId, name: $('teachname').value, intent: $('teachintent').value, custom, sandbox});
   $('teachform').hidden = true; $('mirrorbox').focus();
-  toast('Recording. Play the app on the mirror; Falcor watches every touch. Press Stop when you are done.');
+  toast(custom ? 'Recording a custom task. Do it once on the mirror, start to finish; press Stop at the end.' : 'Recording. Play the app on the mirror; Falcor watches every touch. Press Stop when you are done.');
 };
 $('recpause').onclick = () => call('teachPause', {on: !(S.teaching && S.teaching.state === 'paused')});
 $('markform').onsubmit = async e => {
@@ -377,9 +403,11 @@ $('markform').onsubmit = async e => {
   const f = P.el('<div class="flagdrop">' + icon('flag') + '</div>'); f.style.left = lastTouch.x + '%'; f.style.top = lastTouch.y + '%'; $('overlay').appendChild(f); setTimeout(() => f.remove(), 1500);
   toast('Marked.');
 };
-$('recstop').onclick = async () => { const r = await call('teachStop'); if (!r.auto) showAfter(r.pkg, r.id, r.name, r.screens); };
-async function showAfter(pkg, id, name, screens) {
+$('recstop').onclick = async () => { const r = await call('teachStop'); if (r.sandbox && window.sbAfterTeach) sbAfterTeach(r.sandbox); if (!r.pkg) { toast('No app was opened, so nothing was recorded.', 'warn'); return; } if (r.customTask) toast('Saved as a custom task. Approve it in Tasks to let Falcor run it.'); if (!r.auto) showAfter(r.pkg, r.id, r.name, r.screens, r.learned); };
+async function showAfter(pkg, id, name, screens, learned) {
   after = {pkg, id, screens}; $('after').hidden = false; text($('aftername'), name); text($('afterest'), 'Working out what it costs…');
+  // What Falcor already worked out from the session on this computer (free, no AI): Autopilot uses it from now on.
+  text($('afterlearned'), learned || ''); $('afterlearned').hidden = !learned;
   $('afterbody').hidden = false; $('afterwork').hidden = true;
   for (const b of ['afterfull', 'aftertext', 'afterlocal', 'afterclose']) $(b).disabled = false;
   const est = await call('teachEstimate', {pkg, id}).catch(() => null);
@@ -564,8 +592,8 @@ $('gpchat').onclick = () => { const p = gamePkg; go('falcor'); setTimeout(() => 
 $('gamepage').addEventListener('click', e => { const l = e.target.closest('[data-link]'); if (l) followLink(l.dataset.link, l.dataset.ref); const t = e.target.closest('[data-gotask]'); if (t) followLink('tasks', t.dataset.gotask); });
 
 // ------------------------------------------------------------------ tasks
-const TYPE = {daily_checkin: 'Daily check-in', game_level: 'Game to a level', free_signup: 'Free signup', reward_monitor: 'Reward balance'};
-const TYPEICON = {daily_checkin: 'checkin', game_level: 'game', free_signup: 'signup', reward_monitor: 'reward'};
+const TYPE = {daily_checkin: 'Daily check-in', game_level: 'Game to a level', free_signup: 'Free signup', reward_monitor: 'Reward balance', custom: 'Custom task'};
+const TYPEICON = {daily_checkin: 'checkin', game_level: 'game', free_signup: 'signup', reward_monitor: 'reward', custom: 'rec'};
 const TRACK = ['Created', 'Approved', 'Scheduled', 'Running', 'Verified'];
 function trackOf(state) {
   const at = {DRAFT: 0, NEEDS_REVIEW: 0, READY: 1, SCHEDULED: 2, PAUSED: 2, RUNNING: 3, NEEDS_ATTENTION: 3, ACTION_VERIFIED: 4, CREDIT_PENDING: 4, REWARD_VERIFIED: 4, RECEIVED: 4, BLOCKED: 0, FAILED: 3, CANCELLED: 0, EXPIRED: 2, INVALIDATED: 4}[state] ?? 0;
@@ -581,7 +609,7 @@ function renderTasks() {
   if (box.querySelector('[data-empty]')) box.innerHTML = '';
   keyed(box, list, t => t.id, t => P.el('<div class="panel task"><div class="appicon">' + icon(TYPEICON[t.type] || 'tasks') + '</div><div class="main"></div><div class="acts"></div><div class="gatebox"></div></div>'), (node, t) => {
     const why = t.needs ? 'Needs you: ' + t.needs.reason : t.lastError ? t.lastError : t.history.length ? t.history[t.history.length - 1].reason : '';
-    htmlOnce(node.querySelector('.main'), '<div class="obj"><b>' + esc(t.app) + '</b></div><div class="obj">' + esc(t.objective) + '</div><div class="meta"><span>' + icon(TYPEICON[t.type] || 'tasks') + ' ' + esc(TYPE[t.type] || t.type) + '</span>' + (t.targetLevel ? '<span>level ' + esc(t.level ?? 0) + ' of ' + esc(t.targetLevel) + '</span>' : '') + (t.nextAt && t.state === 'SCHEDULED' ? '<span>next ' + when(t.nextAt) + '</span>' : '') + '<span class="pill ' + (trackOf(t.state).mood === 'needs' ? 'sand' : trackOf(t.state).mood === 'bad' ? 'red' : 'green') + '">' + esc(t.stateLabel) + '</span></div>' + trackHtml(t.state) + (why ? '<div class="why ' + (t.needs || t.lastError ? 'sand' : 'muted') + '">' + esc(why) + '</div>' : ''));
+    htmlOnce(node.querySelector('.main'), '<div class="obj"><b>' + esc(t.app) + '</b></div><div class="obj">' + esc(t.objective) + '</div><div class="meta"><span>' + icon(TYPEICON[t.type] || 'tasks') + ' ' + esc(TYPE[t.type] || t.type) + '</span>' + (t.targetLevel ? '<span>level ' + esc(t.level ?? 0) + ' of ' + esc(t.targetLevel) + '</span>' : '') + (t.nextAt && t.state === 'SCHEDULED' ? '<span>next ' + when(t.nextAt) + '</span>' : '') + '<span class="pill ' + (trackOf(t.state).mood === 'needs' ? 'sand' : trackOf(t.state).mood === 'bad' ? 'red' : 'green') + '">' + esc(t.stateLabel) + '</span></div>' + trackHtml(t.state) + customHtml(t.custom) + (why ? '<div class="why ' + (t.needs || t.lastError ? 'sand' : 'muted') + '">' + esc(why) + '</div>' : ''));
     const acts = [];
     if (t.state !== 'NEEDS_REVIEW') {
       if (!['RUNNING', 'BLOCKED', 'CANCELLED', 'EXPIRED', 'FAILED', 'RECEIVED', 'INVALIDATED'].includes(t.state)) acts.push('<button class="primary small" data-task="' + esc(t.id) + '" data-act="run">' + icon('play') + 'Run now</button>');
@@ -617,6 +645,12 @@ document.addEventListener('click', async e => {
   const s = e.target.closest('[data-unsecret]'); if (s) await call('removeSecret', {name: s.dataset.unsecret});
 });
 
+// A custom task's steps in plain words, with how it repeats.
+function customHtml(c) {
+  if (!c) return '';
+  const steps = c.steps.length > 8 ? c.steps.slice(0, 7).concat(['… ' + (c.steps.length - 7) + ' more']) : c.steps;
+  return '<div class="routine muted small"><b>' + c.steps.length + ' steps:</b> ' + steps.map(esc).join(' → ') + '<br>' + [c.times > 1 ? c.times + ' rounds' : '1 round', c.repeat === 'daily' ? 'every day' : 'once', c.done.length ? 'done when it says “' + esc(c.done[0]) + '”' : '', c.untilText ? 'stops at “' + esc(c.untilText) + '”' : '', c.home ? 'then the home screen' : ''].filter(Boolean).join(' · ') + '</div>';
+}
 // Edit a task in place: what it does, its target, schedule, reward note and (for a signup) the details it types.
 // A change to what runs sends an approved task back to "Needs review".
 async function openEditor(card, id) {
@@ -627,6 +661,7 @@ async function openEditor(card, id) {
     + (d.type === 'game_level' ? '<label>Target level<input name="targetLevel" type="number" min="1" max="100000"></label>' : '')
     + (d.hour !== null ? '<label>Resets daily at (hour 0–23)<input name="hour" type="number" min="0" max="23"></label>' : '')
     + '<label>Reward (as the offer says)<input name="reward" type="number" min="0" step="any"></label><label>Unit<input name="unit" maxlength="24"></label>'
+    + (d.custom ? '<label>Rounds<input name="times" type="number" min="1" max="50"></label><label>Runs<select name="repeat"><option value="once">once</option><option value="daily">every day</option></select></label><label class="wide">Stop early when the screen says<input name="untilText" maxlength="80"></label><label class="check wide"><input type="checkbox" name="home"> Go back to the home screen when done</label>' : '')
     + (d.type === 'free_signup' ? '<label class="wide">Signup details (one per line, name=value; a password as vault:name; a hidden one left empty stays as saved)<textarea name="fields" rows="4"></textarea></label>' : '')
     + '</div><div class="row"><button class="primary">Save</button><button type="button" data-cancel>Cancel</button><span class="muted small">Changing what it does sends an approved task back to Needs review.</span></div></form>');
   const f = box;
@@ -635,6 +670,7 @@ async function openEditor(card, id) {
   if (f.hour) f.hour.value = d.hour;
   f.reward.value = d.reward ?? ''; f.unit.value = d.unit;
   if (f.fields) f.fields.value = fields.map(x => x.key + '=' + (x.hidden ? '' : x.value)).join('\n');
+  if (d.custom) { f.times.value = d.custom.times; f.repeat.value = d.custom.repeat; f.untilText.value = d.custom.untilText || ''; f.home.checked = d.custom.home; }
   box.querySelector('[data-cancel]').onclick = () => box.remove();
   box.onsubmit = async ev => {
     ev.preventDefault();
@@ -642,6 +678,7 @@ async function openEditor(card, id) {
     if (f.targetLevel && f.targetLevel.value !== String(d.targetLevel ?? '')) patch.targetLevel = Number(f.targetLevel.value);
     if (f.hour && f.hour.value !== String(d.hour)) { patch.hour = Number(f.hour.value); patch.minute = 0; }
     if (f.reward.value !== '' && (Number(f.reward.value) !== d.reward || f.unit.value !== d.unit)) { patch.reward = Number(f.reward.value); patch.unit = f.unit.value || 'points'; }
+    if (d.custom) { patch.times = Number(f.times.value) || 1; patch.repeat = f.repeat.value; patch.untilText = f.untilText.value; patch.home = f.home.checked; }
     if (f.fields) { const out = {}; for (const line of f.fields.value.split('\n')) { const i = line.indexOf('='); if (i > 0) out[line.slice(0, i).trim()] = line.slice(i + 1).trim(); } patch.fields = out; }
     await call('editTask', patch); box.remove(); toast('Task saved.');
   };
@@ -824,6 +861,21 @@ function renderLearn() {
 }
 $('apps').onclick = e => { const c = e.target.closest('.appcard'); if (c) { learnPkg = c.dataset.key; learnSig = ''; editing = false; renderLearn(); } };
 $('learnempty').onclick = e => { const l = e.target.closest('[data-link]'); if (l) go(l.dataset.link); };
+// What training taught (worked out on this computer when each session ended): what Autopilot follows in this app.
+function learnedHtml(l) {
+  if (!l) return '';
+  const li = [];
+  if (l.entry && l.entry.fromHome) li.push('Opened from the home screen' + (l.entry.launchedBy ? ' with “' + esc(l.entry.launchedBy) + '”' : ''));
+  const route = (l.path || []).filter(p => !p.claim);
+  if (route.length) li.push('How to get there: ' + route.map(p => p.kind === 'scroll' ? 'scroll ' + esc(p.direction || 'down') : '“' + esc(p.label) + '”').join(' → '));
+  if (l.claim) li.push('Reward button: “' + esc(l.claim.label) + '” · proof: ' + l.claim.proof.map(x => '“' + esc(x) + '”').join(', '));
+  if (l.reset) li.push('Next reward: ' + (l.reset.ms ? Math.round(l.reset.ms / 3600000) + ' h after a claim' : 'tomorrow'));
+  if (l.loops && l.loops.length) li.push('While playing: ' + l.loops.map(p => '“' + esc(p.label) + '” ×' + p.uses).join(', '));
+  if (l.level) li.push('Level ' + l.level.from + ' → ' + l.level.to);
+  for (const b of l.balances || []) li.push(esc(b.unit) + ' ' + b.from + ' → ' + b.to);
+  for (const a of l.avoid || []) li.push('<span class="sand">Never presses “' + esc(a.label) + '”</span>: ' + esc(a.why));
+  return li.length ? '<section class="learnedbox"><h3>' + icon('ai') + 'What training taught · ' + (l.sessions || 1) + ' session(s)</h3><ul>' + li.map(x => '<li>' + x + '</li>').join('') + '</ul></section>' : '';
+}
 async function loadApp() {
   $('guidecard').hidden = $('sessioncard').hidden = !learnPkg;
   if (!learnPkg) { $('guide').innerHTML = ''; return; }
@@ -832,7 +884,7 @@ async function loadApp() {
   const g = L.guide;
   text($('guidemeta'), g ? 'Written ' + (g.by === 'local' ? 'on this computer without AI' : 'by Falcor AI' + (g.by === 'kimi-text' ? ' from text only' : '')) + ' · ' + new Date(g.updatedAt).toLocaleString() + ' · ' + L.sessions.length + ' session(s)' : 'No guide yet: write one from a session below.');
   $('guideedit').hidden = !g; $('guidesave').hidden = true; text($('guideedit'), 'Edit');
-  $('guide').innerHTML = g ? guideHtml(g) : ''; P.fix($('guide'));
+  $('guide').innerHTML = learnedHtml(L.learned) + (g ? guideHtml(g) : ''); P.fix($('guide'));
   $('guide').classList.remove('editing');
   if (g) for (const img of $('guide').querySelectorAll('img[data-shot]')) window.hub.call('shot', {id: img.dataset.shot}).then(u => { if (typeof u === 'string') img.src = u; else img.closest('.thumb').remove(); }).catch(() => {});
   $('sessions').innerHTML = L.sessions.slice().reverse().map(r => '<details><summary>' + new Date(r.startedAt).toLocaleString() + ' · ' + clock(r.activeMs) + ' · ' + r.screens + ' screens · ' + r.touches + ' touches' + (r.intent ? ' · ' + esc(r.intent) : '') + '</summary>'

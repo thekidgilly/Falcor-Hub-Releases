@@ -1,11 +1,11 @@
 {
-  "version": "0.15.0",
-  "notes": "Sandbox: build your own phone routines from blocks on the live mirror (tap, swipe, wait, loops, checks), record them with Teach, test, run and schedule them, also from the phone app. New ouroboros icon for the next installer.",
-  "publishedAt": "2026-10-18T03:25:44.502Z",
+  "version": "0.15.1",
+  "notes": "Clearer start-up: crisp FALCOR.HUB text and a redrawn Falcor dragon on the computer and the phone app.",
+  "publishedAt": "2026-10-18T04:10:33.393Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "718e12d9f310d56370ca320b6ee8a553876e1a822e35e2653a527e4eb380289b",
+      "sha256": "c7bbbbdebb0cbc5791071a6232f4c7f141fd5b1e9cd3e68ca8e033a10f0182d4",
       "size": 721062
     },
     {
@@ -24,14 +24,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-D_WPm9j_.js",
-      "sha256": "a0a62426399464360e7c43d436e68132b0a66d75f30d7efd9957b7b0ec71f511",
-      "size": 118755
+      "path": "remote-ui/assets/index-CVJOFKAy.js",
+      "sha256": "f815bd8624e4fa33e2ed9709bcb4b738b8d9ea3d4f49e046cf46e6d67e740744",
+      "size": 119361
     },
     {
-      "path": "remote-ui/assets/index-YGkSH5sM.css",
-      "sha256": "2920bdc52e70b8dbb3a5c9214436bcc16483409645a6d511cace823bcf694bf6",
-      "size": 29079
+      "path": "remote-ui/assets/index-DK5-MbB-.css",
+      "sha256": "07dcfdbc7f88a3f27fa26656babb33ae00e5a2bbc08b800b7126125ac87e571e",
+      "size": 29585
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -60,7 +60,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "32cf8620f5bf696251949bcbceba9f73ae468121267830d8f6f2cd5dcb41a9a5",
+      "sha256": "18a602cb1cc03b1e0e73226b081403dc5918f11589f98536753e82c6dfa502c3",
       "size": 2692
     },
     {
@@ -100,13 +100,13 @@
     },
     {
       "path": "ui/motion.css",
-      "sha256": "0ac4aba7e67fc37b34eb4dd5c5e230939c6e029c8c350cb9f29f8d29e5784903",
-      "size": 15889
+      "sha256": "b2495c67452535b83d43d94c8681723c5aad58ccb45b1033edb287419e4eab39",
+      "size": 16506
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "bbc98704a95e1a3930face3e7f5c61cace779a69d896c66c1a1af91c6d900f61",
-      "size": 34897
+      "sha256": "1c4271395c595ffb9b9106d7f81a34279da6904c1b4632f514039eb8b3e3fe71",
+      "size": 36021
     },
     {
       "path": "ui/sandbox.js",
