@@ -1,17 +1,17 @@
 {
-  "version": "0.16.1",
-  "notes": "A notification bell on the computer and the phone holds update notices and alerts (no more yellow notes in the chat). Falcor chat opens on a new chat with Falcor's greeting; the phone's chat works like a mobile chat app with a slide-out list of past chats. Guides open from each game, task, the chat or Settings → Knowledge. Auto-capture game details reads a whole offer page by itself. The Sandbox opens on Create and My sequences (with Duplicate and Delete on the phone). Uniform game icons.",
-  "publishedAt": "2026-10-18T19:42:58.946Z",
+  "version": "0.16.2",
+  "notes": "Removed App Rules and built-in app restrictions across tasks, teaching, capture, offers, Sandbox, Daily Queue and Falcor chat. Existing rule-blocked tasks return to review. Hosted phone screens update with Hub.",
+  "publishedAt": "2026-10-18T20:03:08.669Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "918cb829cceeb7cd5cd85b89e755226173820a241b9c1c0ae24b657928a4f424",
-      "size": 855053
+      "sha256": "7755d44a715c22a5b3916c76b1bca6cbe73125e4087a3c5d5440dd1f4ffc3657",
+      "size": 838206
     },
     {
       "path": "dist/preload.js",
-      "sha256": "c42250c486eba46e4ac6eaa1cfbed0e8fcceb794c5293b54f20ea47e84cfe133",
-      "size": 1624
+      "sha256": "c0e0e9e50b7d59e42b9edffe150527b70a388455e3ac1dc354f306f66a134086",
+      "size": 1590
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -29,19 +29,19 @@
       "size": 26196
     },
     {
+      "path": "remote-ui/assets/index-CSOaJkEd.js",
+      "sha256": "afc687d26a3a9bb8d5c55dc0fc97d385ff5d01e90d9077bff55c4f9a0d476355",
+      "size": 137383
+    },
+    {
       "path": "remote-ui/assets/index-ChfuJyFj.css",
       "sha256": "2676e5795d50f5dc1cb1431ef008960363cfdaa15eb00dbdaf286ff4ea8276f2",
       "size": 45491
     },
     {
-      "path": "remote-ui/assets/index-Chj-_Kwv.js",
-      "sha256": "3ec9589697c3cd850ddf88f52bd395350cd74515019e6120e401e677fb3602de",
-      "size": 137739
-    },
-    {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
-      "sha256": "b65e42750f3cb65437a97f4dfd781c58f199259949db2341012be60e32500e83",
-      "size": 4357
+      "sha256": "e06ce6f87c08da1cdf4f98ce4c839ba5f3a8eb38da33c7bdab53a535b1762f98",
+      "size": 4358
     },
     {
       "path": "remote-ui/fonts/DepartureMono-Regular.woff2",
@@ -50,8 +50,8 @@
     },
     {
       "path": "remote-ui/fonts/GeistMono-OFL.txt",
-      "sha256": "cc815ed4fc045f0e991abb10395b7932bd028c6a067deb13316d6002105074e6",
-      "size": 4498
+      "sha256": "77de4f8179f781fbb97c460dba949bca0a12a814f54a73a72e7da8725e9115f0",
+      "size": 4499
     },
     {
       "path": "remote-ui/fonts/GeistMono-Regular.woff2",
@@ -65,13 +65,13 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "da00a225f6fa72f64f0bc3d5d6dca239c7d3ec67dead2348f10b0f6730fd0a3c",
-      "size": 3756
+      "sha256": "7b12e5397de51498ca14752bde4c3db28d6fd6dfd480b294bc6363404ac3ff75",
+      "size": 3757
     },
     {
       "path": "ui/app.js",
-      "sha256": "bdd45993c8c64b5fe3b90c5ad5e6a4323769d1cc2a7529b2c700b21a3d664f70",
-      "size": 127565
+      "sha256": "bbc8acf5009f332e82122ef744d2b6bf4a3329799d3680f8dc75a67ea3612e41",
+      "size": 125709
     },
     {
       "path": "ui/boot-flight.png",
@@ -105,8 +105,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "3fa5b08131ebb4cff2f9c68cb5c22b1a15f02e90bbdceb9b5a66a2d0984d8c1a",
-      "size": 44438
+      "sha256": "22ab9c5bcd8375a22d8028cdf998a61ea5b9b66dbe49a5e5d64337fb85d45c40",
+      "size": 43578
     },
     {
       "path": "ui/motion.css",
@@ -115,8 +115,8 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "07daae760205dea386d650d6e0a33088195fdd4a7b6444354578f677719ddbe1",
-      "size": 50012
+      "sha256": "555a91117be1071b763608018ad89c95de39a8d99a921fcc93db1798bb918bd3",
+      "size": 49947
     },
     {
       "path": "ui/queue.js",
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "4edd795d96bc1ba6ca2180a143112a288b96eb1fc84f0ef28cd0fcba1c3902f0",
-      "size": 66771
+      "sha256": "e95464c022cad6525df6e69563a7d7918e1aa2411290aed93740b37abad20b67",
+      "size": 66486
     },
     {
       "path": "ui/tokens.css",
