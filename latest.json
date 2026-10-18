@@ -1,17 +1,17 @@
 {
-  "version": "0.16.5",
-  "notes": "Capture game: no more list of phone apps to pick from. The review shows whether the game is installed, and the offer links to the game by itself once you install it. While Auto-capture reads the offer, Falcor looks the game up online (with your Kimi key) and keeps tips, how long the goals take and what to avoid on the game's page; Autopilot uses them too.",
-  "publishedAt": "2026-10-18T22:28:43.235Z",
+  "version": "0.16.6",
+  "notes": "Capture Game is now on the Phone tab. When a game's offer page is open on your phone, the button under the mirror turns blue and says the game is ready to capture. One press opens Games and reads the whole offer into the review. An offer you already saved shows Refresh offer instead.",
+  "publishedAt": "2026-10-18T22:53:27.329Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "69f6cbb19c72852c029ebbd7cca13137d2b7c9a1f925a83246d78da373d139ac",
-      "size": 848237
+      "sha256": "db2411adfd82db44e6553308776d2c102b40a9afee5553fcc1a2675e9d776dd8",
+      "size": 853775
     },
     {
       "path": "dist/preload.js",
-      "sha256": "c0e0e9e50b7d59e42b9edffe150527b70a388455e3ac1dc354f306f66a134086",
-      "size": 1590
+      "sha256": "e0e2ae78fc8527cd607c72440ddabed61fec0e6a420303901b70ab63d858eabc",
+      "size": 1607
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -75,8 +75,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "98aea75c4cd7633e827544b5cd6fbda529349f8cc502b72c7cd25af8c613191b",
-      "size": 125913
+      "sha256": "3acfaae0df32524e2519e2dc14f4c8c7f11c2166fd0b7b12f50c8b59f837d260",
+      "size": 128203
     },
     {
       "path": "ui/app.png",
@@ -115,8 +115,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "a3292554b504afc5303897f2ab92dbcafc7aef19ee85cdcb0ebe6820a51cf411",
-      "size": 43721
+      "sha256": "e65207ac0a2d437401fb1e1407ba9c189d9914c6045de8d2d58aa2b48201d94f",
+      "size": 44050
     },
     {
       "path": "ui/motion.css",
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "7b55c26ea75fd8767684391bf9e56fa46cdff53bbf3d277ecf47fb04cfa4b075",
-      "size": 66891
+      "sha256": "1ccfb266b31c360c14ee40c062c1a28f4b0f7939b7e398d1b3e9f989a5da15f1",
+      "size": 67962
     },
     {
       "path": "ui/tokens.css",
