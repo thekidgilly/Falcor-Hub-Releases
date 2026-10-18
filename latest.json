@@ -1,17 +1,22 @@
 {
-  "version": "0.15.3",
-  "notes": "Premium UI polish: compact panels, blue active states, smoother navigation and controls, precise Sandbox snapping, and improved phone layouts.",
-  "publishedAt": "2026-10-18T07:23:05.028Z",
+  "version": "0.15.4",
+  "notes": "New matte black startup with a white Falcor flight, crisp branding, readiness-aware transitions and reduced-motion support. Includes updated Companion screens. The installed Android shell requires a separately signed APK to replace its older intro.",
+  "publishedAt": "2026-10-18T07:44:51.854Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "c05369e9183e2370004f85474c7046a31e0a63b1593233d2cbfc1944227a1c18",
+      "sha256": "a53a4765da341be9825a550949a5c3a5637866a79af5f8f83ecac72cd212fb0a",
       "size": 718235
     },
     {
       "path": "dist/preload.js",
       "sha256": "b62074610276592f62042b9eb1a6f780ee70601495d41dfc6368ab8eeae7701c",
       "size": 1435
+    },
+    {
+      "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
+      "sha256": "47f64862652b15ed7fba59e682c688feb75258b22b83e19a20ec8cb8580ef34e",
+      "size": 1169088
     },
     {
       "path": "remote-ui/assets/esm-B7fXffpm.js",
@@ -24,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-Bq1X3fcF.css",
-      "sha256": "c079340874e915e5d72c44beed36ae132355d5feeecdb1db88666878b02738fb",
-      "size": 33359
+      "path": "remote-ui/assets/index-CLrEdk_B.js",
+      "sha256": "fc61a9c31a1d8eb8ae8c9ed93a85d8ce1e5547e36bc9f8ddaab489680158f41b",
+      "size": 118890
     },
     {
-      "path": "remote-ui/assets/index-DBP1j_3A.js",
-      "sha256": "decb90b040c7417a1c8593afcf96b093ab3493fdf746c3e92fae65f10b922913",
-      "size": 120997
+      "path": "remote-ui/assets/index-CyGK_OUo.css",
+      "sha256": "7a683707e34f7d55ab51461a4be96fd3672209e004b308cf7a11c4e8cf162b97",
+      "size": 33601
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -60,13 +65,18 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "8461d2aefa1929e046052470bbbd350a7beb031e8b68a369f069b1dfabb620ef",
-      "size": 2692
+      "sha256": "8e5466a5bd43db77e28458fece7ebe5485da6a2e8300a63dbdcdacc5b976f722",
+      "size": 2760
     },
     {
       "path": "ui/app.js",
-      "sha256": "9b0f4a2e3fd16c80e86c661f4a17028a67e7be591e24fac44025881348a2b4dc",
-      "size": 106150
+      "sha256": "64f7da2f69dc66322a35554ca52701b685209c1ad53e57ac44bb57055ec47703",
+      "size": 106217
+    },
+    {
+      "path": "ui/boot-flight.png",
+      "sha256": "47f64862652b15ed7fba59e682c688feb75258b22b83e19a20ec8cb8580ef34e",
+      "size": 1169088
     },
     {
       "path": "ui/dragon.png",
@@ -95,18 +105,18 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "29ebba90c3884c2dac187012157e5c15b462786dee50110a85d83d60e0155c09",
-      "size": 36280
+      "sha256": "182ea3cb0768793704ae117d5eedbb4e4795d51b480e0cc5e1cc4c3bfb85a090",
+      "size": 36348
     },
     {
       "path": "ui/motion.css",
-      "sha256": "b682b804067bd82858f204ed3aed6484e5c4d8ad949a5110b110eb53a5525893",
-      "size": 19369
+      "sha256": "8c7c5075860f504e71e7cddca266c1029cadabba0eb7da8894f04b3454372700",
+      "size": 19631
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "5babfdf58c3f43c2676461507e00b33944d320a5fac2e419b76cca90d1b74e34",
-      "size": 38258
+      "sha256": "183278d137f25caa3258e6c3b19a48c06e1f01f88f2726c9fc1d8f72365e6254",
+      "size": 34833
     },
     {
       "path": "ui/sandbox.js",
