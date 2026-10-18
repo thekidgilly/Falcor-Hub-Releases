@@ -51,6 +51,7 @@ var CALLS = [
   "setLimit",
   "appIcon",
   "openApp",
+  "setAds",
   "chatThreads",
   "chatRead",
   "chatNew",

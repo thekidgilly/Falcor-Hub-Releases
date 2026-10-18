@@ -440,7 +440,7 @@ function renderGames(force) {
     htmlOnce(n.querySelector('.gicon'), iconHtml(g));
     text(n.querySelector('.nm'), g.name);
     text(n.querySelector('.m'), g.tasks.length ? g.tasks.length + ' challenge' + (g.tasks.length === 1 ? '' : 's') : 'no challenges yet');
-    text(n.querySelector('.earn'), P.earnLine(g.earnings) || (g.runs ? g.runs + ' runs' : ''));
+    text(n.querySelector('.earn'), P.earnLine(g) || (g.runs ? g.runs + ' runs' : ''));
     const p = n.querySelector('.pill'); p.className = 'pill ' + st.mood; text(p, st.label);
     n.title = g.name + ' · ' + g.pkg;
   });
@@ -449,22 +449,24 @@ function renderGame(g) {
   const st = gameState(g), d = dev();
   htmlOnce($('gpicon'), iconHtml(g));
   text($('gpname'), g.name);
-  htmlOnce($('gpmeta'), '<code>' + esc(g.pkg) + '</code> · <span class="' + st.mood + '">' + esc(st.label) + '</span>' + (g.lastPlayed ? ' · last played ' + new Date(g.lastPlayed).toLocaleString() : '') + (g.installed ? '' : ' · <span class="sand">not on the phone</span>'));
+  htmlOnce($('gpmeta'), '<code>' + esc(g.pkg) + '</code> · <span class="' + st.mood + '">' + esc(st.label) + '</span>' + (g.level !== null && g.level !== undefined ? ' · level ' + esc(g.level) : '') + (g.lastPlayed ? ' · last played ' + new Date(g.lastPlayed).toLocaleString() : '') + (g.installed ? '' : ' · <span class="sand">not on the phone</span>'));
   $('gpopen').disabled = !d || !g.installed || !!d.running || !!d.emergency;
   $('gpopen').title = !d ? 'Plug in the phone' : !g.installed ? 'Not installed on the phone' : d.running ? 'A task is running' : d.emergency ? 'Emergency Stop is on' : 'Open it on the phone and take control';
   $('gpteach').disabled = $('gpopen').disabled || !!S.teaching;
   $('gpguide').disabled = !g.learned;
   const tiles = [{k: 'ch', label: 'Challenges', v: g.tasks.length}, {k: 'active', label: 'Active', v: g.active}, {k: 'runs', label: 'Runs', v: g.runs}, {k: 'ver', label: 'Verified', v: g.verified}];
   keyed($('gptiles'), tiles, t => t.k, () => P.el('<div class="panel tile"><span class="muted small"></span><b></b></div>'), (n, t) => { text(n.querySelector('.muted'), t.label); roll(n.querySelector('b'), t.v, String); });
-  const earn = P.earnings(g.earnings);
-  htmlOnce($('gpearn'), earn.length ? '<div class="earns">' + earn.map(e => '<div class="earn"><span class="u">' + icon(UNIT(e.unit)) + ' ' + esc(e.unit) + '</span><b>' + P.num(e.earned) + '</b><span class="muted small">earned' + (e.coming ? ' · ' + P.num(e.coming) + ' on the way' : '') + (e.offered ? ' · ' + P.num(e.offered) + ' offered' : '') + (e.unknown ? ' · ' + e.unknown + ' amount' + (e.unknown === 1 ? '' : 's') + ' not shown' : '') + '</span></div>').join('') + '</div>' : '<p class="muted small">Nothing earned yet. Earnings show here per unit once a challenge claims a reward.</p>');
+  htmlOnce($('gpearn'), P.rewardsHtml(g)); P.fix($('gpearn'));
+  htmlOnce($('gphist'), P.historyHtml(g));
+  $('gptierbox').hidden = !(g.tiers || []).length && !(g.objectives || []).length;
+  htmlOnce($('gptiers'), P.tiersHtml(g));
   const box = $('gptasks');
   if (!g.tasks.length) htmlOnce(box, '<div class="empty" data-empty><span>No challenges for this game yet.</span></div>');
   else {
     if (box.querySelector('[data-empty]')) box.innerHTML = '';
     keyed(box, g.tasks, t => t.id, () => P.el('<div class="gtask"><div class="main"></div><div class="acts"></div></div>'), (n, t) => {
       const why = t.needs ? 'Needs you: ' + t.needs.reason : t.lastError || '';
-      htmlOnce(n.querySelector('.main'), '<div class="obj">' + icon(TYPEICON[t.type] || 'tasks') + ' ' + esc(t.objective) + '</div><div class="meta"><span>' + esc(TYPE[t.type] || t.type) + '</span>' + (t.targetLevel ? '<span>level ' + esc(t.level ?? 0) + ' of ' + esc(t.targetLevel) + '</span>' : '') + (t.reward !== null ? '<span>' + icon(UNIT(t.unit)) + ' ' + esc(t.reward) + ' ' + esc(t.unit) + '</span>' : '') + (t.nextAt && t.state === 'SCHEDULED' ? '<span>next ' + when(t.nextAt) + '</span>' : '') + '<span class="pill ' + (trackOf(t.state).mood === 'needs' ? 'sand' : trackOf(t.state).mood === 'bad' ? 'red' : 'green') + '">' + esc(t.stateLabel) + '</span></div>' + trackHtml(t.state) + (why ? '<div class="why sand">' + esc(why) + '</div>' : ''));
+      htmlOnce(n.querySelector('.main'), '<div class="obj">' + icon(TYPEICON[t.type] || 'tasks') + ' ' + esc(t.objective) + '</div><div class="meta"><span>' + esc(TYPE[t.type] || t.type) + '</span>' + (t.targetLevel ? '<span>level ' + esc(t.level ?? 0) + ' of ' + esc(t.targetLevel) + '</span>' : '') + (t.reward !== null ? '<span>' + icon(UNIT(t.unit)) + ' offer ' + esc(t.reward) + ' ' + esc(t.unit) + '</span>' : '') + (t.nextAt && t.state === 'SCHEDULED' ? '<span>next ' + when(t.nextAt) + '</span>' : '') + '<span class="pill ' + (trackOf(t.state).mood === 'needs' ? 'sand' : trackOf(t.state).mood === 'bad' ? 'red' : 'green') + '">' + esc(t.stateLabel) + '</span></div>' + P.progressHtml(t) + trackHtml(t.state) + (why ? '<div class="why sand">' + esc(why) + '</div>' : ''));
       const acts = [];
       if (!['NEEDS_REVIEW', 'DRAFT', 'RUNNING', 'BLOCKED', 'CANCELLED', 'EXPIRED', 'FAILED', 'RECEIVED', 'INVALIDATED'].includes(t.state)) acts.push('<button class="primary small" data-task="' + esc(t.id) + '" data-act="run">' + icon('play') + 'Run now</button>');
       if (['SCHEDULED', 'RUNNING', 'READY', 'NEEDS_ATTENTION'].includes(t.state)) acts.push('<button class="small" data-task="' + esc(t.id) + '" data-act="pause">' + icon('pause') + 'Pause</button>');
@@ -473,10 +475,25 @@ function renderGame(g) {
       htmlOnce(n.querySelector('.acts'), acts.join(''));
     });
   }
-  const k = g.learned;
-  htmlOnce($('gpknowbody'), k ? '<p>' + esc(k.summary || (k.hasGuide ? 'Guide ready.' : 'Recorded; no guide written yet.')) + '</p><p class="muted small">' + k.sessions + ' teaching session' + (k.sessions === 1 ? '' : 's') + ' · last ' + new Date(k.lastSessionAt).toLocaleDateString() + '</p><button class="small" data-link="knowledge" data-ref="' + esc(g.pkg) + '">' + icon('book') + 'Read the guide</button>'
-    : '<p class="muted small">' + (g.note ? esc(g.note) + '.' : 'Falcor has not learned this game yet. Press Teach again (or Teach on the Phone tab) and play it on the mirror.') + '</p>');
+  renderAds(g);
+  const k = g.learned, moves = g.moves ? '<p class="small green">' + g.moves + ' step' + (g.moves === 1 ? '' : 's') + ' Falcor presses here without asking (from your teaching and its own runs).</p>' : '';
+  htmlOnce($('gpknowbody'), moves + (k ? '<p>' + esc(k.summary || (k.hasGuide ? 'Guide ready.' : 'Recorded; no guide written yet.')) + '</p><p class="muted small">' + k.sessions + ' teaching session' + (k.sessions === 1 ? '' : 's') + ' · last ' + new Date(k.lastSessionAt).toLocaleDateString() + '</p><button class="small" data-link="knowledge" data-ref="' + esc(g.pkg) + '">' + icon('book') + 'Read the guide</button>'
+    : '<p class="muted small">' + (g.note ? esc(g.note) + '.' : 'Falcor has not learned this game yet. Press Teach again (or Teach on the Phone tab) and play it on the mirror.') + '</p>'));
 }
+// Rewarded ads: on for every game. Falcor plays an ad offer while the owner is here to watch it and closes it once the
+// reward is granted; a game can be turned off (and on again) here.
+function renderAds(g) {
+  const box = $('gpadsbody'), sig = g.pkg + ':' + g.ads + ':' + g.adsLocked;
+  if (box.dataset.sig === sig) return; box.dataset.sig = sig;
+  box.innerHTML = g.adsLocked ? '<p class="muted small">This app is manual only. Falcor does not play its ads.</p>'
+    : g.ads ? '<p class="small"><span class="led on"></span> On. When the game offers a reward for an ad, Falcor plays it while you are at the computer or in the phone app, waits for the reward, then closes it. It never taps inside the ad or buys anything.</p><button class="small" data-ads="off">Turn off for this game</button>'
+    : '<p class="muted small">Off for this game: Falcor passes by "watch an ad" offers here.</p><button class="small primary" data-ads="on">Turn on</button>';
+}
+$('gpadsbody').onclick = async e => {
+  const b = e.target.closest('[data-ads]'); if (!b || !gamePkg) return;
+  await call('setAds', {pkg: gamePkg, on: b.dataset.ads === 'on'});
+  toast(b.dataset.ads === 'on' ? 'Rewarded ads on for this game.' : 'Rewarded ads off for this game.');
+};
 $('gamegrid').onclick = e => { if (e.target.closest('[data-newgame]')) return openDrawer(); const t = e.target.closest('.gametile'); if (t) { gamePkg = t.dataset.key; renderGames(); $('gamepage').scrollIntoView({block: 'start'}); } };
 $('gamenew').onclick = () => openDrawer();
 $('gameback').onclick = () => { gamePkg = null; renderGames(); };
