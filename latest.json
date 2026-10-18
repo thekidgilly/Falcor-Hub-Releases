@@ -1,11 +1,11 @@
 {
-  "version": "0.15.4",
-  "notes": "New matte black startup with a white Falcor flight, crisp branding, readiness-aware transitions and reduced-motion support. Includes updated Companion screens. The installed Android shell requires a separately signed APK to replace its older intro.",
-  "publishedAt": "2026-10-18T07:44:51.854Z",
+  "version": "0.15.5",
+  "notes": "Fix startup animation disappearing on fast launches. Visible dragon flight and product name with Skip intro. Installed Companion shell requires APK 0.3.2.",
+  "publishedAt": "2026-10-18T08:19:07.330Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "a53a4765da341be9825a550949a5c3a5637866a79af5f8f83ecac72cd212fb0a",
+      "sha256": "f00590b439017b0b1c51d77497c9aa405a0cc92818ac64b9474ecec6348f28bd",
       "size": 718235
     },
     {
@@ -39,6 +39,16 @@
       "size": 33601
     },
     {
+      "path": "remote-ui/assets/index-D1URNTmz.css",
+      "sha256": "cff675a9ec511f20ffe50358458ca1d96919a2c1db2de3b1f2610eee5023b576",
+      "size": 33918
+    },
+    {
+      "path": "remote-ui/assets/index-DIeArkK6.js",
+      "sha256": "7434846a39102276388b1d3387b558747fa5d0e25fc2eeec034684c4bfd12920",
+      "size": 119233
+    },
+    {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
       "sha256": "b65e42750f3cb65437a97f4dfd781c58f199259949db2341012be60e32500e83",
       "size": 4357
@@ -65,7 +75,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "8e5466a5bd43db77e28458fece7ebe5485da6a2e8300a63dbdcdacc5b976f722",
+      "sha256": "cdd50fc3be8d37164e4626b2957faf142d036fc10013284fa11f445a1b8c9ad2",
       "size": 2760
     },
     {
@@ -110,13 +120,13 @@
     },
     {
       "path": "ui/motion.css",
-      "sha256": "8c7c5075860f504e71e7cddca266c1029cadabba0eb7da8894f04b3454372700",
-      "size": 19631
+      "sha256": "1956f9ed946662d5d250ee1cf08750410ce8dcdd4137eeb3b2666b230e321434",
+      "size": 19992
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "183278d137f25caa3258e6c3b19a48c06e1f01f88f2726c9fc1d8f72365e6254",
-      "size": 34833
+      "sha256": "7f29fee0d53e63f4647a5984a2accd0d3871785c404fe28e163d9bd18e0fef23",
+      "size": 35618
     },
     {
       "path": "ui/sandbox.js",
