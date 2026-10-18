@@ -1,12 +1,12 @@
 {
-  "version": "0.16.2",
-  "notes": "Removed App Rules and built-in app restrictions across tasks, teaching, capture, offers, Sandbox, Daily Queue and Falcor chat. Existing rule-blocked tasks return to review. Hosted phone screens update with Hub.",
-  "publishedAt": "2026-10-18T20:03:08.669Z",
+  "version": "0.16.3",
+  "notes": "Capture game now reads the game's real title (not a category like \"Gaming\"), keeps the game's own icon from the offer page, reads the offer ID and the boosted total correctly, and links a store title like \"Word Pizza: Crossword Games\" to the installed app. Press Refresh offer on a game captured before to fix its name and picture.",
+  "publishedAt": "2026-10-18T22:08:48.044Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "7755d44a715c22a5b3916c76b1bca6cbe73125e4087a3c5d5440dd1f4ffc3657",
-      "size": 838206
+      "sha256": "6406c07a36664e646524af079782429b723c5ea1cd412a6ecef149e966b81f67",
+      "size": 838908
     },
     {
       "path": "dist/preload.js",
@@ -29,9 +29,9 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-CSOaJkEd.js",
-      "sha256": "afc687d26a3a9bb8d5c55dc0fc97d385ff5d01e90d9077bff55c4f9a0d476355",
-      "size": 137383
+      "path": "remote-ui/assets/index-BVjggQSl.js",
+      "sha256": "0b825593186a0d6795821ae50730bdbcf3548b56cb304e5b38c9656597f50aa1",
+      "size": 137339
     },
     {
       "path": "remote-ui/assets/index-ChfuJyFj.css",
@@ -40,8 +40,8 @@
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
-      "sha256": "e06ce6f87c08da1cdf4f98ce4c839ba5f3a8eb38da33c7bdab53a535b1762f98",
-      "size": 4358
+      "sha256": "b65e42750f3cb65437a97f4dfd781c58f199259949db2341012be60e32500e83",
+      "size": 4357
     },
     {
       "path": "remote-ui/fonts/DepartureMono-Regular.woff2",
@@ -50,8 +50,8 @@
     },
     {
       "path": "remote-ui/fonts/GeistMono-OFL.txt",
-      "sha256": "77de4f8179f781fbb97c460dba949bca0a12a814f54a73a72e7da8725e9115f0",
-      "size": 4499
+      "sha256": "cc815ed4fc045f0e991abb10395b7932bd028c6a067deb13316d6002105074e6",
+      "size": 4498
     },
     {
       "path": "remote-ui/fonts/GeistMono-Regular.woff2",
@@ -65,8 +65,8 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "7b12e5397de51498ca14752bde4c3db28d6fd6dfd480b294bc6363404ac3ff75",
-      "size": 3757
+      "sha256": "32b11e4b82cba960b81a76a0cccf398a6f332691e37cdf4bab2468c4247d3ea7",
+      "size": 3756
     },
     {
       "path": "ui/app.js",
