@@ -1,12 +1,12 @@
 {
-  "version": "0.8.0",
-  "notes": "Rewarded ads: turn them on per game in the Games tab (two ticks). When a game offers a reward for an ad, Falcor plays it while you're at the computer or in the phone app, waits for the reward, then closes it. It never taps inside an ad or buys anything.",
-  "publishedAt": "2026-10-18T00:03:13.978Z",
+  "version": "0.9.0",
+  "notes": "Rewarded ads are now on for every game automatically, no checkboxes. When a game offers a reward for an ad, Falcor plays it while you're at the computer or in the phone app, waits for the reward, then closes it. It never taps inside an ad or buys anything. A game's page can still turn ads off for that game.",
+  "publishedAt": "2026-10-18T00:09:03.021Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "7c8c3d244a82595a0198c7feeb03cbb056286c019ee230986b8596df8bb5fec6",
-      "size": 534422
+      "sha256": "dab26e506bc83ee6903cae490a067e595f19612a4cc1b375fc63454d67066436",
+      "size": 534077
     },
     {
       "path": "dist/preload.js",
@@ -24,9 +24,9 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-B9ry6EBc.js",
-      "sha256": "5b99ec57d5cd699cae8895d5fa2ac442d9e6192c1df5489d4e3cf45f6ba928d3",
-      "size": 93343
+      "path": "remote-ui/assets/index-CsNi-xQw.js",
+      "sha256": "085d11075999fb7dba0c008dc408a2c7014fcea05cd39fb527eaac93828af1d2",
+      "size": 93371
     },
     {
       "path": "remote-ui/assets/index-E6jRBlli.css",
@@ -60,13 +60,13 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "0018b825c65c24bf918dccb7e1655f9f7519809ff5f6a3e6f69bfb7d211d080f",
+      "sha256": "ca4731d72e00d07ea56d34aa5137631f13554785b32e6e2c15e7decde12a766b",
       "size": 2594
     },
     {
       "path": "ui/app.js",
-      "sha256": "22216df97e98342363ba97b88b94754c53828cc0d2f04eaa2c52e66ff0f742a5",
-      "size": 95555
+      "sha256": "29353a40fc720a1f117bc1af9d71e1e5d1e49e1592e36032843b73459242ccbb",
+      "size": 94826
     },
     {
       "path": "ui/dragon.png",
