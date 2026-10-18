@@ -1,12 +1,12 @@
 {
-  "version": "0.16.6",
-  "notes": "Capture Game is now on the Phone tab. When a game's offer page is open on your phone, the button under the mirror turns blue and says the game is ready to capture. One press opens Games and reads the whole offer into the review. An offer you already saved shows Refresh offer instead.",
-  "publishedAt": "2026-10-18T22:53:27.329Z",
+  "version": "0.16.7",
+  "notes": "Capture Game now recognises offer pages whose rewards are shown as numbers next to the earning app's coin icon (like \"Complete Level 15 · 64\"), so the Phone tab's button turns blue on them and the capture reads every milestone. The button no longer stays on \"Capture in progress\" after a capture ends.",
+  "publishedAt": "2026-10-18T23:20:33.661Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "db2411adfd82db44e6553308776d2c102b40a9afee5553fcc1a2675e9d776dd8",
-      "size": 853775
+      "sha256": "248b556e06a92742d7066a21f9f374a5f6c9c149e18712687d8d0b780c2b3ab2",
+      "size": 854745
     },
     {
       "path": "dist/preload.js",
