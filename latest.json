@@ -1,17 +1,17 @@
 {
-  "version": "0.15.5",
-  "notes": "Fix startup animation disappearing on fast launches. Visible dragon flight and product name with Skip intro. Installed Companion shell requires APK 0.3.2.",
-  "publishedAt": "2026-10-18T08:19:07.330Z",
+  "version": "0.16.0",
+  "notes": "Daily Autopilot queue: Today's Queue on the Phone tab runs your scheduled games, tasks and Sandbox sequences in order, one at a time per phone, with Run Ready, Play now and one schedule editor everywhere. Game Intelligence: Capture game reads long offer pages screen by screen, a reward ladder with stages (goal reached, pending, credited, paid out), library cards with filters, game profiles and Refresh offer, on the computer and in Companion (APK 0.3.2 unchanged).",
+  "publishedAt": "2026-10-18T09:55:34.843Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "f00590b439017b0b1c51d77497c9aa405a0cc92818ac64b9474ecec6348f28bd",
-      "size": 718235
+      "sha256": "89ab2eda33aefa012efb8819af119b01a1bf4fc6b0754d396eebb707e52ba15f",
+      "size": 845115
     },
     {
       "path": "dist/preload.js",
-      "sha256": "b62074610276592f62042b9eb1a6f780ee70601495d41dfc6368ab8eeae7701c",
-      "size": 1435
+      "sha256": "a43feef7fad82fb9f89fa32dcf8a2e9665157b8088833a3b237670306a82b33f",
+      "size": 1555
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -29,24 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-CLrEdk_B.js",
-      "sha256": "fc61a9c31a1d8eb8ae8c9ed93a85d8ce1e5547e36bc9f8ddaab489680158f41b",
-      "size": 118890
+      "path": "remote-ui/assets/index-3NpkV-43.js",
+      "sha256": "89248bbdfe88a97a23fd7562b4c6d6f8c7d08564ca4ecb939a7b94c0662f9775",
+      "size": 128022
     },
     {
-      "path": "remote-ui/assets/index-CyGK_OUo.css",
-      "sha256": "7a683707e34f7d55ab51461a4be96fd3672209e004b308cf7a11c4e8cf162b97",
-      "size": 33601
-    },
-    {
-      "path": "remote-ui/assets/index-D1URNTmz.css",
-      "sha256": "cff675a9ec511f20ffe50358458ca1d96919a2c1db2de3b1f2610eee5023b576",
-      "size": 33918
-    },
-    {
-      "path": "remote-ui/assets/index-DIeArkK6.js",
-      "sha256": "7434846a39102276388b1d3387b558747fa5d0e25fc2eeec034684c4bfd12920",
-      "size": 119233
+      "path": "remote-ui/assets/index-JIaJ39Yt.css",
+      "sha256": "3cf8f3f800116274d85bbbd97afb42c806230968e00511010d2c136c80f32d99",
+      "size": 38743
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -75,13 +65,13 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "cdd50fc3be8d37164e4626b2957faf142d036fc10013284fa11f445a1b8c9ad2",
+      "sha256": "4198b13e4eb715e1c72c9a5ef2ca004c956744ef0ff32b8f53d0a5a99d0a9bbd",
       "size": 2760
     },
     {
       "path": "ui/app.js",
-      "sha256": "64f7da2f69dc66322a35554ca52701b685209c1ad53e57ac44bb57055ec47703",
-      "size": 106217
+      "sha256": "ea18fb882f4f072e2da711495ae802597120518bb33803fe31ed7dc2139db508",
+      "size": 119289
     },
     {
       "path": "ui/boot-flight.png",
@@ -115,28 +105,33 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "182ea3cb0768793704ae117d5eedbb4e4795d51b480e0cc5e1cc4c3bfb85a090",
-      "size": 36348
+      "sha256": "4fee01aa9e567ed10a5d49271a3b2adecc583de7a64ff89422a68ffe11f50cd3",
+      "size": 41713
     },
     {
       "path": "ui/motion.css",
-      "sha256": "1956f9ed946662d5d250ee1cf08750410ce8dcdd4137eeb3b2666b230e321434",
-      "size": 19992
+      "sha256": "fbb5d778a307be511ee3ce6a4683bffe3f3b81d6fac7c7308fd9cdddd8e09df1",
+      "size": 24565
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "7f29fee0d53e63f4647a5984a2accd0d3871785c404fe28e163d9bd18e0fef23",
-      "size": 35618
+      "sha256": "3d962240b96ec26d9df8fb0e71a40a580af386526c07f456717a8ec0e85ffdc4",
+      "size": 44520
+    },
+    {
+      "path": "ui/queue.js",
+      "sha256": "baad1f3b8cfc0ca431fd72693104c39839f7baae75ae906f19769d7fce729068",
+      "size": 49694
     },
     {
       "path": "ui/sandbox.js",
-      "sha256": "62adb8ce556fe04e0ce14ac495b194f7ecee3a4af67fc8be6b4422634fc1129a",
-      "size": 96455
+      "sha256": "d3c3eef801dc7ef8484947690ac410f94c0d91773ef7f82a3058503336ca4627",
+      "size": 88083
     },
     {
       "path": "ui/style.css",
-      "sha256": "e824a6cc560fd4d55765bfc9f04e7763dcedf870f662f0b2275b21f544824b80",
-      "size": 51377
+      "sha256": "7e9ae2b2f3d93342257da5770b4b66b48ba1b40482c77c03cff9e0b9575d250d",
+      "size": 60709
     },
     {
       "path": "ui/tokens.css",
