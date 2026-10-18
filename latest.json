@@ -1,12 +1,12 @@
 {
-  "version": "0.11.0",
-  "notes": "Offers from earning apps: in Games, press Add offer, then Capture from the phone while the game's offer is open in your earning app. Falcor reads the game, its milestones, rewards and deadline, you check them, and the game shows in Games (computer and phone) with a milestone tracker and earnings. Mistplay offers are entered by hand: Falcor never reads Mistplay's screen or plays its games.",
-  "publishedAt": "2026-10-18T00:50:42.989Z",
+  "version": "0.12.0",
+  "notes": "Sturdier Autopilot: a task carries on by itself after you take the phone, the laptop sleeps, the phone is locked or the cable is pulled, and long games keep going in their next run. Taught games skip your slips and pop-ups no longer hide the right button. Falcor understands everyday phrases and reminds you before an offer ends.",
+  "publishedAt": "2026-10-18T01:44:47.724Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "8b86f938b636eea44577a024689f797f5d8ae049974e15bc1a16071c1eb58d31",
-      "size": 553055
+      "sha256": "b0785985ec619d2d8b7636492a0b214036a8ae54a1916e2ffba5ca36f0f725a6",
+      "size": 558943
     },
     {
       "path": "dist/preload.js",
