@@ -1,11 +1,11 @@
 {
-  "version": "0.15.2",
-  "notes": "Live phone viewing no longer has privacy overlays or replacement cards. Manual taps, swipes, typing and app launches work across all apps. Recording and automated tasks stay separate. Updated desktop and phone interface in one update.",
-  "publishedAt": "2026-10-18T07:01:08.138Z",
+  "version": "0.15.3",
+  "notes": "Premium UI polish: compact panels, blue active states, smoother navigation and controls, precise Sandbox snapping, and improved phone layouts.",
+  "publishedAt": "2026-10-18T07:23:05.028Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "4a0c96aa1f09f7f93616ecbf79852e31cef8949ec3137510e963406b65a98cd8",
+      "sha256": "c05369e9183e2370004f85474c7046a31e0a63b1593233d2cbfc1944227a1c18",
       "size": 718235
     },
     {
@@ -24,14 +24,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-CVJOFKAy.js",
-      "sha256": "f815bd8624e4fa33e2ed9709bcb4b738b8d9ea3d4f49e046cf46e6d67e740744",
-      "size": 119361
+      "path": "remote-ui/assets/index-Bq1X3fcF.css",
+      "sha256": "c079340874e915e5d72c44beed36ae132355d5feeecdb1db88666878b02738fb",
+      "size": 33359
     },
     {
-      "path": "remote-ui/assets/index-DK5-MbB-.css",
-      "sha256": "07dcfdbc7f88a3f27fa26656babb33ae00e5a2bbc08b800b7126125ac87e571e",
-      "size": 29585
+      "path": "remote-ui/assets/index-DBP1j_3A.js",
+      "sha256": "decb90b040c7417a1c8593afcf96b093ab3493fdf746c3e92fae65f10b922913",
+      "size": 120997
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -60,13 +60,13 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "18a602cb1cc03b1e0e73226b081403dc5918f11589f98536753e82c6dfa502c3",
+      "sha256": "8461d2aefa1929e046052470bbbd350a7beb031e8b68a369f069b1dfabb620ef",
       "size": 2692
     },
     {
       "path": "ui/app.js",
-      "sha256": "e4c9193a819dc5366b14b3f95b60ae7905d8813fe962b68444dda3f23628588c",
-      "size": 106061
+      "sha256": "9b0f4a2e3fd16c80e86c661f4a17028a67e7be591e24fac44025881348a2b4dc",
+      "size": 106150
     },
     {
       "path": "ui/dragon.png",
@@ -100,23 +100,28 @@
     },
     {
       "path": "ui/motion.css",
-      "sha256": "b2495c67452535b83d43d94c8681723c5aad58ccb45b1033edb287419e4eab39",
-      "size": 16506
+      "sha256": "b682b804067bd82858f204ed3aed6484e5c4d8ad949a5110b110eb53a5525893",
+      "size": 19369
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "1c4271395c595ffb9b9106d7f81a34279da6904c1b4632f514039eb8b3e3fe71",
-      "size": 36021
+      "sha256": "5babfdf58c3f43c2676461507e00b33944d320a5fac2e419b76cca90d1b74e34",
+      "size": 38258
     },
     {
       "path": "ui/sandbox.js",
-      "sha256": "f704cadab95f290e7aa6a0b8c74b0c75c0880db702fe826cd73eb8c6b1fbd9e0",
-      "size": 95453
+      "sha256": "62adb8ce556fe04e0ce14ac495b194f7ecee3a4af67fc8be6b4422634fc1129a",
+      "size": 96455
     },
     {
       "path": "ui/style.css",
-      "sha256": "619e93a9bf1d8ea05ece63f9d0e6c62c4d46ad37eb6ee2893b80f0119d9b3994",
-      "size": 48996
+      "sha256": "e824a6cc560fd4d55765bfc9f04e7763dcedf870f662f0b2275b21f544824b80",
+      "size": 51377
+    },
+    {
+      "path": "ui/tokens.css",
+      "sha256": "6ec5659aab51fc736776febc50737fa2f42e957c963342ed83400c744a723cb8",
+      "size": 692
     }
   ]
 }
