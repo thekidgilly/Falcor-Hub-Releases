@@ -1,12 +1,12 @@
 {
-  "version": "0.16.8",
-  "notes": "Capture Game now works on offer pages with a playing video (like Scrambly's Woodoku Blast): when the phone can't give Falcor the page's words, Falcor reads the screen from a picture with your Kimi key. The Phone tab recognises an offer from the top of the page, and Capture Game on either tab scans the whole offer in one press. Fixed an error when two captures started at once.",
-  "publishedAt": "2026-10-18T23:39:41.154Z",
+  "version": "0.16.9",
+  "notes": "Capture Game reads game names correctly on every layout, including names like \"Amaze GO!\" (it no longer picks a button like \"View details\"). When a game is played sideways, the Phone tab switches to landscape: the mirror fills the left side and the panels line up on the right, and it switches back when the game is upright.",
+  "publishedAt": "2026-10-18T23:55:18.166Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "eb4b23383ff2529290db1bb71c148951c5775bd4f83a3da9a427f8856632517b",
-      "size": 856937
+      "sha256": "fd4304a610de5843898d22119642f12475f2e5568a0c9e553d53d26a01e03475",
+      "size": 858999
     },
     {
       "path": "dist/preload.js",
@@ -75,8 +75,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "7f65135dfe4656d4a3a35246bfdf9cacacaf3360a59fccc20adc279568eff6bb",
-      "size": 128669
+      "sha256": "5a91b5cdea844bcdbb3787cff4fe3de02af053eedd35a0e994a580a49f1cfeda",
+      "size": 129139
     },
     {
       "path": "ui/app.png",
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "1ccfb266b31c360c14ee40c062c1a28f4b0f7939b7e398d1b3e9f989a5da15f1",
-      "size": 67962
+      "sha256": "0b34a64d46337861d4d82d8f3f9cee846de1b05348972954b63d998c364d8d9a",
+      "size": 68867
     },
     {
       "path": "ui/tokens.css",
