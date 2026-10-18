@@ -1,12 +1,12 @@
 {
-  "version": "0.16.7",
-  "notes": "Capture Game now recognises offer pages whose rewards are shown as numbers next to the earning app's coin icon (like \"Complete Level 15 · 64\"), so the Phone tab's button turns blue on them and the capture reads every milestone. The button no longer stays on \"Capture in progress\" after a capture ends.",
-  "publishedAt": "2026-10-18T23:20:33.661Z",
+  "version": "0.16.8",
+  "notes": "Capture Game now works on offer pages with a playing video (like Scrambly's Woodoku Blast): when the phone can't give Falcor the page's words, Falcor reads the screen from a picture with your Kimi key. The Phone tab recognises an offer from the top of the page, and Capture Game on either tab scans the whole offer in one press. Fixed an error when two captures started at once.",
+  "publishedAt": "2026-10-18T23:39:41.154Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "248b556e06a92742d7066a21f9f374a5f6c9c149e18712687d8d0b780c2b3ab2",
-      "size": 854745
+      "sha256": "eb4b23383ff2529290db1bb71c148951c5775bd4f83a3da9a427f8856632517b",
+      "size": 856937
     },
     {
       "path": "dist/preload.js",
@@ -75,8 +75,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "3acfaae0df32524e2519e2dc14f4c8c7f11c2166fd0b7b12f50c8b59f837d260",
-      "size": 128203
+      "sha256": "7f65135dfe4656d4a3a35246bfdf9cacacaf3360a59fccc20adc279568eff6bb",
+      "size": 128669
     },
     {
       "path": "ui/app.png",
