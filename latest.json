@@ -1,12 +1,12 @@
 {
-  "version": "0.12.0",
-  "notes": "Sturdier Autopilot: a task carries on by itself after you take the phone, the laptop sleeps, the phone is locked or the cable is pulled, and long games keep going in their next run. Taught games skip your slips and pop-ups no longer hide the right button. Falcor understands everyday phrases and reminds you before an offer ends.",
-  "publishedAt": "2026-10-18T01:44:47.724Z",
+  "version": "0.13.0",
+  "notes": "Training is much stronger. Press Teach on the home screen or in the app; Falcor records every touch and the screen it really led to, then works out at once how to get to the task, the reward button, when the next reward comes and which buttons to stay away from. Autopilot uses it straight away, and you see it in Knowledge and in Falcor chat.",
+  "publishedAt": "2026-10-18T02:11:55.615Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "b0785985ec619d2d8b7636492a0b214036a8ae54a1916e2ffba5ca36f0f725a6",
-      "size": 558943
+      "sha256": "31087ec649d81bd3182317b35d1cf8fe551a2df82d477e83dc2288c3b0144f79",
+      "size": 578939
     },
     {
       "path": "dist/preload.js",
@@ -65,8 +65,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "03638962d8f294e2987a45a8658a06b42ebbd5153ab81915f15a854f4fed5c7a",
-      "size": 100597
+      "sha256": "55e058b80fccd1e85307f4ebd78777029337c4e54da3e970fcb7123ffba8c2c0",
+      "size": 102602
     },
     {
       "path": "ui/dragon.png",
@@ -95,8 +95,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "00ffb255edb80c3041fef220f705d13e49362a918401ed62715509306bb18fee",
-      "size": 28479
+      "sha256": "143f29c159f17bc5d5a1ebd54129102a72b740a47dd5d004fca090b41b832f29",
+      "size": 28538
     },
     {
       "path": "ui/motion.css",
@@ -110,8 +110,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "c29cf3dde612fb8201e628e53bed5a6ff7b68f3c433b25ccbb27b3eed2e230d2",
-      "size": 35684
+      "sha256": "ac3bb96939bd8afb89e7157a08d607e1c59dcfad7cb6381806555ecba3fe7273",
+      "size": 36188
     }
   ]
 }

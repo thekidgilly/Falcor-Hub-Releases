@@ -360,8 +360,10 @@ function tickRec() { if (!teachSeen) return; text($('rectime'), clock(teachSeen.
 setInterval(tickRec, 500);
 $('teach').onclick = async () => {
   const t = await call('teachTarget', {deviceId});
-  if (!t.pkg || /launcher|systemui/.test(t.pkg)) { toast('Open the app you want to teach on the phone first (Take Control and tap it on the mirror).', 'warn'); return; }
-  text($('teachpkg'), t.pkg); text($('teachapp'), t.name); $('teachname').value = t.name; $('teachintent').value = '';
+  // On the home screen: Falcor records how the owner opens the app too, and learns the app from the first one opened.
+  const home = !t.pkg || /launcher|systemui/.test(t.pkg);
+  $('teachname').required = !home; $('teachname').placeholder = home ? 'Named after the app you open' : '';
+  text($('teachpkg'), home ? 'Start here, then open the app on the mirror' : t.pkg); text($('teachapp'), home ? 'The home screen' : t.name); $('teachname').value = home ? '' : t.name; $('teachintent').value = '';
   $('teachform').hidden = false; $('teachname').focus();
 };
 $('teachcancel').onclick = () => { $('teachform').hidden = true; };
@@ -377,9 +379,11 @@ $('markform').onsubmit = async e => {
   const f = P.el('<div class="flagdrop">' + icon('flag') + '</div>'); f.style.left = lastTouch.x + '%'; f.style.top = lastTouch.y + '%'; $('overlay').appendChild(f); setTimeout(() => f.remove(), 1500);
   toast('Marked.');
 };
-$('recstop').onclick = async () => { const r = await call('teachStop'); if (!r.auto) showAfter(r.pkg, r.id, r.name, r.screens); };
-async function showAfter(pkg, id, name, screens) {
+$('recstop').onclick = async () => { const r = await call('teachStop'); if (!r.pkg) { toast('No app was opened, so nothing was recorded.', 'warn'); return; } if (!r.auto) showAfter(r.pkg, r.id, r.name, r.screens, r.learned); };
+async function showAfter(pkg, id, name, screens, learned) {
   after = {pkg, id, screens}; $('after').hidden = false; text($('aftername'), name); text($('afterest'), 'Working out what it costs…');
+  // What Falcor already worked out from the session on this computer (free, no AI): Autopilot uses it from now on.
+  text($('afterlearned'), learned || ''); $('afterlearned').hidden = !learned;
   $('afterbody').hidden = false; $('afterwork').hidden = true;
   for (const b of ['afterfull', 'aftertext', 'afterlocal', 'afterclose']) $(b).disabled = false;
   const est = await call('teachEstimate', {pkg, id}).catch(() => null);
@@ -426,7 +430,7 @@ function iconHtml(g) {
   const u = icons.get(g.pkg);
   return u ? '<img src="' + esc(u) + '" alt="">' : P.monogram(g.name, g.pkg);
 }
-const gameState = g => g.note ? {label: g.note, mood: 'sand'} : g.tasks.some(t => t.state === 'RUNNING') ? {label: 'Running', mood: 'green'} : g.needsYou ? {label: g.needsYou + ' need' + (g.needsYou === 1 ? 's' : '') + ' you', mood: 'sand'} : g.active ? {label: g.active + ' active', mood: 'green'} : g.tasks.length ? {label: 'All done', mood: 'muted'} : {label: 'Learned', mood: 'muted'};
+const gameState = g => g.note ? {label: g.note, mood: 'sand'} : !g.tasks.length && (g.earning || []).length ? {label: g.earning.reduce((n, o) => n + o.progress.done, 0) + ' of ' + g.earning.reduce((n, o) => n + o.progress.of, 0) + ' milestones', mood: 'green'} : g.tasks.some(t => t.state === 'RUNNING') ? {label: 'Running', mood: 'green'} : g.needsYou ? {label: g.needsYou + ' need' + (g.needsYou === 1 ? 's' : '') + ' you', mood: 'sand'} : g.active ? {label: g.active + ' active', mood: 'green'} : g.tasks.length ? {label: 'All done', mood: 'muted'} : {label: 'Learned', mood: 'muted'};
 function renderGames(force) {
   const list = S.games || [];
   if (gamePkg && !list.some(g => g.pkg === gamePkg)) gamePkg = null;
@@ -440,7 +444,7 @@ function renderGames(force) {
     htmlOnce(n.querySelector('.gicon'), iconHtml(g));
     text(n.querySelector('.nm'), g.name);
     text(n.querySelector('.m'), g.tasks.length ? g.tasks.length + ' challenge' + (g.tasks.length === 1 ? '' : 's') : 'no challenges yet');
-    text(n.querySelector('.earn'), P.earnLine(g.earnings) || (g.runs ? g.runs + ' runs' : ''));
+    text(n.querySelector('.earn'), P.earnLine(g) || (g.runs ? g.runs + ' runs' : ''));
     const p = n.querySelector('.pill'); p.className = 'pill ' + st.mood; text(p, st.label);
     n.title = g.name + ' · ' + g.pkg;
   });
@@ -449,22 +453,27 @@ function renderGame(g) {
   const st = gameState(g), d = dev();
   htmlOnce($('gpicon'), iconHtml(g));
   text($('gpname'), g.name);
-  htmlOnce($('gpmeta'), '<code>' + esc(g.pkg) + '</code> · <span class="' + st.mood + '">' + esc(st.label) + '</span>' + (g.lastPlayed ? ' · last played ' + new Date(g.lastPlayed).toLocaleString() : '') + (g.installed ? '' : ' · <span class="sand">not on the phone</span>'));
+  htmlOnce($('gpmeta'), (g.pkg.startsWith('offer:') ? 'Offer only' : '<code>' + esc(g.pkg) + '</code>') + ' · <span class="' + st.mood + '">' + esc(st.label) + '</span>' + (g.level !== null && g.level !== undefined ? ' · level ' + esc(g.level) : '') + (g.lastPlayed ? ' · last played ' + new Date(g.lastPlayed).toLocaleString() : '') + (g.installed ? '' : ' · <span class="sand">' + (g.pkg.startsWith('offer:') ? 'not linked to an app on the phone yet: Edit the offer once it is installed' : 'not on the phone') + '</span>'));
   $('gpopen').disabled = !d || !g.installed || !!d.running || !!d.emergency;
   $('gpopen').title = !d ? 'Plug in the phone' : !g.installed ? 'Not installed on the phone' : d.running ? 'A task is running' : d.emergency ? 'Emergency Stop is on' : 'Open it on the phone and take control';
   $('gpteach').disabled = $('gpopen').disabled || !!S.teaching;
   $('gpguide').disabled = !g.learned;
   const tiles = [{k: 'ch', label: 'Challenges', v: g.tasks.length}, {k: 'active', label: 'Active', v: g.active}, {k: 'runs', label: 'Runs', v: g.runs}, {k: 'ver', label: 'Verified', v: g.verified}];
   keyed($('gptiles'), tiles, t => t.k, () => P.el('<div class="panel tile"><span class="muted small"></span><b></b></div>'), (n, t) => { text(n.querySelector('.muted'), t.label); roll(n.querySelector('b'), t.v, String); });
-  const earn = P.earnings(g.earnings);
-  htmlOnce($('gpearn'), earn.length ? '<div class="earns">' + earn.map(e => '<div class="earn"><span class="u">' + icon(UNIT(e.unit)) + ' ' + esc(e.unit) + '</span><b>' + P.num(e.earned) + '</b><span class="muted small">earned' + (e.coming ? ' · ' + P.num(e.coming) + ' on the way' : '') + (e.offered ? ' · ' + P.num(e.offered) + ' offered' : '') + (e.unknown ? ' · ' + e.unknown + ' amount' + (e.unknown === 1 ? '' : 's') + ' not shown' : '') + '</span></div>').join('') + '</div>' : '<p class="muted small">Nothing earned yet. Earnings show here per unit once a challenge claims a reward.</p>');
+  $('gpofferbox').hidden = !(g.earning || []).length;
+  htmlOnce($('gpoffers'), P.offersHtml(g, true)); P.fix($('gpoffers'));
+  $('gpopen').hidden = $('gpteach').hidden = $('gptask').hidden = $('gpchat').hidden = $('gpguide').hidden = $('gptiles').hidden = g.pkg.startsWith('offer:');
+  htmlOnce($('gpearn'), P.rewardsHtml(g)); P.fix($('gpearn'));
+  htmlOnce($('gphist'), P.historyHtml(g));
+  $('gptierbox').hidden = !(g.tiers || []).length && !(g.objectives || []).length;
+  htmlOnce($('gptiers'), P.tiersHtml(g));
   const box = $('gptasks');
   if (!g.tasks.length) htmlOnce(box, '<div class="empty" data-empty><span>No challenges for this game yet.</span></div>');
   else {
     if (box.querySelector('[data-empty]')) box.innerHTML = '';
     keyed(box, g.tasks, t => t.id, () => P.el('<div class="gtask"><div class="main"></div><div class="acts"></div></div>'), (n, t) => {
       const why = t.needs ? 'Needs you: ' + t.needs.reason : t.lastError || '';
-      htmlOnce(n.querySelector('.main'), '<div class="obj">' + icon(TYPEICON[t.type] || 'tasks') + ' ' + esc(t.objective) + '</div><div class="meta"><span>' + esc(TYPE[t.type] || t.type) + '</span>' + (t.targetLevel ? '<span>level ' + esc(t.level ?? 0) + ' of ' + esc(t.targetLevel) + '</span>' : '') + (t.reward !== null ? '<span>' + icon(UNIT(t.unit)) + ' ' + esc(t.reward) + ' ' + esc(t.unit) + '</span>' : '') + (t.nextAt && t.state === 'SCHEDULED' ? '<span>next ' + when(t.nextAt) + '</span>' : '') + '<span class="pill ' + (trackOf(t.state).mood === 'needs' ? 'sand' : trackOf(t.state).mood === 'bad' ? 'red' : 'green') + '">' + esc(t.stateLabel) + '</span></div>' + trackHtml(t.state) + (why ? '<div class="why sand">' + esc(why) + '</div>' : ''));
+      htmlOnce(n.querySelector('.main'), '<div class="obj">' + icon(TYPEICON[t.type] || 'tasks') + ' ' + esc(t.objective) + '</div><div class="meta"><span>' + esc(TYPE[t.type] || t.type) + '</span>' + (t.targetLevel ? '<span>level ' + esc(t.level ?? 0) + ' of ' + esc(t.targetLevel) + '</span>' : '') + (t.reward !== null ? '<span>' + icon(UNIT(t.unit)) + ' offer ' + esc(t.reward) + ' ' + esc(t.unit) + '</span>' : '') + (t.nextAt && t.state === 'SCHEDULED' ? '<span>next ' + when(t.nextAt) + '</span>' : '') + '<span class="pill ' + (trackOf(t.state).mood === 'needs' ? 'sand' : trackOf(t.state).mood === 'bad' ? 'red' : 'green') + '">' + esc(t.stateLabel) + '</span></div>' + P.progressHtml(t) + trackHtml(t.state) + (why ? '<div class="why sand">' + esc(why) + '</div>' : ''));
       const acts = [];
       if (!['NEEDS_REVIEW', 'DRAFT', 'RUNNING', 'BLOCKED', 'CANCELLED', 'EXPIRED', 'FAILED', 'RECEIVED', 'INVALIDATED'].includes(t.state)) acts.push('<button class="primary small" data-task="' + esc(t.id) + '" data-act="run">' + icon('play') + 'Run now</button>');
       if (['SCHEDULED', 'RUNNING', 'READY', 'NEEDS_ATTENTION'].includes(t.state)) acts.push('<button class="small" data-task="' + esc(t.id) + '" data-act="pause">' + icon('pause') + 'Pause</button>');
@@ -478,24 +487,71 @@ function renderGame(g) {
   htmlOnce($('gpknowbody'), moves + (k ? '<p>' + esc(k.summary || (k.hasGuide ? 'Guide ready.' : 'Recorded; no guide written yet.')) + '</p><p class="muted small">' + k.sessions + ' teaching session' + (k.sessions === 1 ? '' : 's') + ' · last ' + new Date(k.lastSessionAt).toLocaleDateString() + '</p><button class="small" data-link="knowledge" data-ref="' + esc(g.pkg) + '">' + icon('book') + 'Read the guide</button>'
     : '<p class="muted small">' + (g.note ? esc(g.note) + '.' : 'Falcor has not learned this game yet. Press Teach again (or Teach on the Phone tab) and play it on the mirror.') + '</p>'));
 }
-// Rewarded ads for this game: off until the owner turns them on with both ticks. Falcor then plays an ad offer only
-// while the owner is here to watch it, and closes it once the reward is granted.
+// Rewarded ads: on for every game. Falcor plays an ad offer while the owner is here to watch it and closes it once the
+// reward is granted; a game can be turned off (and on again) here.
 function renderAds(g) {
-  const box = $('gpadsbody'), sig = g.pkg + ':' + g.ads + ':' + g.adsLocked;
+  const box = $('gpadsbody'), sig = g.pkg + ':' + g.ads + ':' + g.adsLocked + ':' + g.manual;
+  $('gpads').hidden = g.pkg.startsWith('offer:');
   if (box.dataset.sig === sig) return; box.dataset.sig = sig;
-  if (g.adsLocked) { box.innerHTML = '<p class="muted small">This app is manual only. Falcor does not play its ads.</p>'; return; }
-  box.innerHTML = g.ads
-    ? '<p class="small"><span class="led on"></span> On. When the game offers a reward for an ad, Falcor plays it while you are at the computer or in the phone app, waits for the reward, then closes it. It never taps inside the ad or buys anything.</p><button class="small" data-ads="off">Turn off</button>'
-    : '<p class="muted small">Off. Falcor passes by "watch an ad" offers in this game.</p><div class="gate"><label class="check"><input type="checkbox" data-tick="rules"> This game\'s rules allow rewarded ads to be started this way</label><label class="check"><input type="checkbox" data-tick="watch"> I watch every ad myself while Falcor plays</label><div class="row"><button class="primary small" data-ads="on" disabled>Turn on</button></div></div>';
-  const gate = box.querySelector('.gate');
-  if (gate) gate.addEventListener('change', () => { box.querySelector('[data-ads="on"]').disabled = !gate.querySelector('[data-tick="rules"]').checked || !gate.querySelector('[data-tick="watch"]').checked; });
+  box.innerHTML = g.manual ? '<p class="muted small">This game is a ' + esc(g.manual) + ' offer: you play it, so Falcor plays no ads in it.</p>'
+    : g.adsLocked ? '<p class="muted small">This app is manual only. Falcor does not play its ads.</p>'
+    : g.ads ? '<p class="small"><span class="led on"></span> On. When the game offers a reward for an ad, Falcor plays it while you are at the computer or in the phone app, waits for the reward, then closes it. It never taps inside the ad or buys anything.</p><button class="small" data-ads="off">Turn off for this game</button>'
+    : '<p class="muted small">Off for this game: Falcor passes by "watch an ad" offers here.</p><button class="small primary" data-ads="on">Turn on</button>';
 }
 $('gpadsbody').onclick = async e => {
   const b = e.target.closest('[data-ads]'); if (!b || !gamePkg) return;
-  const q = k => !!$('gpadsbody').querySelector('[data-tick="' + k + '"]')?.checked;
-  await call('setAds', {pkg: gamePkg, on: b.dataset.ads === 'on', rulesAllow: q('rules'), iWatch: q('watch')});
-  toast(b.dataset.ads === 'on' ? 'Rewarded ads on: Falcor plays them only while you are here to watch.' : 'Rewarded ads off.');
+  await call('setAds', {pkg: gamePkg, on: b.dataset.ads === 'on'});
+  toast(b.dataset.ads === 'on' ? 'Rewarded ads on for this game.' : 'Rewarded ads off for this game.');
 };
+// ---------------------------------------------------------------- offers from earning apps
+// Capture reads the offer page open on the phone into this form; nothing is saved until the owner checks it and saves.
+let offerDraft = null;
+function offerRow(m = {text: '', amount: '', unit: 'points', done: false}) {
+  const r = P.el('<div class="mrow"><input data-k="text" maxlength="120" placeholder="Reach level 10"><input data-k="amount" type="number" min="0" step="any" placeholder="reward" data-num="1"><input data-k="unit" maxlength="24" placeholder="unit"><label class="check"><input type="checkbox" data-k="done"> done</label><button type="button" class="icon small ghost" title="Remove">' + icon('close') + '</button></div>');
+  r.querySelector('[data-k="text"]').value = m.text; r.querySelector('[data-k="amount"]').value = m.amount ?? ''; r.querySelector('[data-k="unit"]').value = m.unit || ''; r.querySelector('[data-k="done"]').checked = !!m.done;
+  r.querySelector('button').onclick = () => r.remove();
+  $('offerrows').appendChild(r);
+}
+async function openOffer(draft, installed, where) {
+  offerDraft = draft || {source: {name: '', pkg: ''}, game: {name: '', pkg: null}, milestones: [], total: null, expiresAt: null, by: 'owner'};
+  const f = $('offerform');
+  $('offerform').hidden = false; $('offerfields').hidden = false; $('offerstart').hidden = true;
+  text($('offerwhere'), where || 'Fill in the offer as the earning app shows it.');
+  if (!installed) installed = deviceId ? await window.hub.call('installedApps', {deviceId}).catch(() => []) : [];
+  f.pkg.innerHTML = '<option value="">Not on the phone yet</option>' + installed.map(a => '<option value="' + esc(a.pkg) + '">' + esc(a.name) + ' · ' + esc(a.pkg) + '</option>').join('');
+  f.source.value = offerDraft.source.name; f.game.value = offerDraft.game.name; f.pkg.value = offerDraft.game.pkg || '';
+  f.days.value = offerDraft.expiresAt ? Math.round((offerDraft.expiresAt - Date.now()) / 8_640_000) / 10 : '';
+  f.total.value = offerDraft.total ? offerDraft.total.amount : ''; f.totalunit.value = offerDraft.total ? offerDraft.total.unit : '';
+  $('offerrows').innerHTML = ''; for (const m of offerDraft.milestones) offerRow(m); if (!offerDraft.milestones.length) offerRow();
+  numbers(f); f.game.focus();
+}
+function closeOffer() { $('offerform').hidden = true; $('offerfields').hidden = true; $('offerstart').hidden = false; offerDraft = null; }
+$('offeradd').onclick = () => { closeOffer(); $('offerform').hidden = false; };
+$('offercancel').onclick = closeOffer;
+$('offerhand').onclick = () => openOffer(null, null, 'Fill in the offer as the earning app shows it.');
+$('offerrow').onclick = () => offerRow();
+$('offercapture').onclick = async () => {
+  if (!deviceId) { toast('Plug in the phone first.', 'warn'); return; }
+  try { const r = await window.hub.call('captureOffer', {deviceId}); await openOffer(r.draft, r.installed, 'Read from ' + r.draft.source.name + ' on the phone. Check everything, fix what is wrong, then Save.'); }
+  catch (e) { const m = errText(e); toast(m, 'warn'); if (/by hand/.test(m)) openOffer({source: {name: (/^(.+?)'s rules/.exec(m) || [])[1] || '', pkg: ''}, game: {name: '', pkg: null}, milestones: [], total: null, expiresAt: null, by: 'owner'}, null, m); }
+};
+$('offerform').onsubmit = async e => {
+  e.preventDefault();
+  const f = $('offerform'), days = f.days.value === '' ? null : Number(f.days.value);
+  const offer = {id: offerDraft && offerDraft.id, by: offerDraft ? offerDraft.by : 'owner', source: {name: f.source.value, pkg: offerDraft && offerDraft.source.pkg || ''}, game: {name: f.game.value, pkg: f.pkg.value || null},
+    total: f.total.value === '' ? null : {amount: Number(f.total.value), unit: f.totalunit.value || 'points'}, expiresAt: days === null ? null : Date.now() + days * 86_400_000,
+    milestones: [...$('offerrows').querySelectorAll('.mrow')].map(r => ({text: r.querySelector('[data-k="text"]').value, amount: r.querySelector('[data-k="amount"]').value === '' ? null : Number(r.querySelector('[data-k="amount"]').value), unit: r.querySelector('[data-k="unit"]').value, done: r.querySelector('[data-k="done"]').checked})).filter(m => m.text.trim())};
+  const o = await call('saveOffer', {offer});
+  closeOffer(); S = await call('status'); gamePkg = o.game.pkg || 'offer:' + o.id; go('games');
+  toast('Offer saved: ' + o.game.name + ' via ' + o.source.name + (o.manual ? '. You play it; Falcor tracks it.' : '.'));
+};
+$('gpoffers').addEventListener('change', async e => { const b = e.target.closest('[data-offer]'); if (b) await call('tickOffer', {id: b.dataset.offer, index: Number(b.dataset.i), done: b.checked}); });
+$('gpoffers').addEventListener('click', async e => {
+  const ed = e.target.closest('[data-offer-edit]'), rm = e.target.closest('[data-offer-remove]');
+  const o = (ed || rm) && (S.games.find(g => g.pkg === gamePkg)?.earning || []).find(x => x.id === (ed || rm).dataset[ed ? 'offerEdit' : 'offerRemove']);
+  if (ed && o) { gamePkg = null; renderGames(); await openOffer(o, null, 'Editing the ' + o.source.name + ' offer.'); }
+  if (rm && o && confirm('Remove the ' + o.source.name + ' offer for ' + o.game.name + '?')) await call('removeOffer', {id: o.id});
+});
 $('gamegrid').onclick = e => { if (e.target.closest('[data-newgame]')) return openDrawer(); const t = e.target.closest('.gametile'); if (t) { gamePkg = t.dataset.key; renderGames(); $('gamepage').scrollIntoView({block: 'start'}); } };
 $('gamenew').onclick = () => openDrawer();
 $('gameback').onclick = () => { gamePkg = null; renderGames(); };
@@ -772,6 +828,21 @@ function renderLearn() {
 }
 $('apps').onclick = e => { const c = e.target.closest('.appcard'); if (c) { learnPkg = c.dataset.key; learnSig = ''; editing = false; renderLearn(); } };
 $('learnempty').onclick = e => { const l = e.target.closest('[data-link]'); if (l) go(l.dataset.link); };
+// What training taught (worked out on this computer when each session ended): what Autopilot follows in this app.
+function learnedHtml(l) {
+  if (!l) return '';
+  const li = [];
+  if (l.entry && l.entry.fromHome) li.push('Opened from the home screen' + (l.entry.launchedBy ? ' with “' + esc(l.entry.launchedBy) + '”' : ''));
+  const route = (l.path || []).filter(p => !p.claim);
+  if (route.length) li.push('How to get there: ' + route.map(p => p.kind === 'scroll' ? 'scroll ' + esc(p.direction || 'down') : '“' + esc(p.label) + '”').join(' → '));
+  if (l.claim) li.push('Reward button: “' + esc(l.claim.label) + '” · proof: ' + l.claim.proof.map(x => '“' + esc(x) + '”').join(', '));
+  if (l.reset) li.push('Next reward: ' + (l.reset.ms ? Math.round(l.reset.ms / 3600000) + ' h after a claim' : 'tomorrow'));
+  if (l.loops && l.loops.length) li.push('While playing: ' + l.loops.map(p => '“' + esc(p.label) + '” ×' + p.uses).join(', '));
+  if (l.level) li.push('Level ' + l.level.from + ' → ' + l.level.to);
+  for (const b of l.balances || []) li.push(esc(b.unit) + ' ' + b.from + ' → ' + b.to);
+  for (const a of l.avoid || []) li.push('<span class="sand">Never presses “' + esc(a.label) + '”</span>: ' + esc(a.why));
+  return li.length ? '<section class="learnedbox"><h3>' + icon('ai') + 'What training taught · ' + (l.sessions || 1) + ' session(s)</h3><ul>' + li.map(x => '<li>' + x + '</li>').join('') + '</ul></section>' : '';
+}
 async function loadApp() {
   $('guidecard').hidden = $('sessioncard').hidden = !learnPkg;
   if (!learnPkg) { $('guide').innerHTML = ''; return; }
@@ -780,7 +851,7 @@ async function loadApp() {
   const g = L.guide;
   text($('guidemeta'), g ? 'Written ' + (g.by === 'local' ? 'on this computer without AI' : 'by Falcor AI' + (g.by === 'kimi-text' ? ' from text only' : '')) + ' · ' + new Date(g.updatedAt).toLocaleString() + ' · ' + L.sessions.length + ' session(s)' : 'No guide yet: write one from a session below.');
   $('guideedit').hidden = !g; $('guidesave').hidden = true; text($('guideedit'), 'Edit');
-  $('guide').innerHTML = g ? guideHtml(g) : ''; P.fix($('guide'));
+  $('guide').innerHTML = learnedHtml(L.learned) + (g ? guideHtml(g) : ''); P.fix($('guide'));
   $('guide').classList.remove('editing');
   if (g) for (const img of $('guide').querySelectorAll('img[data-shot]')) window.hub.call('shot', {id: img.dataset.shot}).then(u => { if (typeof u === 'string') img.src = u; else img.closest('.thumb').remove(); }).catch(() => {});
   $('sessions').innerHTML = L.sessions.slice().reverse().map(r => '<details><summary>' + new Date(r.startedAt).toLocaleString() + ' · ' + clock(r.activeMs) + ' · ' + r.screens + ' screens · ' + r.touches + ' touches' + (r.intent ? ' · ' + esc(r.intent) : '') + '</summary>'
