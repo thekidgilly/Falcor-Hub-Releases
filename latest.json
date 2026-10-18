@@ -1,17 +1,17 @@
 {
-  "version": "0.10.0",
-  "notes": "Games tab upgrade: every game's page now shows its level, coins and points collected (each daily claim counts), a reward tracker with every reward's date and amount, the game's reward tiers, and level progress for each challenge. Coins a game pays while Falcor plays are now counted, and newly installed games can be opened right away.",
-  "publishedAt": "2026-10-18T00:20:50.859Z",
+  "version": "0.11.0",
+  "notes": "Offers from earning apps: in Games, press Add offer, then Capture from the phone while the game's offer is open in your earning app. Falcor reads the game, its milestones, rewards and deadline, you check them, and the game shows in Games (computer and phone) with a milestone tracker and earnings. Mistplay offers are entered by hand: Falcor never reads Mistplay's screen or plays its games.",
+  "publishedAt": "2026-10-18T00:50:42.989Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "2475309d7805db21d2f6d53584520aea612384521bceb99a577073dcc4eb9b13",
-      "size": 538441
+      "sha256": "8b86f938b636eea44577a024689f797f5d8ae049974e15bc1a16071c1eb58d31",
+      "size": 553055
     },
     {
       "path": "dist/preload.js",
-      "sha256": "0b0bb7b405a519280b22294bce00b1a31a8e0b32460fa548bc51492c75975d14",
-      "size": 1351
+      "sha256": "f152e27d6158759f173e01eae9ae21d763b970a1bb06ed8e429ad51d99b0a37e",
+      "size": 1435
     },
     {
       "path": "remote-ui/assets/esm-B7fXffpm.js",
@@ -24,14 +24,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-DQoMDvom.js",
-      "sha256": "2fbc53d776072d61828b7ae474a950d37d3083532090425db943164f2ae805e6",
-      "size": 95498
+      "path": "remote-ui/assets/index-C1gcBFWl.css",
+      "sha256": "4fec841a1113b2e038fce3ad28ab2dc969b9a2f025106351f5c33dfb7a3e2c9f",
+      "size": 24504
     },
     {
-      "path": "remote-ui/assets/index-DcIVixZ_.css",
-      "sha256": "220b12366d09767f16ce39afbd0d007684b1cb25d610f4cdd10e11757d0c78a2",
-      "size": 23753
+      "path": "remote-ui/assets/index-CZDXkN3B.js",
+      "sha256": "d00769518f3604699123652bb13b3a32f3112ebb93b6d462f8d45f1019f60759",
+      "size": 97883
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -60,13 +60,13 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "5f99c48353df44d59628926cb30cad2dfe14cb22b93a62e974d34f3ac6338676",
+      "sha256": "0af36a0d74668e8c31dc113a5db67473c242cdf343a8177d0eb3ca461b68e436",
       "size": 2594
     },
     {
       "path": "ui/app.js",
-      "sha256": "8ec8e6fb795449242495a97b3d29222ccad76919de23141fa2728005b5579af9",
-      "size": 94515
+      "sha256": "03638962d8f294e2987a45a8658a06b42ebbd5153ab81915f15a854f4fed5c7a",
+      "size": 100597
     },
     {
       "path": "ui/dragon.png",
@@ -95,23 +95,23 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "73c637038162f3ce303109339e0c0911e35de7b649e44318e95a387c6e40c3ab",
-      "size": 26484
+      "sha256": "00ffb255edb80c3041fef220f705d13e49362a918401ed62715509306bb18fee",
+      "size": 28479
     },
     {
       "path": "ui/motion.css",
-      "sha256": "c33c6cf6d4f421c610fb1be2ace8d5fd0e9122b11385db62fc8033a551ba4d30",
-      "size": 13324
+      "sha256": "351263b3d36f8116fcc3411b69b887e6317a578d5e21d02750ae939ff12fe943",
+      "size": 14286
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "e33f9dde2daebad4acb0e0f2fa2bcb78c0562136c734a5d0075d82db8cfedb46",
-      "size": 29406
+      "sha256": "5741dbf132fc77590a87e04a942772aa2a9a989c377e38a31dcef6b60f24c98c",
+      "size": 31824
     },
     {
       "path": "ui/style.css",
-      "sha256": "6cda0b5a1372633adb8c793803e4709156e1bcfba0e43500c91e9da7cb0d837a",
-      "size": 35372
+      "sha256": "c29cf3dde612fb8201e628e53bed5a6ff7b68f3c433b25ccbb27b3eed2e230d2",
+      "size": 35684
     }
   ]
 }

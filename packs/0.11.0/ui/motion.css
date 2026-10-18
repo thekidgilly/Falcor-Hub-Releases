@@ -123,3 +123,25 @@ canvas.intro.out { animation: fadeout .32s steps(6) forwards; } @keyframes fadeo
 .gicon .mono { width: 70%; height: 70%; display: grid; place-items: center; font: 22px/1 'Departure Mono', monospace; color: #0A0A0A; border-radius: 4px; }
 .gicon.big { width: 88px; height: 88px; border-radius: 18px; } .gicon.big .mono { font-size: 36px; }
 .mono.c0 { background: #5CE59A; } .mono.c1 { background: #F5B544; } .mono.c2 { background: #F0544F; } .mono.c3 { background: #E8E8E8; }
+
+/* The Games tab's reward parts (both apps). */
+.earn .rbar { display: flex; height: 6px; background: rgba(255,255,255,.08); margin-top: 6px; }
+.earn .rbar i { display: block; } .earn .rbar i.c { background: #5CE59A; } .earn .rbar i.p { background: #F5B544; }
+.rhist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.rhist li { display: grid; grid-template-columns: auto auto auto 1fr; gap: 10px; align-items: center; font-size: 12px; }
+.rhist .pill { justify-self: start; }
+.rhist time { color: rgba(237,237,237,.58); font-variant-numeric: tabular-nums; }
+.tiers { width: 100%; border-collapse: collapse; font-size: 12px; } .tiers th { text-align: left; color: rgba(237,237,237,.58); font-weight: 400; }
+.tiers td, .tiers th { padding: 4px 8px 4px 0; border-bottom: 1px solid rgba(255,255,255,.08); vertical-align: top; }
+.objs { list-style: none; margin: 0 0 8px; padding: 0; font-size: 13px; } .objs li { padding: 2px 0; }
+.lvbar { display: flex; gap: 2px; margin-top: 6px; max-width: 360px; } .lvbar i { flex: 1; height: 6px; background: rgba(255,255,255,.1); } .lvbar i.on { background: #5CE59A; }
+@media (max-width: 520px) { .rhist li { grid-template-columns: auto auto 1fr; } .rhist li .muted { grid-column: 1 / -1; } }
+
+/* Offers from earning apps (both apps). */
+.offer { border: 1px solid rgba(255,255,255,.10); border-radius: 6px; padding: 10px 12px; display: grid; gap: 6px; }
+.offer + .offer { margin-top: 8px; }
+.ounit { font-size: 13px; } .ounit b { color: #5CE59A; font-size: 16px; } .ounit .rbar { display: flex; height: 6px; background: rgba(255,255,255,.08); margin-top: 4px; } .ounit .rbar i { display: block; } .ounit .rbar i.c { background: #5CE59A; }
+.mstones { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.mstones li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; font-size: 13px; }
+.mstones li.done span { color: rgba(237,237,237,.58); text-decoration: line-through; } .mstones li b { font-weight: 400; color: #5CE59A; white-space: nowrap; }
+.mstones li em { grid-column: 1 / -1; font-style: normal; font-size: 11px; } .mstones label { display: flex; gap: 8px; align-items: center; cursor: pointer; }

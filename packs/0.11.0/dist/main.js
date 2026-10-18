@@ -5364,8 +5364,11 @@ function moneyReason(text2, { prices = true } = {}) {
   for (const m of MONEY) if ((prices || !m.price) && m.re.test(t)) return m.why;
   return null;
 }
-var RISKY = /[$€£]\s?\d|\b(?:buy|purchase|pay|checkout|subscribe|subscription|deposit|top ?up|install|watch|ads?|bet|wager)\b|\bx[2-9]\b/i;
+var RISKY = /[$€£]\s?\d|\b(?:buy|purchase|pay|checkout|subscribe|subscription|deposit|top ?up|install|download|learn more|visit|get the app|watch|ads?|bet|wager)\b|\bx[2-9]\b/i;
 var riskyControl = (label) => RISKY.test(String(label || "")) && !/^(?:skip|close)(?: the| this)? ads?$/i.test(String(label || "").trim());
+var AD_OFFER = /\b(?:watch|view|play)\b.{0,24}\b(?:ads?|video)\b|\(\s*(?:watch\s+)?ads?\s*\)|\bads?\b.{0,12}\b(?:for|to get)\b/i;
+var NOT_AN_OFFER = /[$€£]\s?\d|\b(?:buy|purchase|pay|subscribe|install|download|learn more|visit|remove ads|no ads)\b/i;
+var adOffer = (label) => AD_OFFER.test(String(label || "")) && !NOT_AN_OFFER.test(String(label || ""));
 var PROTECTED = [
   { re: /\b(?:captcha|i'?m not a robot|verify (?:that )?you(?:'re| are) (?:a )?human|select all (?:images|squares)|press (?:and|&) hold)\b/, kind: "captcha", reason: "a human check (CAPTCHA) is the owner's to solve" },
   { re: /\b(?:one[- ]time (?:code|password|passcode)|otp|verification code|enter (?:the )?(?:\d|six|6)[- ]digit code|code (?:we )?sent to|sms code)\b/, kind: "otp", reason: "a one-time code goes to the owner" },
@@ -5465,7 +5468,7 @@ var GuardedDriver = class {
       return { id: env.id, ok: false, error: e instanceof Error ? e.message : "Refused.", code: e instanceof ActionError ? e.code : "INVALID", at: now };
     }
     if (auth.lease.kind !== "human") {
-      const label = riskyAt(obs, env.action, at);
+      const label = riskyAt(obs, env, at);
       if (label !== null) return { id: env.id, ok: false, error: 'Falcor never presses purchases, ads or offers ("' + label.slice(0, 40) + '").', code: "POLICY", at: now };
     }
     let info;
@@ -5490,12 +5493,14 @@ var GuardedDriver = class {
     }
   }
 };
-function riskyAt(obs, a, at) {
+function riskyAt(obs, env, at) {
+  const a = env.action;
   const nodes = obs.nodes || [], label = (n) => (n.text + " " + n.desc).trim();
   if (a.kind === "tap_node" && at.node) {
     const b = at.node.bounds, small = (b.r - b.l) * (b.b - b.t) < obs.width * obs.height / 2;
     const hit = find(nodes, a.selector), inside = !small ? [] : nodes.filter((n) => n.bounds.l >= at.node.bounds.l && n.bounds.r <= at.node.bounds.r && n.bounds.t >= at.node.bounds.t && n.bounds.b <= at.node.bounds.b && (n.text || n.desc));
-    for (const n of [hit, at.node, ...inside]) if (n && riskyControl(label(n))) return label(n);
+    const offer = (n) => a.kind === "tap_node" && env.intent === "watch_ad" && adOffer(label(n));
+    for (const n of [hit, at.node, ...inside]) if (n && riskyControl(label(n)) && !offer(n)) return label(n);
     return null;
   }
   if ((a.kind === "tap" || a.kind === "long_press") && at.x !== void 0 && at.y !== void 0) {
@@ -6653,6 +6658,8 @@ var screenKey = (o) => o.package + "|" + o.uiSignature + "|" + o.textHash;
 
 // src/automation/android/procedures.ts
 var TTL = 30 * 864e5;
+var TAUGHT_TTL = 180 * 864e5;
+var TAUGHT = "taught";
 var ProcedureMemory = class _ProcedureMemory {
   all = /* @__PURE__ */ new Map();
   source;
@@ -6672,11 +6679,28 @@ var ProcedureMemory = class _ProcedureMemory {
     }
     return p;
   }
-  // The verified step for this screen, if any: the control and what it should do.
+  // The verified step for this screen, if any: the control and what it should do. Then what the owner taught there.
   suggest(appPackage, appVersion, task, screen, now) {
-    const p = this.get(appPackage, appVersion, task, now);
-    const s2 = p?.steps.find((x) => x.screen === screen && x.failures < 2 && x.uses > x.failures);
-    return s2 || null;
+    const ok = (x) => x.screen === screen && x.failures < 2 && x.uses > x.failures;
+    return this.get(appPackage, appVersion, task, now)?.steps.find(ok) || this.get(appPackage, "*", TAUGHT, now)?.steps.find(ok) || null;
+  }
+  // Steps from a Teach session: on each screen, the control the owner pressed there that changed something.
+  teach(appPackage, steps, now) {
+    const id = _ProcedureMemory.key(appPackage, "*", TAUGHT);
+    const p = this.all.get(id) || { id, appPackage, appVersion: "*", task: TAUGHT, steps: [], verifiedRuns: 0, failedRuns: 0, confidence: 0.9, source: "taught", createdAt: now, updatedAt: now, expiresAt: now + TAUGHT_TTL };
+    for (const st of steps) {
+      p.steps = p.steps.filter((x) => x.screen !== st.screen);
+      p.steps.push({ screen: st.screen, goal: st.goal, selector: st.selector, expected: "changed", uses: st.uses, failures: 0, lastVerifiedAt: now });
+    }
+    p.steps = p.steps.slice(-120);
+    p.updatedAt = now;
+    p.expiresAt = now + TAUGHT_TTL;
+    this.all.set(id, p);
+    return steps.length;
+  }
+  // How many steps Falcor can press on this app without asking (learned while playing and taught).
+  count(appPackage, now) {
+    return this.list().filter((p) => p.appPackage === appPackage && p.expiresAt >= now).reduce((n, p) => n + p.steps.filter((x) => x.failures < 2).length, 0);
   }
   // A step that was just verified on the phone.
   learn(appPackage, appVersion, task, step, now) {
@@ -6695,13 +6719,14 @@ var ProcedureMemory = class _ProcedureMemory {
   }
   // A suggested step that did not do what it should: less trusted, and dropped after two misses.
   miss(appPackage, appVersion, task, screen, now) {
-    const p = this.all.get(_ProcedureMemory.key(appPackage, appVersion, task));
-    const s2 = p?.steps.find((x) => x.screen === screen);
-    if (!p || !s2) return;
-    s2.failures++;
-    p.updatedAt = now;
-    p.confidence = Math.max(0, p.confidence - 0.15);
-    if (s2.failures >= 2) p.steps = p.steps.filter((x) => x !== s2);
+    for (const p of [this.all.get(_ProcedureMemory.key(appPackage, appVersion, task)), this.all.get(_ProcedureMemory.key(appPackage, "*", TAUGHT))]) {
+      const s2 = p?.steps.find((x) => x.screen === screen);
+      if (!p || !s2) continue;
+      s2.failures++;
+      p.updatedAt = now;
+      if (p.source !== "taught") p.confidence = Math.max(0, p.confidence - 0.15);
+      if (s2.failures >= 2) p.steps = p.steps.filter((x) => x !== s2);
+    }
   }
   finish(appPackage, appVersion, task, ok, now) {
     const p = this.all.get(_ProcedureMemory.key(appPackage, appVersion, task));
@@ -6717,7 +6742,7 @@ var ProcedureMemory = class _ProcedureMemory {
   }
   // The app updated (a new version): its old procedures no longer apply.
   invalidateApp(appPackage, keepVersion) {
-    for (const [id, p] of this.all) if (p.appPackage === appPackage && p.appVersion !== keepVersion) this.all.delete(id);
+    for (const [id, p] of this.all) if (p.appPackage === appPackage && p.appVersion !== keepVersion && p.source !== "taught") this.all.delete(id);
   }
   list() {
     return [...this.all.values()];
@@ -6826,10 +6851,10 @@ var PREMIUM = /\b(?:gems?|diamonds?|crystals?|premium|vip)\b/i;
 var NEVER = new RegExp("\\b(?:new game|restart|reset|begin again|start over|quit|exit|delete|log ?out|sign (?:in|out)|settings|options|shop|store)\\b|" + PREMIUM.source, "i");
 var LOADING = /\b(?:loading|connecting|please wait|downloading|syncing)\b|^\s*\d{1,3}\s?%\s*$/im;
 var TIRED = 12;
-function genericStep(o, mem) {
+function genericStep(o, mem, avoid = []) {
   if (!o.nodes) return null;
   const label = (n) => (n.text || n.desc).trim();
-  const safe = onTop(o.nodes).filter((n) => n.enabled && (n.clickable || /Button/.test(n.cls)) && label(n) && !riskyControl(label(n)) && (mem.pressed.get(label(n).toLowerCase()) || 0) < TIRED);
+  const safe = onTop(o.nodes).filter((n) => n.enabled && (n.clickable || /Button/.test(n.cls)) && label(n) && !riskyControl(label(n)) && !avoid.includes(label(n).toLowerCase()) && (mem.pressed.get(label(n).toLowerCase()) || 0) < TIRED);
   const up = safe.find((n) => UPGRADE.test(label(n)) && !PREMIUM.test(label(n)));
   if (up) return { press: up, goal: "Upgrade: " + label(up) };
   for (const re of FORWARD) {
@@ -6893,6 +6918,33 @@ function dailyStep(ctx) {
   }
   return { unknown: "The daily reward is not on this screen." };
 }
+var REWARD_GRANTED = /\b(?:reward (?:granted|earned|received|unlocked|collected)|you(?:'ve| have)? (?:earned|got|received) (?:the |your )?reward|thanks for watching)\b/i;
+var COUNTDOWN = /\b(?:reward in|ad (?:closes|ends) in|skip in|close in)\s*\d+|\b\d{1,3}\s?(?:s|sec|seconds)\b/i;
+var MAX_ADS = 10;
+function adStep(ctx) {
+  const nodes = ctx.obs.nodes || [], n = onTop(nodes).find((x) => x.enabled && (x.clickable || /Button/.test(x.cls)) && adOffer(x.text || x.desc));
+  if (!n) return null;
+  const label = (n.text || n.desc).trim();
+  const why = !ctx.ads.allowed ? "rewarded ads are off for this game" : Number(ctx.s.adsWatched || 0) >= MAX_ADS ? MAX_ADS + " ads were watched this run" : !ctx.ads.present() ? "you are not at the computer or in the phone app to watch it" : null;
+  if (why) {
+    if (!ctx.s.adPassNoted) {
+      ctx.s.adPassNoted = true;
+      ctx.ads.say('Passed by "' + label + '": ' + why + ".");
+    }
+    return null;
+  }
+  ctx.s.watching = { since: ctx.ads.now(), label };
+  return { act: { kind: "tap_node", selector: nodeSel(n) }, expect: { kind: "changed" }, goal: 'Play the ad for "' + label + '" (you watch it)', intent: "watch_ad", learn: null };
+}
+var BALANCE = /(?<![+\d])\b(coins?|gems?|gold|points?|credits?|cash|diamonds?|stars?)\b\s*:?\s*(\d[\d,]*)\b/gi;
+function balancesOf(o) {
+  const out = /* @__PURE__ */ new Map();
+  for (const n of o.nodes || []) for (const m of (n.text || "").matchAll(BALANCE)) {
+    const u = m[1].toLowerCase().replace(/^(coin|gem|point|credit|diamond|star)$/, "$1s");
+    if (!out.has(u)) out.set(u, Number(m[2].replace(/,/g, "")));
+  }
+  return out;
+}
 function aiLevel(ctx) {
   const r = ctx.s.aiLevels || [];
   const [a, b] = r.slice(-2);
@@ -6910,7 +6962,9 @@ function gameStep(ctx) {
       ctx.game.lastLevel = level;
       ctx.game.pressed.clear();
     }
-    const g = genericStep(o, ctx.game);
+    const ad = adStep(ctx);
+    if (ad) return ad;
+    const g = genericStep(o, ctx.game, ctx.avoid);
     if (g && "wait" in g && Number(ctx.s.loadWaits = Number(ctx.s.loadWaits || 0) + 1) <= 10) return g;
     if (g && "press" in g) {
       const key = (g.press.text || g.press.desc).trim().toLowerCase();
@@ -7036,7 +7090,7 @@ function recipeStep(ctx, recipes) {
   const used = ctx.s.recipeUsed || (ctx.s.recipeUsed = []);
   for (const r of recipes) for (const st of r.steps) {
     const label = st.label.trim().toLowerCase();
-    if (!label || label.length > 60 || NEVER_FOLLOW.test(label)) continue;
+    if (!label || label.length > 60 || NEVER_FOLLOW.test(label) || ctx.avoid.includes(label)) continue;
     const key = screenKey(o) + ":" + label;
     if (used.includes(key)) continue;
     const n = nodes.find((x) => x.enabled && (x.text.trim().toLowerCase() === label || x.desc.trim().toLowerCase() === label));
@@ -7047,6 +7101,10 @@ function recipeStep(ctx, recipes) {
     return { act: { kind: "tap_node", selector: nodeSel(pressable(nodes, n)) }, expect: claim ? { kind: "claimed" } : { kind: "changed" }, goal: 'Guide "' + r.name.slice(0, 40) + '": tap "' + (n.text || n.desc).trim().slice(0, 40) + '"', intent: claim ? "claim" : "navigate", learn: nodeSel(pressable(nodes, n)) };
   }
   return null;
+}
+function dismissOf(o) {
+  const n = (o.nodes || []).find((x) => x.enabled && /^(?:×|✕|x|close|close ad|skip|skip ad|done|continue|ok)$/i.test((x.text || x.desc).trim()));
+  return n ? n.text.trim() ? { text: n.text.trim() } : { desc: n.desc.trim() } : null;
 }
 var MissionRunner = class {
   d;
@@ -7063,10 +7121,15 @@ var MissionRunner = class {
     const started = d.now(), deadline = started + mission.timeBudgetMs, allowed = [mission.appPackage];
     let seq = 0, steps = 0, actions = 0, recoveries = 0, dismissals = 0, aiSteps = 0, aiTrouble = 0, claim = "none", checkpoint = mission.checkpoint;
     const visits = /* @__PURE__ */ new Map(), dismissed = /* @__PURE__ */ new Map(), evidence = [], ledger = [];
-    const ctx = { signal, from: from || mission.state, mission, obs: null, s: {}, game: newGameMemory(), period, vault: d.vault, lastVerdict: null, lastIntent: null, mode: d.mode || "run", prices: mission.type === "free_signup" };
+    const ctx = { ads: { allowed: !!d.ads?.allowed(mission.appPackage), present: () => !!d.ads?.present(), now: d.now, say }, avoid: d.avoid?.(mission.appPackage) || [], signal, from: from || mission.state, mission, obs: null, s: {}, game: newGameMemory(), period, vault: d.vault, lastVerdict: null, lastIntent: null, mode: d.mode || "run", prices: mission.type === "free_signup" };
     const version = d.appVersion ? await d.appVersion(mission.appPackage).catch(() => "") : "";
     const task = mission.type;
+    let firstBalances = null, lastBalances = null, balanceObs = null;
     const finish = (outcome, reason, needs = null) => {
+      if (mission.type === "game_level" && firstBalances && lastBalances && balanceObs) for (const [unit2, after] of lastBalances) {
+        const before = firstBalances.get(unit2);
+        if (before !== void 0 && after > before) ledger.push({ stage: "claimed", amount: after - before, unit: unit2, source: "game balance on screen: " + before + " before this run, " + after + " after", proof: [ev(balanceObs, unit2 + " balance " + after, "balance", 0.8, String(after))] });
+      }
       d.procedures.finish(mission.appPackage, version, task, outcome === "ACTION_VERIFIED" || outcome === "REWARD_VERIFIED" || outcome === "CREDIT_PENDING", d.now());
       say(outcome + ": " + reason);
       return { outcome, reason, evidence, checkpoint, ledger, needs, steps, actions, log, claim };
@@ -7094,11 +7157,55 @@ var MissionRunner = class {
         if (d.now() > deadline) return finish("NEEDS_ATTENTION", "Time budget used up (" + Math.round(mission.timeBudgetMs / 6e4) + " min).", { kind: "budget", reason: "Time budget used up" });
         if (!d.leases.renew(leaseId, d.now())) throw new Stopped("This mission no longer has the phone.");
         ctx.obs = obs;
+        if (mission.type === "game_level" && obs.package === mission.appPackage) {
+          const b = balancesOf(obs);
+          if (b.size) {
+            firstBalances ||= b;
+            lastBalances = new Map([...lastBalances || [], ...b]);
+            balanceObs = obs;
+          }
+        }
         const key = screenKey(obs), seen = (visits.get(key) || 0) + 1;
         visits.set(key, seen);
         if (seen > limits.repeatLimit) return finish("NEEDS_ATTENTION", "The same screen keeps coming back without progress.", { kind: "loop", reason: "Repeating the same screen" });
         const foreign = !!obs.package && obs.package !== mission.appPackage && !SYSTEM_PACKAGE.test(obs.package);
         const interrupt = foreign ? null : interruptOf(obs, { prices: ctx.prices });
+        const watching = ctx.s.watching;
+        if (watching) {
+          const text2 = screenText(obs), granted = REWARD_GRANTED.test(text2), counting = COUNTDOWN.test(text2), elapsed = d.now() - watching.since;
+          const close = interrupt?.kind === "ad" || granted ? (interrupt && "dismiss" in interrupt ? interrupt.dismiss : null) || dismissOf(obs) : null;
+          const resume = /\blose (?:your |the )?reward\b|\breward will be lost\b/i.test(text2) ? (obs.nodes || []).find((x) => x.enabled && /^(?:resume(?: video)?|keep watching|continue watching|back to video)$/i.test((x.text || x.desc).trim())) : null;
+          if (resume) {
+            obs = (await this.act(obs, { act: { kind: "tap_node", selector: nodeSel(resume) }, expect: { kind: "changed" }, goal: "Keep watching the ad", intent: "dismiss" }, { leaseId, seq: ++seq, allowed, limits, ctx, say })).after;
+            actions++;
+            continue;
+          }
+          if (interrupt?.kind !== "ad" && !granted && !counting) {
+            ctx.s.watching = null;
+            ctx.s.adsWatched = Number(ctx.s.adsWatched || 0) + 1;
+            say('The ad for "' + watching.label + '" is over; back in the game.');
+          } else if (close && (granted || !counting && elapsed >= 5e3 || elapsed >= 9e4)) {
+            say(granted ? "Reward granted; closing the ad." : "The ad finished; closing it.");
+            const closed = await this.act(obs, { act: { kind: "tap_node", selector: close }, expect: { kind: "changed" }, goal: "Close the ad", intent: "dismiss" }, { leaseId, seq: ++seq, allowed, limits, ctx, say });
+            obs = closed.after;
+            actions++;
+            if (closed.verdict === "REJECTED") {
+              if (["EMERGENCY", "LEASE"].includes(closed.code || "")) throw new Stopped(closed.error || "Stopped.");
+              obs = await look();
+            }
+            continue;
+          } else if (elapsed >= 15e4) return finish("NEEDS_ATTENTION", 'The ad for "' + watching.label + '" did not end or could not be closed.', { kind: "ad", reason: "Ad did not end" });
+          else {
+            if (!watching.noted) {
+              watching.noted = true;
+              say('Watching the ad for "' + watching.label + '" until its reward is granted.');
+            }
+            visits.delete(key);
+            await d.sleep(2e3, signal);
+            obs = await look();
+            continue;
+          }
+        }
         if (interrupt) {
           if (interrupt.kind === "forbidden") return finish("BLOCKED", "Stopped: " + interrupt.reason + ".", { kind: "policy", reason: interrupt.reason });
           if (interrupt.kind === "money") {
@@ -7145,8 +7252,10 @@ var MissionRunner = class {
           const r = recipeStep(ctx, d.recipes(mission.appPackage));
           if (r) step = r;
         }
-        if (known && "unknown" in step && find(obs.nodes, known.selector)) {
-          step = { act: { kind: "tap_node", selector: known.selector }, expect: { kind: known.expected === "claimed" ? "claimed" : "changed" }, goal: known.goal + " (learned)", intent: known.expected === "claimed" ? "claim" : ctx.s.aiPlay ? "play" : "navigate", learn: known.selector };
+        const knownSel = !known ? null : find(obs.nodes, known.selector) ? known.selector : known.selector.text && find(obs.nodes, { desc: known.selector.text }) ? { desc: known.selector.text } : null;
+        const knownNode = knownSel ? find(obs.nodes, knownSel) : null;
+        if (known && knownSel && knownNode && "unknown" in step && !ctx.avoid.includes((knownNode.text || knownNode.desc).trim().toLowerCase())) {
+          step = { act: { kind: "tap_node", selector: knownSel }, expect: { kind: known.expected === "claimed" ? "claimed" : "changed" }, goal: known.goal + " (learned)", intent: known.expected === "claimed" ? "claim" : ctx.s.aiPlay ? "play" : "navigate", learn: known.selector };
         }
         if ("unknown" in step && ctx.s.aiPlay) {
           if (!d.planner) return finish("NEEDS_ATTENTION", mission.appLabel + " has no built-in player. Add your Kimi key so Falcor AI can play it, or teach Falcor the game.", { kind: "unsupported_game", reason: "No player for this game" });
@@ -7212,6 +7321,7 @@ var MissionRunner = class {
         }
         const res = await this.act(obs, step, { leaseId, seq: ++seq, allowed, limits, ctx, say });
         actions++;
+        if (step.intent === "watch_ad" && res.verdict !== "VERIFIED") ctx.s.watching = null;
         if (step.intent === "claim") {
           if (res.verdict === "VERIFIED") {
             await d.claims.settle(mission.id, period, "verified");
@@ -7333,6 +7443,7 @@ var MissionRunner = class {
         if (plan.confidence < 0.6 || !action) return { handoff: "low_confidence", reason: why + " Falcor AI is not sure (" + Math.round(plan.confidence * 100) + "%)." };
         const node = action.kind === "tap_node" ? find(obs.nodes, action.selector) : null;
         if (action.kind === "tap_node" && tried.includes(describeSelector(action.selector))) throw new ActionError(describeSelector(action.selector) + " was already pressed on this screen and did nothing.");
+        if (node && ctx.avoid.includes((node.text || node.desc).trim().toLowerCase())) throw new ActionError(`the owner's guide says never to press "` + (node.text || node.desc).trim() + '".');
         if (node && action.kind === "tap_node" && mission.type === "daily_checkin" && isClaim(node)) return { act: action, expect: { kind: "claimed" }, goal: 'Falcor AI: claim "' + (node.text || node.desc).trim() + '"', intent: "claim", learn: action.selector };
         return { act: action, expect: { kind: "changed" }, goal: "Falcor AI: " + plan.expectedEffect, intent: "navigate", learn: action.kind === "tap_node" ? action.selector : null };
       } catch (e) {
@@ -7639,6 +7750,8 @@ var Orchestrator = class _Orchestrator {
       limits: d.limits,
       onTarget: (t) => this.emit({ type: "target", deviceId, target: t }),
       recipes: d.recipes,
+      avoid: d.avoid,
+      ads: d.ads,
       allowVision: !!d.vision?.(),
       claims: {
         mark: (missionId2, period, runId) => store.addMarker({ missionId: missionId2, period, status: "submitted", at: d.now(), runId }),
@@ -7995,10 +8108,177 @@ function describeTouch(t) {
   return t.n + " " + t.screen + " " + t.kind + what + where2 + (t.hit?.label ? ' "' + t.hit.label + '"' : t.hit?.id ? " #" + t.hit.id : "") + (t.after ? " \u2192 " + t.after : "") + (t.changed ? " (" + t.changed + ")" : "");
 }
 
+// src/offers.ts
+var PAID = /\b(?:purchase|buy|spend|deposit|subscribe|subscription|pay|in-app|iap|starter pack|bundle)\b/i;
+var clip2 = (v, n) => redact(String(v ?? "").replace(/\s+/g, " ").trim()).slice(0, n);
+var AMOUNT = /(?:^|[^\w.])(\+?\s?\$\s?(\d[\d,]*(?:\.\d+)?)|\+?\s?(\d[\d,]*(?:\.\d+)?)\s*(coins?|points?|pts|units?|gems?|tickets?|cash|usd|\$))(?![\w])/i;
+var UNIT = { coin: "coins", coins: "coins", point: "points", points: "points", pts: "points", unit: "units", units: "units", gem: "gems", gems: "gems", ticket: "tickets", tickets: "tickets", cash: "usd", usd: "usd", $: "usd" };
+function amountOf(text2) {
+  const m = AMOUNT.exec(text2);
+  if (!m) return null;
+  if (m[2] !== void 0) return { amount: Number(m[2].replace(/,/g, "")), unit: "usd", at: m.index, len: m[0].length };
+  return { amount: Number(m[3].replace(/,/g, "")), unit: UNIT[m[4].toLowerCase()] || m[4].toLowerCase(), at: m.index, len: m[0].length };
+}
+var TOTAL = /\b(?:earn up to|up to|total|win up to|get up to|max(?:imum)?|all milestones)\b/i;
+var DONE = /✓|✔|☑|\b(?:completed|complete!|done|claimed|collected|achieved|earned)\b/i;
+var EXPIRES = /\b(?:expires?|ends?|time left|left to complete|complete within|within|remaining)\b[^\d]{0,20}(\d{1,3})\s*(days?|d|hours?|hrs?|h)\b|\b(\d{1,3})\s*(days?|d|hours?|hrs?|h)\s+(?:left|remaining|to go)\b/i;
+var NOT_A_NAME = /^(?:back|play|play now|install|install now|start|start playing|open|details|offer|offers|rewards?|milestones?|tasks?|goals?|how it works|terms|faq|help|home|games?|my games|featured|new|hot|settings|profile|wallet|balance|leaderboard|events?|close|×|✕|more|info|description|about|continue|next|ok)$/i;
+function parseOffer(o, sourceName, now) {
+  const lines = [];
+  for (const n of o.nodes || []) for (const t of [n.text, n.desc]) {
+    const l = clip2(t, 140);
+    if (l && !lines.includes(l)) lines.push(l);
+  }
+  const milestones = [];
+  let total = null, expiresAt = null, firstMilestone = lines.length;
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i], e = EXPIRES.exec(l);
+    if (e && expiresAt === null) {
+      const n = Number(e[1] ?? e[3]);
+      expiresAt = now + n * (/^h/i.test(e[2] ?? e[4]) ? 36e5 : 864e5);
+      continue;
+    }
+    const a = amountOf(l);
+    if (!a) continue;
+    if (TOTAL.test(l)) {
+      if (!total || a.amount > total.amount) total = { amount: a.amount, unit: a.unit };
+      continue;
+    }
+    let text2 = (l.slice(0, a.at) + " " + l.slice(a.at + a.len)).replace(DONE, "").replace(/(?:\s*[·•:\-–—|+])+\s*$/, "").replace(/^(?:\s*[·•:\-–—|])+/, "").replace(/\s+/g, " ").trim();
+    let at = i;
+    if (text2.length < 3 && i > 0 && !amountOf(lines[i - 1]) && !NOT_A_NAME.test(lines[i - 1]) && !EXPIRES.test(lines[i - 1])) {
+      text2 = lines[i - 1].replace(DONE, "").trim();
+      at = i - 1;
+    }
+    if (text2.length < 3) continue;
+    const done = DONE.test(l) || at < i && DONE.test(lines[at]) || DONE.test(lines[i + 1] || "") && !amountOf(lines[i + 1] || "");
+    milestones.push({ text: text2.slice(0, 120), amount: a.amount, unit: a.unit, done, doneAt: done ? now : null, ...PAID.test(text2) ? { paid: true } : {} });
+    firstMilestone = Math.min(firstMilestone, at);
+  }
+  const candidates = lines.slice(0, firstMilestone).filter((l) => l.length >= 2 && l.length <= 50 && /[a-z]{2}/i.test(l) && !NOT_A_NAME.test(l) && !amountOf(l) && !EXPIRES.test(l) && !TOTAL.test(l) && !/^[★☆\d.,\s]+$|\b\d(?:\.\d)?\s*★|★\s*\d/.test(l) && l.toLowerCase() !== sourceName.toLowerCase() && !/[.!?]$/.test(l));
+  const plain = candidates.filter((l) => !/^(?:play|earn|get|install|download|try|win|complete|start)\b.+\s/i.test(l));
+  const name = plain.find((c) => lines.some((l) => l !== c && l.toLowerCase().includes(c.toLowerCase()))) || plain[0] || candidates[0] || "";
+  return { source: { pkg: o.package || "", name: sourceName }, game: { name, pkg: null }, milestones: milestones.slice(0, 40), total, expiresAt, by: "screen" };
+}
+function matchGame(name, installed) {
+  const key = (s2) => s2.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const k = key(name);
+  if (k.length < 3) return null;
+  return installed.find((a) => key(a.name) === k)?.pkg || installed.find((a) => key(a.pkg.split(".").pop() || "") === k)?.pkg || installed.find((a) => key(a.pkg).endsWith(k) || k.length >= 5 && key(a.pkg).includes(k))?.pkg || null;
+}
+function cleanOffer(raw, now) {
+  const r = raw || {}, src2 = r.source || {}, game = r.game || {};
+  const name = clip2(game.name, 80);
+  if (!name) throw new Error("Name the game.");
+  const sourceName = clip2(src2.name, 60);
+  if (!sourceName) throw new Error("Name the earning app.");
+  const pkg = game.pkg === null || game.pkg === "" || game.pkg === void 0 ? null : String(game.pkg);
+  if (pkg !== null && !validPackage(pkg)) throw new Error("Not an app package.");
+  const unitOf = (u) => clip2(u, 24).toLowerCase() || "points";
+  const milestones = (Array.isArray(r.milestones) ? r.milestones : []).slice(0, 40).map((x) => {
+    const m = x || {}, amount = m.amount === null || m.amount === "" || m.amount === void 0 ? null : Number(m.amount);
+    if (amount !== null && !(Number.isFinite(amount) && amount >= 0)) throw new Error("A milestone reward is a number.");
+    const text2 = clip2(m.text, 120);
+    return { text: text2, amount, unit: unitOf(m.unit), done: m.done === true, doneAt: m.done === true ? Number(m.doneAt) || now : null, ...PAID.test(text2) ? { paid: true } : {} };
+  }).filter((m) => m.text);
+  const t = r.total, ta = t && t.amount !== null && t.amount !== "" ? Number(t.amount) : NaN;
+  const exp = r.expiresAt === null || r.expiresAt === void 0 || r.expiresAt === "" ? null : Number(r.expiresAt);
+  return {
+    id: typeof r.id === "string" && /^of[\w]{4,40}$/.test(r.id) ? r.id : void 0,
+    source: { pkg: validPackage(src2.pkg) ? String(src2.pkg) : "", name: sourceName },
+    game: { name, pkg },
+    milestones,
+    total: Number.isFinite(ta) && ta >= 0 ? { amount: ta, unit: unitOf(t.unit) } : null,
+    expiresAt: exp !== null && Number.isFinite(exp) ? exp : null,
+    by: r.by === "screen" ? "screen" : "owner"
+  };
+}
+var Offers = class {
+  store;
+  now;
+  constructor(store, now) {
+    this.store = store;
+    this.now = now;
+  }
+  list() {
+    try {
+      return JSON.parse(this.store.get("offers") || "[]");
+    } catch {
+      return [];
+    }
+  }
+  put(list) {
+    this.store.set("offers", JSON.stringify(list));
+  }
+  get(id) {
+    return this.list().find((o) => o.id === id) || null;
+  }
+  // A new offer, or a newer reading of the same one (same earning app and game): milestones already done stay done.
+  save(d, manual) {
+    const list = this.list(), now = this.now();
+    const same = list.find((o2) => d.id ? o2.id === d.id : o2.source.name.toLowerCase() === d.source.name.toLowerCase() && o2.game.name.toLowerCase() === d.game.name.toLowerCase());
+    const before = new Map((same?.milestones || []).map((m) => [m.text.toLowerCase(), m]));
+    const milestones = d.milestones.map((m) => {
+      const b = before.get(m.text.toLowerCase());
+      return b?.done && !m.done ? { ...m, done: true, doneAt: b.doneAt } : m;
+    });
+    const o = { id: same?.id || "of" + now.toString(36) + Math.random().toString(36).slice(2, 6), source: d.source, game: d.game, milestones, total: d.total, expiresAt: d.expiresAt, by: d.by, manual, capturedAt: same?.capturedAt || now, updatedAt: now };
+    this.put([...list.filter((x) => x.id !== o.id), o]);
+    return o;
+  }
+  tick(id, index, done) {
+    const list = this.list(), o = list.find((x) => x.id === id), m = o?.milestones[index];
+    if (!o || !m) throw new Error("That milestone is not in the offer.");
+    m.done = done;
+    m.doneAt = done ? this.now() : null;
+    o.updatedAt = this.now();
+    this.put(list);
+    return o;
+  }
+  remove(id) {
+    this.put(this.list().filter((o) => o.id !== id));
+  }
+};
+function offerProgress(o) {
+  const units = /* @__PURE__ */ new Map();
+  for (const m of o.milestones) if (m.amount !== null) {
+    const u = units.get(m.unit) || units.set(m.unit, { unit: m.unit, collected: 0, possible: 0 }).get(m.unit);
+    u.possible += m.amount;
+    if (m.done) u.collected += m.amount;
+  }
+  return { done: o.milestones.filter((m) => m.done).length, of: o.milestones.length, units: [...units.values()] };
+}
+
 // src/engine.ts
 var OWNER = "owner";
 var DEVICE_MS = 3e3;
 var TICK_MS = 1e4;
+function gameRewards(entries, missions) {
+  const ORDER = ["offered", "claimed", "pending", "confirmed", "received"], furthest = /* @__PURE__ */ new Map();
+  for (const e of entries) {
+    if (e.stage === "offered") continue;
+    const k = e.id.split(":")[0] + "|" + e.unit, f = furthest.get(k);
+    if (!f || ORDER.indexOf(e.stage) > ORDER.indexOf(f.stage)) furthest.set(k, e);
+  }
+  const units = /* @__PURE__ */ new Map();
+  const of = (unit2) => units.get(unit2) || units.set(unit2, { unit: unit2, collected: 0, pending: 0, offered: 0, unknown: 0 }).get(unit2);
+  for (const e of furthest.values()) {
+    const u = of(e.unit);
+    if (e.amount === null) u.unknown++;
+    else if (e.stage === "pending") u.pending += e.amount;
+    else u.collected += e.amount;
+  }
+  for (const [unit2, amount] of Object.entries(offersOf(missions))) of(unit2).offered += amount;
+  return [...units.values()].sort((a, b) => b.collected - a.collected || a.unit.localeCompare(b.unit));
+}
+function offersOf(missions) {
+  const out = {};
+  for (const m of missions) if (m.reward?.advertised !== void 0 && m.reward.advertised !== null) {
+    const u = String(m.reward.unit || "points").trim().toLowerCase();
+    out[u] = (out[u] || 0) + Number(m.reward.advertised);
+  }
+  return out;
+}
 var HubEngine = class {
   o;
   leases;
@@ -8010,6 +8290,7 @@ var HubEngine = class {
   steps = /* @__PURE__ */ new Map();
   labels = /* @__PURE__ */ new Map();
   battery = /* @__PURE__ */ new Map();
+  installedAt = /* @__PURE__ */ new Map();
   orchestrator;
   found = /* @__PURE__ */ new Map();
   frames = /* @__PURE__ */ new Map();
@@ -8024,9 +8305,11 @@ var HubEngine = class {
   icons = Promise.resolve();
   iconWanted = /* @__PURE__ */ new Set();
   now;
+  offers;
   constructor(o) {
     this.o = o;
     this.now = o.now || Date.now;
+    this.offers = new Offers(o.store, this.now);
     const WORDS = { human: "you have control", agent: "Falcor has control", released: "control released", revoked: "control ended", expired: "control timed out", emergency: "Emergency Stop", cleared: "Emergency Stop cleared" };
     this.leases = new DeviceLeases({ ids: () => this.id(), onChange: (d, what) => {
       this.say((this.views.get(d)?.label || "Phone") + ": " + (WORDS[what] || what) + ".", what === "emergency" || what === "cleared" ? "STOP" : what === "human" ? "YOU" : what === "agent" ? "FALCOR" : "SYSTEM");
@@ -8074,7 +8357,9 @@ var HubEngine = class {
       },
       onEvent: (e) => this.onEvent(e),
       recipes: this.o.recipes,
-      vision: this.o.vision
+      avoid: this.o.avoid,
+      vision: this.o.vision,
+      ads: { allowed: (pkg) => this.adsOn(pkg), present: () => !!this.o.present?.() }
     });
     for (const m of await this.o.store.listMissions()) this.labels.set(m.appPackage, m.appLabel);
   }
@@ -8144,7 +8429,10 @@ var HubEngine = class {
         view.info = null;
         view.error = e instanceof DeviceError ? DEVICE_MESSAGES[e.code] : e instanceof Error ? e.message : String(e);
       }
-      if (!view.installed.length && view.info?.authorized) view.installed = await f.driver.installedPackages().catch(() => []);
+      if (view.info?.authorized && (!view.installed.length || this.now() - (this.installedAt.get(id) || 0) > 6e4)) {
+        view.installed = await f.driver.installedPackages().catch(() => view.installed);
+        this.installedAt.set(id, this.now());
+      }
       const bat = f.driver.battery, last = this.battery.get(id);
       if (bat && view.info?.authorized && (!last || this.now() - last.at > 6e4)) this.battery.set(id, { level: await bat.call(f.driver).catch(() => null), at: this.now() });
       this.views.set(id, view);
@@ -8390,7 +8678,28 @@ var HubEngine = class {
     this.gameNotes.delete(rec.pkg);
     this.say("Teach Falcor: " + rec.name + " recorded (" + why + "): " + rec.screens.length + " screens, " + rec.touches.length + " touches, " + t.session.shots.size + " pictures kept.");
     this.o.onTeachEnd?.(rec, t.session.shots, { auto: t.auto, why });
+    const taught = await this.learnFromTeach(rec);
+    if (taught) this.say("Teach Falcor: " + taught + " step" + (taught === 1 ? "" : "s") + " learned from " + rec.name + "; Autopilot presses them there without asking.");
     return { pkg: rec.pkg, id: rec.id, name: rec.name, screens: rec.screens.length, touches: rec.touches.length, shots: t.session.shots.size, auto: t.auto };
+  }
+  // What the owner showed becomes steps Falcor can repeat: on each screen with words, the button pressed most often there
+  // that changed something (never one the gate refuses or the guide warns about; never a privacy-paused screen).
+  async learnFromTeach(rec) {
+    const avoid = this.o.avoid?.(rec.pkg) || [], screens = new Map(rec.screens.map((sc) => [sc.id, sc])), tally = /* @__PURE__ */ new Map();
+    for (const t of rec.touches) {
+      const sc = screens.get(t.screen), label = t.hit?.label.trim() || "";
+      if (t.kind !== "tap" || !sc || sc.paused || sc.kind !== "screen" || sc.visual || sc.pkg !== rec.pkg || !label) continue;
+      if (!t.changed || t.changed === "no visible change" || t.changed.startsWith("opened ") || riskyControl(label) || avoid.includes(label.toLowerCase())) continue;
+      const screen = sc.key.split("|")[1], k = screen + "|" + label, cur = tally.get(k);
+      if (screen) tally.set(k, { screen, label, id: t.hit.id, n: (cur?.n || 0) + 1 });
+    }
+    const best = /* @__PURE__ */ new Map();
+    for (const v of tally.values()) if ((best.get(v.screen)?.n || 0) < v.n) best.set(v.screen, v);
+    const steps = [...best.values()].map((v) => ({ screen: v.screen, goal: 'Do as you showed: tap "' + v.label + '"', selector: v.id ? { resourceId: v.id } : { text: v.label }, uses: v.n }));
+    if (!steps.length) return 0;
+    this.orchestrator.procedures.teach(rec.pkg, steps, this.now());
+    await this.o.store.saveProcedures(this.orchestrator.procedures.list());
+    return steps.length;
   }
   // The phone's picture, straight from the phone (the Teach recorder decides itself what may be kept).
   async picture(id) {
@@ -8448,9 +8757,73 @@ var HubEngine = class {
     return PROVIDER_PROFILES.map((p) => ({ id: p.provider_id, label: p.label, packages: p.packages, mode: p.provider_mode, reverifyAfter: p.reverify_after }));
   }
   providerBlock(m) {
+    const via = this.manualOffer(m.appPackage);
+    if (via) return this.labelOf(m.appPackage) + " is a " + via + " offer: its playtime is the reward, so Falcor does not play it. Play it yourself; Falcor tracks its milestones in Games.";
     if (!profileFor(m.appPackage)) return null;
     const d = authorize({ package: m.appPackage, action: missionAction(m.type), controller: "agent", ownerPolicy: policyFor(this.policies(), m.appPackage) });
     return d.decision === "ALLOW" ? null : d.reason;
+  }
+  // ---------------------------------------------------------------- rewarded ads (every game, the owner watching)
+  // On for every game (the owner can turn a game off from its page); Falcor plays a rewarded ad offer only while the
+  // owner is at the computer or in the phone app. Never for an app with a provider profile (Mistplay is manual only).
+  adsOn(pkg) {
+    return this.kv("ads", {})[pkg]?.on !== false && !profileFor(pkg) && !this.manualOffer(pkg);
+  }
+  setAds(pkg, on) {
+    if (!validPackage(pkg)) throw new Error("Not an app package.");
+    if (on && profileFor(pkg)) throw new Error(this.labelOf(pkg) + " is manual only: Falcor does not play its ads.");
+    this.setKv("ads", { ...this.kv("ads", {}), [pkg]: { on, at: this.now() } });
+    this.say((on ? "Rewarded ads on for " : "Rewarded ads off for ") + this.labelOf(pkg) + (on ? ": Falcor plays them only while you are here to watch." : "."), "YOU");
+    return on;
+  }
+  // ---------------------------------------------------------------- offers from earning apps (offers.ts)
+  // The earning app a game's offer came from, when that app is manual only (Mistplay), or null.
+  manualOffer(pkg) {
+    return this.offers.list().find((o) => o.manual && o.game.pkg === pkg)?.source.name || null;
+  }
+  manualSource = (src2) => !!(profileFor(src2.pkg) || profileFor(src2.name));
+  installedApps() {
+    return [...new Set([...this.views.values()].flatMap((v) => v.installed))].map((p) => ({ pkg: p, name: this.labelOf(p) }));
+  }
+  // The offer page open in the earning app on the phone, read as a draft for the owner to check (never saved as is).
+  async captureOffer(id) {
+    const drv = this.drivers.get(id), v = this.views.get(id), f = this.found.get(id);
+    if (!drv || !v || !f) throw new Error("That phone is not connected.");
+    v.info = await f.driver.info();
+    const pkg = v.info.foreground;
+    if (!pkg || /launcher|systemui|^android$/.test(pkg)) throw new Error("Open the game's offer in your earning app on the phone first.");
+    const rule = authorize({ package: pkg, action: "remote_screen_view", controller: "human" });
+    if (rule.provider && rule.decision !== "ALLOW") throw new Error(this.labelOf(pkg) + "'s rules do not let Falcor read its screen yet, so enter this offer by hand (Games \u2192 Add offer \u2192 Enter by hand). Falcor tracks it the same way.");
+    const o = await drv.observe(), pause2 = teachPause(o, null);
+    if (pause2) throw new Error("Not read: " + pause2 + ".");
+    const draft = parseOffer(o, this.labelOf(pkg), this.now()), installed = this.installedApps().filter((a) => a.pkg !== pkg);
+    draft.game.pkg = matchGame(draft.game.name, installed);
+    if (!draft.game.name && !draft.milestones.length) throw new Error("No offer was found on this screen. Open the game's offer page (its milestones and rewards) in the earning app.");
+    return { draft, installed };
+  }
+  // The offer as the owner checked it. A game from a manual-only earning app is never played or given ads by Falcor,
+  // and its tasks are paused.
+  async saveOffer(raw) {
+    const d = cleanOffer(raw, this.now()), manual = this.manualSource(d.source);
+    const o = this.offers.save(d, manual);
+    if (o.game.pkg) {
+      if (!this.labels.has(o.game.pkg)) this.labels.set(o.game.pkg, o.game.name);
+      void this.fetchIcon(o.game.pkg);
+    }
+    if (manual && o.game.pkg) {
+      for (const m of await this.o.store.listMissions()) if (m.appPackage === o.game.pkg && ["SCHEDULED", "READY", "NEEDS_ATTENTION", "RUNNING"].includes(m.state)) await this.taskAction(m.id, "pause").catch(() => null);
+    }
+    this.say("Offer saved: " + o.game.name + " via " + o.source.name + " (" + o.milestones.length + " milestone" + (o.milestones.length === 1 ? "" : "s") + ")" + (manual ? "; " + o.source.name + " is manual only, so you play it and Falcor tracks it." : "."), "YOU");
+    return o;
+  }
+  tickOffer(id, index, done) {
+    const o = this.offers.tick(id, index, done);
+    this.changed();
+    return o;
+  }
+  removeOffer(id) {
+    this.offers.remove(id);
+    this.changed();
   }
   // ---------------------------------------------------------------- tasks (missions)
   async createTask(input) {
@@ -8505,6 +8878,7 @@ var HubEngine = class {
     if (!this.drivers.has(id) || !v) throw new Error("That phone is not connected.");
     if (this.leases.emergency(id)) throw new Error("Emergency Stop is on. Clear it first.");
     if (this.orchestrator.running(id)) throw new Error("A task is running on this phone. Pause it first.");
+    if (v.installed.length && !v.installed.includes(pkg)) await this.refreshApps(id);
     if (v.installed.length && !v.installed.includes(pkg)) throw new Error(this.labelOf(pkg) + " is not installed on this phone.");
     const had = this.leases.current(id, this.now())?.kind === "human";
     if (!had) this.takeControl(id);
@@ -8576,6 +8950,10 @@ var HubEngine = class {
       case "run": {
         if (!m.deviceId || !this.drivers.has(m.deviceId)) throw new Error("Its phone is not connected.");
         if (m.state === "NEEDS_REVIEW" || m.state === "DRAFT") throw new Error("Approve the task first.");
+        {
+          const blocked = this.providerBlock(m);
+          if (blocked) throw new Error(blocked);
+        }
         if (TERMINAL.has(m.state)) throw new Error("This task is " + STATE_LABEL[m.state] + ".");
         if (this.orchestrator.running(m.deviceId)) throw new Error(this.leases.current(m.deviceId, now)?.missionId === m.id ? "This task is already running." : "The phone is busy with another task.");
         if (["PAUSED", "NEEDS_ATTENTION", "READY"].includes(m.state)) {
@@ -8713,12 +9091,15 @@ var HubEngine = class {
   async games() {
     const now = this.now(), p = zonedParts(now, DEFAULT_TZ), dayStart = zonedToUtc(p.year, p.month, p.day, 0, 0, DEFAULT_TZ);
     const [missions, scheduled, runs, ledger] = await Promise.all([this.o.store.listMissions(), this.o.store.scheduled(), this.o.store.runs(), this.o.store.ledger()]);
-    const learned = this.o.learned?.() || [], live = missions.filter((m) => m.state !== "CANCELLED");
+    const learned = this.o.learned?.() || [], live = missions.filter((m) => m.state !== "CANCELLED"), offers = this.offers.list();
     const installed = new Set([...this.views.values()].flatMap((v) => v.installed)), teaching = this.teach?.session.rec.pkg;
-    return [.../* @__PURE__ */ new Set([...live.map((m) => m.appPackage), ...learned.map((k) => k.pkg)])].map((pkg) => {
-      const ms2 = live.filter((m) => m.appPackage === pkg), ids = new Set(ms2.map((m) => m.id)), k = learned.find((x) => x.pkg === pkg) || null;
+    const keyOf = (o) => o.game.pkg || "offer:" + o.id;
+    return [.../* @__PURE__ */ new Set([...live.map((m) => m.appPackage), ...learned.map((k) => k.pkg), ...offers.map(keyOf)])].map((pkg) => {
+      const ms2 = live.filter((m) => m.appPackage === pkg), ids = new Set(ms2.map((m) => m.id)), k = learned.find((x) => x.pkg === pkg) || null, its = offers.filter((o) => keyOf(o) === pkg), linked = !pkg.startsWith("offer:");
       const ended = runs.filter((r) => ids.has(r.missionId) && r.endedAt !== null);
       if (!this.icon(pkg) && installed.has(pkg)) void this.fetchIcon(pkg);
+      const level = ms2.reduce((l, m) => m.checkpoint?.level !== void 0 && m.checkpoint.level !== null && (l === null || m.checkpoint.level > l) ? m.checkpoint.level : l, null);
+      const mine = ledger.filter((e) => ids.has(e.missionId)), named = new Map(ms2.map((m) => [m.id, m.objective]));
       const tasks = ms2.map((m) => ({
         id: m.id,
         objective: m.objective,
@@ -8738,19 +9119,33 @@ var HubEngine = class {
       }));
       return {
         pkg,
-        name: this.labelOf(pkg),
-        icon: !!this.icon(pkg),
+        name: !linked ? its[0].game.name : this.o.appName?.(pkg) || this.labels.get(pkg) || its[0]?.game.name || this.labelOf(pkg),
+        icon: linked && !!this.icon(pkg),
         installed: installed.has(pkg),
         tasks,
+        // A "Reach level N" milestone the game was seen at (or past): reached, for the owner to confirm in the earning app.
+        earning: its.map((o) => ({ ...o, progress: offerProgress(o), milestones: o.milestones.map((m) => {
+          const n = /\blevel\s*(\d{1,5})\b/i.exec(m.text);
+          return { ...m, reached: !m.done && !!n && level !== null && level >= Number(n[1]) };
+        }) })),
+        manual: its.find((o) => o.manual)?.source.name || null,
         learned: k ? { sessions: k.sessions, hasGuide: k.hasGuide, summary: k.summary, lastSessionAt: k.lastSessionAt } : null,
+        moves: this.orchestrator.procedures.count(pkg, now),
+        ads: linked && this.adsOn(pkg),
+        adsLocked: !linked || !!profileFor(pkg) || !!this.manualOffer(pkg),
         note: teaching === pkg ? "Recording while you play" : this.gameNotes.get(pkg) || null,
-        earnings: summary(ledger.filter((e) => ids.has(e.missionId))).units,
+        rewards: gameRewards(mine, ms2),
+        offers: offersOf(ms2),
+        history: mine.filter((e) => e.stage !== "offered").sort((a, b) => b.at - a.at).slice(0, 30).map((e) => ({ at: e.at, stage: e.stage, amount: e.amount, unit: e.unit, source: e.source, task: named.get(e.missionId) || "" })),
+        tiers: (k?.rewards || []).slice(0, 12),
+        objectives: (k?.objectives || []).slice(0, 8),
+        level,
         runs: ended.length,
         verified: ended.filter((r) => /VERIFIED|PENDING|RECEIVED/.test(r.outcome)).length,
         lastPlayed: ended.reduce((a, r) => Math.max(a, r.endedAt), 0) || null,
         needsYou: tasks.filter((t) => t.state === "NEEDS_ATTENTION" || t.state === "NEEDS_REVIEW").length,
         active: tasks.filter((t) => !TERMINAL.has(t.state)).length,
-        updatedAt: Math.max(0, ...ms2.map((m) => m.updatedAt), k?.lastSessionAt || 0)
+        updatedAt: Math.max(0, ...ms2.map((m) => m.updatedAt), k?.lastSessionAt || 0, ...its.map((o) => o.updatedAt))
       };
     }).sort((a, b) => b.updatedAt - a.updatedAt);
   }
@@ -8889,6 +9284,11 @@ var RemoteServer = class _RemoteServer {
   port;
   uiDir;
   conductor;
+  activeAt = 0;
+  // The phone app asked for something lately: its screens only refresh while they are open on the phone.
+  activeWithin(ms2) {
+    return this.engine.now() - this.activeAt < ms2;
+  }
   // uiDir: the phone app's screens (remote/dist, copied in as remote-ui/), served at /app/ so the phone always runs the
   // version that matches this computer. They hold no data; every call they make still needs the phone's token.
   constructor(engine, port = REMOTE_PORT, uiDir, conductor = null) {
@@ -8965,6 +9365,7 @@ var RemoteServer = class _RemoteServer {
     const who = this.auth(req);
     if (!who) return { status: 401, json: { error: "This phone is not paired with Falcor.Hub. Pair it again." } };
     const phone = { client: "phone:" + who.id, name: who.name };
+    this.activeAt = e.now();
     if (method === "GET" && path === "/api/status") return { status: 200, json: { devices: e.devices().map(({ installed, installedNames, ...d }) => (void installed, void installedNames, d)), tasks: await e.tasks(), games: await e.games(), stats: await e.stats(), activity: e.lines.slice(-30), unread: this.conductor?.unread(phone) ?? 0, at: e.now() } };
     const ap = /^\/api\/tasks\/([\w-]{1,80})\/approve$/.exec(path);
     if (method === "POST" && ap) {
@@ -9004,6 +9405,11 @@ var RemoteServer = class _RemoteServer {
       await e.openApp(String(body.deviceId || ""), op[1], false);
       e.say("Opened " + e.labelOf(op[1]) + " from " + who.name + ".", "YOU");
       return { status: 200, json: { ok: true } };
+    }
+    const om = /^\/api\/offers\/(of\w{4,40})\/milestones\/(\d{1,2})$/.exec(path);
+    if (method === "POST" && om) {
+      const o = e.tickOffer(om[1], Number(om[2]), body.done === true);
+      return { status: 200, json: { ok: true, done: o.milestones[Number(om[2])].done } };
     }
     if (method === "POST" && path === "/api/autopilot") return { status: 200, json: { on: e.setAutopilot(String(body.deviceId || ""), body.on === true) } };
     if (method === "POST" && path === "/api/stop") {
@@ -9305,6 +9711,14 @@ function guideText(name, pkg, g) {
   for (const a of g.answers || []) L.push("The owner says: " + a.q + " \u2192 " + a.a);
   return L.join("\n");
 }
+function avoidIn(lines) {
+  const out = /* @__PURE__ */ new Set();
+  for (const l of lines) {
+    for (const m of l.matchAll(/\b(?:never|don'?t|do not|avoid)\b[^"“”\n]{0,40}["“]([^"“”\n]{1,40})["”]/gi)) out.add(m[1].trim().toLowerCase());
+    for (const m of l.matchAll(/\b(?:never|don'?t|do not|avoid)\s+(?:press(?:ing)?|tap(?:ping)?|touch(?:ing)?|hit(?:ting)?|click(?:ing)?|use|using)\s+(?:the\s+|on\s+)?([a-z0-9][\w' ]{0,30}?)(?:\s+(?:button|icon|option))?(?=\s*(?:[:.,;!(]|$|\s(?:because|it|as|or|which|unless)\b))/gi)) if (!/["“]/.test(m[0])) out.add(m[1].trim().toLowerCase());
+  }
+  return [...out].filter((x) => x.length > 1).slice(0, 40);
+}
 var Knowledge = class {
   store;
   now;
@@ -9456,6 +9870,12 @@ var Knowledge = class {
     const ids = new Set([...k.sessions.flatMap((r) => [...r.screens.flatMap((x) => [x.shot, x.extra]), ...r.marks.map((m) => m.shot)]), ...k.guide?.screens.map((x) => x.shot) || []].filter(Boolean));
     return { format: "falcor-hub-knowledge", v: 1, exportedAt: this.now(), ...k, shots: Object.fromEntries([...ids].map((i) => [i, this.shot(i)]).filter(([, v]) => v)) };
   }
+  // Buttons the guide warns about ("Never press Begin again", 'Don't tap "Reset"'), and the owner's own answers saying
+  // so: Autopilot never presses them in this app.
+  avoidLabels(pkg) {
+    const g = this.get(pkg)?.guide;
+    return g ? avoidIn([...g.watchouts.map((w) => w.text), ...(g.answers || []).map((a) => a.a)]) : [];
+  }
   // The guide Autopilot's planner gets for a task on this app.
   plannerGuide(pkg) {
     const k = this.get(pkg);
@@ -9564,7 +9984,7 @@ var MAX_ROUNDS = 6;
 var HISTORY = 12;
 var MAX_MESSAGES = 300;
 var norm = (t) => t.toLowerCase().replace(/[’']/g, "'").replace(/[.!?,;]+/g, " ").replace(/\s+/g, " ").trim();
-var clip2 = (v, n) => redact(String(v ?? "").replace(/\s+/g, " ").trim()).slice(0, n);
+var clip3 = (v, n) => redact(String(v ?? "").replace(/\s+/g, " ").trim()).slice(0, n);
 function clean(v, depth = 0) {
   if (typeof v === "string") return redact(v).replace(/\bsk-[A-Za-z0-9_-]{8,}/g, "[key]").slice(0, 4e3);
   if (depth > 6 || v === null || typeof v !== "object") return v;
@@ -9665,7 +10085,7 @@ var Conductor = class {
   }
   preview(id) {
     const m = this.thread(id)?.messages.slice(-1)[0];
-    return m ? clip2(m.text, 80) : "";
+    return m ? clip3(m.text, 80) : "";
   }
   newThread(focus = null) {
     const t = { id: "th" + this.now().toString(36) + Math.random().toString(36).slice(2, 6), title: "New chat", pinned: false, createdAt: this.now(), updatedAt: this.now(), focus: focus && validPackage(focus) ? focus : null, messages: [] };
@@ -9674,7 +10094,7 @@ var Conductor = class {
   }
   renameThread(id, title) {
     const t = this.need(id);
-    t.title = clip2(title, 60) || t.title;
+    t.title = clip3(title, 60) || t.title;
     this.save(t);
   }
   pinThread(id, pinned) {
@@ -9735,7 +10155,7 @@ var Conductor = class {
     this.e.say("FALCOR CHAT \xB7 " + what + " (" + (who.client === "computer" ? "on the computer" : "on " + who.name) + ")", "FALCOR");
   }
   card(kind, title, lines = [], extra = {}) {
-    return { id: "c" + this.now().toString(36) + Math.random().toString(36).slice(2, 8), kind, title: clip2(title, 120), lines: lines.map((l) => clip2(l, 300)).filter(Boolean), state: kind === "confirm" || kind === "approve" ? "open" : "done", ...extra };
+    return { id: "c" + this.now().toString(36) + Math.random().toString(36).slice(2, 8), kind, title: clip3(title, 120), lines: lines.map((l) => clip3(l, 300)).filter(Boolean), state: kind === "confirm" || kind === "approve" ? "open" : "done", ...extra };
   }
   // ---------------------------------------------------------------- what Falcor knows right now (sent with every message)
   async snapshot(focus) {
@@ -9751,7 +10171,7 @@ var Conductor = class {
     L.push("LEARNED APPS: " + (know.length ? know.map((k) => k.name + " (" + k.pkg + ")" + (k.hasGuide ? "" : " no guide yet")).join(", ") : "none yet"));
     const installed = devs[0]?.installed || [];
     if (installed.length) L.push("APPS ON THE PHONE: " + installed.slice(0, 40).map((p) => e.labelOf(p) + " (" + p + ")").join(", "));
-    if (focus) L.push("FOCUS: " + e.labelOf(focus) + " (" + focus + ")" + (this.d.knowledge.get(focus)?.guide ? " \xB7 guide: " + clip2(this.d.knowledge.get(focus).guide.summary.text, 200) : " \xB7 no guide yet"));
+    if (focus) L.push("FOCUS: " + e.labelOf(focus) + " (" + focus + ")" + (this.d.knowledge.get(focus)?.guide ? " \xB7 guide: " + clip3(this.d.knowledge.get(focus).guide.summary.text, 200) : " \xB7 no guide yet"));
     return clean(L.join("\n"));
   }
   // An app named in words: a package, or a name from tasks, Knowledge or the phone's apps.
@@ -9772,7 +10192,7 @@ var Conductor = class {
         break;
       }
     }
-    if (!pkg) throw new Error(`I don't know an app called "` + clip2(q2, 60) + '" on this phone.');
+    if (!pkg) throw new Error(`I don't know an app called "` + clip3(q2, 60) + '" on this phone.');
     return pkg;
   }
   noMistplay(pkg) {
@@ -9889,13 +10309,13 @@ var Conductor = class {
         if (type === "game_level" && !(Number(a.target_level) >= 1)) throw new Error("A game task needs a target level.");
         args.app = pkg;
         title = "Create a task: " + e.labelOf(pkg);
-        lines = [kind + " \xB7 " + clip2(a.objective, 200), type === "game_level" ? "Target level " + a.target_level : "", type === "free_signup" ? "Add the signup details (and passwords as vault:name) in Tasks before approving." : "", a.reward !== void 0 ? "Reward note: " + a.reward + " " + (a.unit || "points") : "", "It lands in Tasks as Needs review. Nothing runs until you approve it."];
+        lines = [kind + " \xB7 " + clip3(a.objective, 200), type === "game_level" ? "Target level " + a.target_level : "", type === "free_signup" ? "Add the signup details (and passwords as vault:name) in Tasks before approving." : "", a.reward !== void 0 ? "Reward note: " + a.reward + " " + (a.unit || "points") : "", "It lands in Tasks as Needs review. Nothing runs until you approve it."];
         break;
       }
       case "propose_edit_task": {
         const t = await this.task(a.id);
         title = "Edit: " + t.app + " \xB7 " + t.objective;
-        lines = [a.objective !== void 0 ? "Objective \u2192 " + clip2(a.objective, 200) : "", a.target_level !== void 0 ? "Target level \u2192 " + a.target_level : "", a.hour !== void 0 ? "Resets daily at " + String(a.hour).padStart(2, "0") + ":" + String(a.minute ?? 0).padStart(2, "0") : "", a.reward !== void 0 ? "Reward note \u2192 " + a.reward + " " + (a.unit || "") : "", ["SCHEDULED", "READY", "PAUSED", "NEEDS_ATTENTION"].includes(t.state) ? "It goes back to Needs review for you to approve again." : ""];
+        lines = [a.objective !== void 0 ? "Objective \u2192 " + clip3(a.objective, 200) : "", a.target_level !== void 0 ? "Target level \u2192 " + a.target_level : "", a.hour !== void 0 ? "Resets daily at " + String(a.hour).padStart(2, "0") + ":" + String(a.minute ?? 0).padStart(2, "0") : "", a.reward !== void 0 ? "Reward note \u2192 " + a.reward + " " + (a.unit || "") : "", ["SCHEDULED", "READY", "PAUSED", "NEEDS_ATTENTION"].includes(t.state) ? "It goes back to Needs review for you to approve again." : ""];
         break;
       }
       case "propose_remove_task": {
@@ -9909,7 +10329,7 @@ var Conductor = class {
         const pkg = this.app(a.app), g = k.get(pkg)?.guide;
         if (!g) throw new Error("There is no guide for that app yet.");
         args.app = pkg;
-        const i = Number(a.index), v = clip2(a.value, 300);
+        const i = Number(a.index), v = clip3(a.value, 300);
         if (a.edit === "rename_screen") {
           const sc = g.screens[i];
           if (!sc) throw new Error("That screen is not in the guide.");
@@ -9948,10 +10368,10 @@ var Conductor = class {
         args.app = pkg;
         if (status2 === "ALLOWED") {
           this.noMistplay(pkg);
-          if (!clip2(a.source, 300)) throw new Error("An ALLOWED rule needs where you read that the app allows automation.");
+          if (!clip3(a.source, 300)) throw new Error("An ALLOWED rule needs where you read that the app allows automation.");
         }
         title = "App rule: " + e.labelOf(pkg) + " \u2192 " + status2;
-        lines = [a.source ? "Source: " + clip2(a.source, 300) : ""];
+        lines = [a.source ? "Source: " + clip3(a.source, 300) : ""];
         break;
       }
       case "propose_remove_app_rule": {
@@ -9967,8 +10387,8 @@ var Conductor = class {
         const t = e.teachTarget(d.id);
         if (!t.pkg || /launcher|systemui/.test(t.pkg)) throw new Error("Open the app on the phone first, then ask again.");
         this.noMistplay(t.pkg);
-        title = "Start teaching: " + (clip2(a.name, 80) || t.name);
-        lines = [a.intent ? "Showing: " + clip2(a.intent, 200) : "", "I record the screens and your touches on the mirror. Password, card, ID and code screens are never recorded."];
+        title = "Start teaching: " + (clip3(a.name, 80) || t.name);
+        lines = [a.intent ? "Showing: " + clip3(a.intent, 200) : "", "I record the screens and your touches on the mirror. Password, card, ID and code screens are never recorded."];
         break;
       }
       case "propose_kimi_settings": {
@@ -10027,7 +10447,7 @@ var Conductor = class {
       c.doneAt = this.now();
     } catch (err) {
       c.state = "open";
-      c.error = clip2(err.message, 300);
+      c.error = clip3(err.message, 300);
     }
     this.touch(t, m);
     return c;
@@ -10059,7 +10479,7 @@ var Conductor = class {
           type: a.type,
           appPackage: a.app,
           appLabel: e.labelOf(String(a.app)),
-          objective: clip2(a.objective, 300),
+          objective: clip3(a.objective, 300),
           ...a.type === "game_level" ? { game: { targetLevel: Number(a.target_level) } } : {},
           ...a.type === "free_signup" ? { signup: { fields: {} } } : {},
           ...a.reward !== void 0 ? { reward: { advertised: Number(a.reward), unit: String(a.unit || "points") } } : {},
@@ -10085,7 +10505,7 @@ var Conductor = class {
       case "propose_guide_edit": {
         const pkg = String(a.app), g = k.get(pkg)?.guide;
         if (!g) throw new Error("There is no guide for that app any more.");
-        const i = Number(a.index), v = clip2(a.value, 300);
+        const i = Number(a.index), v = clip3(a.value, 300);
         if (a.edit === "answer_question") k.answer(pkg, i, v);
         else {
           const copy = JSON.parse(JSON.stringify(g));
@@ -10145,7 +10565,7 @@ var Conductor = class {
     const q2 = String(text2 || "").replace(/\r/g, "").trim().slice(0, 2e3);
     if (!q2) throw new Error("Type a message.");
     if (focus !== void 0) t.focus = focus && validPackage(focus) ? focus : null;
-    if (t.title === "New chat") t.title = clip2(q2, 40);
+    if (t.title === "New chat") t.title = clip3(q2, 40);
     this.add(t, { role: "user", text: redact(q2), who: who.name });
     if (STOP_WORDS.test(norm(q2))) {
       const card = this.stopAll(who);
@@ -10160,7 +10580,7 @@ var Conductor = class {
     const t = this.need(threadId), m = t.messages.find((x) => x.id === msgId);
     const finish = (text2, error = false) => {
       const tt = this.need(threadId), mm = tt.messages.find((x) => x.id === msgId);
-      Object.assign(mm, m, { text: clip2(text2, 4e3) || "\u2026", pending: false, error });
+      Object.assign(mm, m, { text: clip3(text2, 4e3) || "\u2026", pending: false, error });
       this.touch(tt, mm);
     };
     const step = (s2) => {
@@ -10209,7 +10629,7 @@ var Conductor = class {
       }
       finish("I went round in circles on that one. Could you ask it a simpler way?", true);
     } catch (err) {
-      finish("I couldn't finish that: " + clip2(err.message, 200), true);
+      finish("I couldn't finish that: " + clip3(err.message, 200), true);
     }
   }
   async call(call, who, m, step) {
@@ -10227,7 +10647,7 @@ var Conductor = class {
       if (r.used && !m.used.some((u) => u.label === r.used.label)) m.used.push(r.used);
       return JSON.stringify(clean(r.out)).slice(0, 12e3);
     } catch (err) {
-      return JSON.stringify({ error: clip2(err.message, 300) });
+      return JSON.stringify({ error: clip3(err.message, 300) });
     }
   }
   // Questions and orders that need no AI: answered from the Hub's own data, free.
@@ -10309,11 +10729,11 @@ var Conductor = class {
   }
 };
 function summarize(msgs) {
-  return msgs.slice(-40).map((m) => (m.role === "user" ? "Owner: " : "Falcor: ") + clip2(m.text, 100) + (m.cards.length ? " [" + m.cards.map((c) => c.title + " " + c.state).join("; ") + "]" : "")).join("\n").slice(0, 3e3);
+  return msgs.slice(-40).map((m) => (m.role === "user" ? "Owner: " : "Falcor: ") + clip3(m.text, 100) + (m.cards.length ? " [" + m.cards.map((c) => c.title + " " + c.state).join("; ") + "]" : "")).join("\n").slice(0, 3e3);
 }
 
 // ../README.md
-var README_default = '# Falcor.Hub\n\nPlug an Android phone into your Windows computer, see its screen live, take control, and let Falcor run the games, daily check-ins and signup quests you approve. Falcor.Hub Remote, on your everyday phone, starts and stops it, shows the stats, chats with Falcor, approves tasks with your own taps, and has Stop.\n\nNothing here talks to a website. The phone is driven over USB from your computer. Falcor\'s AI is Kimi, called with your own key. The Remote reaches the computer only on your home Wi-Fi.\n\n| Folder | What it is |\n| --- | --- |\n| `desktop/` | **Falcor.Hub** for Windows (Electron). It has the live mirror, Take Control, Autopilot, tasks, stats, Kimi and the Remote pairing. |\n| `remote/` | **Falcor.Hub Remote**, the Android app (Capacitor) for your everyday phone, not the one plugged in. |\n\n## Install\n\n1. **Falcor.Hub.** Run `Falcor.Hub-Setup-0.2.0-x64.exe`. It is not code-signed yet, so Windows may warn: choose **More info \u2192 Run anyway**. It includes Android platform-tools (adb) and scrcpy.\n2. **The phone that runs the games.**\n   - Turn on **USB debugging**: Settings \u2192 About phone \u2192 Software information \u2192 tap Build number 7 times, then Developer options \u2192 USB debugging.\n   - Plug it in with a data cable and tap **Allow** (tick *Always allow from this computer*).\n   - On Samsung, turn **Auto Blocker** off: Settings \u2192 Security and privacy.\n   - The Phone tab ticks off each step.\n3. **Kimi.** Settings \u2192 paste your Kimi API key (`sk-\u2026`) \u2192 Save \u2192 Test connection.\n4. **Your everyday phone.**\n   - Install `Falcor.Hub-Remote-0.2.0.apk`.\n   - In Falcor.Hub: Settings \u2192 Phone app \u2192 **Pair a phone**, then scan the QR code with the Remote (or type the address and code).\n   - Press **Let my phone through Windows Firewall** once and choose Yes when Windows asks.\n\n## Using it\n\n- **Phone tab.**\n  - Live mirror of the phone (about 1\u20133 pictures a second; **Full-speed window** opens scrcpy for 30 fps).\n  - **Take Control**: click to tap, drag to swipe, hold to long-press, wheel to scroll, type in the box. Back / Home / Apps buttons.\n  - **Start / Stop Autopilot.**\n- **Games tab.** Every game and challenge you accepted, as a grid of the apps\' own icons (read from the app on the phone; a pixel letter when it has none).\n  - Click a game: its page shows the total earnings per unit (earned and on the way, never added across units), every challenge with its status, runs and verified runs, and what Falcor learned about it.\n  - **Open game** opens it on the phone and gives you control on the mirror. **Teach again**, **New challenge**, the guide and **Ask Falcor** are there too.\n- **New games are learned by themselves.** When you create a game or daily task (in Tasks, in chat or from your phone) for an app Falcor has not learned yet, Falcor opens it on the phone and starts **Teach Falcor**: play it on the mirror while it records the name, the challenge, the screens and their text, and your taps.\n  - When you leave the game (Home, or another app), recording stops by itself and Falcor writes the guide (Falcor AI with your Kimi key; on this computer without AI when there is no key or the monthly limit is reached). The game then shows in Games with its icon and guide.\n  - If nothing was played (nobody touched it, or 5 minutes pass without a touch), nothing is kept. Signups are not taught: they are Falcor\'s to do.\n- **Tasks tab.**\n  - Create a task: a daily check-in, a game to a level, a free signup or a reward balance check, on an app installed on the phone.\n  - **Approve it.** Tick that the app\'s own rules allow automation; a signup also needs the $0 confirmation and your consent.\n  - Autopilot then runs it when it is due, or press **Run now**.\n- **Stats tab.** Today\'s runs and verified results, rewards per unit (never added across units), and recent runs.\n- **On your phone (Remote):** Home (the phone\'s state, today\'s stats, a live screen thumbnail you can open full screen, activity, and Start/Stop Autopilot at the bottom), **Games** (the same grid and game pages, with Open game: it opens the game on the plugged-in phone and gives control straight back), **Falcor** (the same chat) and **Tasks** (Run now, Pause, Resume and the approval gate). Stop is always in the header.\n- **Stop** is always in the header (Ctrl+Shift+X). It stops every phone and turns Autopilot off; a red bar shows until you press Clear. It also works from the Remote.\n- **Teach Falcor** (Phone tab).\n  - Open the app on the phone, press **Teach Falcor**, name it and say what you will show.\n  - Play it on the mirror. The mirror is live video inside the window; every touch goes through Falcor and is recorded.\n  - The red Recording bar has the time, **Mark this** (with a note), Pause and Stop. The Remote shows it and can stop it.\n  - After Stop, Falcor shows what the guide will cost. Choose **Write guide**, **Text only (cheaper)** or **Save without AI** (free).\n  - Falcor keeps one small picture (about 480 px) of each distinct screen and drops ads, loading screens and near-duplicates. It never records password, card, ID or code screens.\n- **Falcor tab: chat with Falcor** (also on your phone, the same conversation). Ctrl+K opens it from anywhere.\n  - Ask about your games, tasks, what Falcor learned, stats, rewards, Autopilot, or how Falcor.Hub works.\n  - Tell it what to do: start or stop Autopilot, run, pause or resume a task, create or edit a task, fix a guide, change an app rule, start a teaching session.\n  - Anything that creates, edits or removes something shows a card; nothing changes until you tap **Confirm**. Approving a task shows the same ticks as the Tasks tab; only your taps approve it.\n  - Say **stop** at any time: everything stops at once, even with no internet.\n  - Falcor never shows secrets, never taps on the phone for you through chat, and never touches Mistplay.\n- **How Falcor works out what to do on a screen**, cheapest first:\n  - the task\'s own logic: claim buttons ("Claim", "Claim Day 3", "Collect 50 coins"), signup forms, balances, and the screens every game has (loading, Play, Next, Continue, Retry, free Collect, Skip ad, upgrades paid with the game\'s own coins);\n  - your **Teach recipe** for that app (the buttons you pressed, followed by what they say, never a money button);\n  - a move it already verified on that very screen (also from earlier runs: a game\'s move found once is pressed again without asking);\n  - then Falcor AI (Kimi), with your guide, told which presses already did nothing there. A wrong answer is sent back once with the reason; Falcor looks again before giving up.\n  - **Games with no built-in player** are checked against the level on screen ("Level 3", "LV. 3", "Stage 3"; never "Unlock at Level 10"), within a 150-move AI budget per run. For games drawn without text (most Unity games), Falcor AI gets a small picture and reads the level from it; the target counts only when two pictures in a row agree. Without a Kimi key, such a game goes back to you.\n  - **Prices and ads in a game** ("Buy now", "$0.99", "Double coins (watch ad)") are played around: Falcor\'s own taps can never land on a price, a purchase, an ad, an install or a bet, whatever proposed them. A payment screen (a card, a deposit, a paid plan) still stops the run and comes back to you. Popups are closed with their own \xD7, and ad screens are skipped or waited out.\n- **Edit a task** with its pencil button in Tasks: what it does, the target level, the daily reset hour, the reward note and a signup\'s details. Changing what it does sends it back to Needs review.\n- **Knowledge tab.**\n  - Every app Falcor learned, with its guide: summary, objectives, reward tiers, screens, step-by-step recipes and watch-outs. Each part says **seen** or **AI**.\n  - Press **Edit** to correct the guide, or delete pictures you don\'t want kept. Rename, Export or Delete each app.\n  - Ask Falcor about a guide from the Falcor tab (the guide\'s chat button focuses on it). A task it drafts lands in Tasks as *Needs review*; nothing runs until you approve it.\n  - Teaching the same app again updates its guide and lists what changed. Autopilot uses the guide when it runs a task on that app.\n- **Kimi spending.** Stats shows this month\'s spending for teaching, chat and Autopilot. Settings has a monthly limit; when it is reached, Falcor asks before sending more.\n\n**What Falcor never does:**\n- payments, cards, deposits or paid trials;\n- codes sent to you;\n- CAPTCHAs and ID checks;\n- typing a secret anywhere but its own field;\n- messages to people.\n\nThose screens come back to you. Screens with passwords, ID checks or card details are never shown in the mirror ("Privacy pause").\n\n**Mistplay is manual only.** Its terms prohibit automated rewarded play, so Falcor never touches it, and a plain "allowed" rule cannot change that.\n\n## Updates\n\nYou install once. After that:\n- **Falcor.Hub updates itself.** It checks [Falcor-Hub-Releases](https://github.com/thekidgilly/Falcor-Hub-Releases) at start and every 10 minutes, downloads a new update pack, checks every file\'s SHA-256, and shows **Restart to update** (never while a task runs). "What\'s new" shows once after the restart. If a new pack fails to start twice, Falcor.Hub goes back to the previous version by itself.\n- **The Remote\'s screens come from Falcor.Hub** (`/app/` on port 5175), so they update with it. The APK only needs reinstalling when its shell changes (rare).\n- A new installer is needed only when Electron, sql.js, adb or scrcpy change; the pack then says so (`minInstall`).\n\nPublishing an update (from `desktop/`, with the releases repo cloned next to this one):\n\n```\n# bump "version" in desktop/package.json (and remote/package.json if its screens changed)\nnpm test && npm run pack -- --notes "What changed, in a line or two"\ncd ../../falcor-hub-releases && git add -A && git commit -m "Falcor.Hub 0.2.1" && git push\n```\n\n## Develop\n\nRequires Node 22. Each folder is its own npm project.\n\n```\ncd desktop && npm install\nnpm run simulated            # the window with Falcor\'s simulated phone (no real phone needed)\nnpm test                     # engine and phone-app API on the simulated phone, and ten owned test games played end to end\nnode test/games-bench.mjs    # the games scorecard: success, AI calls, tokens, cost, taps and time per game\nxvfb-run -a node test/window.mjs   # the real window, driven end to end (Linux)\nnpm run dist:win             # Windows installer in desktop/release/ (downloads and checks adb + scrcpy)\n\ncd remote && npm install\nnpm test                     # the Remote\'s connection code against desktop/dist (build desktop first)\nnpm run build && npx cap add android && node scripts/prepare-android.mjs && cd android && ./gradlew assembleRelease\n```\n\nRelease APKs are signed when `FALCOR_KEYSTORE`, `FALCOR_KEYSTORE_PASSWORD` and `FALCOR_KEY_ALIAS` are set. Every update must use the same key.\n';
+var README_default = '# Falcor.Hub\n\nPlug an Android phone into your Windows computer, see its screen live, take control, and let Falcor run the games, daily check-ins and signup quests you approve. Falcor.Hub Remote, on your everyday phone, starts and stops it, shows the stats, chats with Falcor, approves tasks with your own taps, and has Stop.\n\nNothing here talks to a website. The phone is driven over USB from your computer. Falcor\'s AI is Kimi, called with your own key. The Remote reaches the computer only on your home Wi-Fi.\n\n| Folder | What it is |\n| --- | --- |\n| `desktop/` | **Falcor.Hub** for Windows (Electron). It has the live mirror, Take Control, Autopilot, tasks, stats, Kimi and the Remote pairing. |\n| `remote/` | **Falcor.Hub Remote**, the Android app (Capacitor) for your everyday phone, not the one plugged in. |\n\n## Install\n\n1. **Falcor.Hub.** Run `Falcor.Hub-Setup-0.2.0-x64.exe`. It is not code-signed yet, so Windows may warn: choose **More info \u2192 Run anyway**. It includes Android platform-tools (adb) and scrcpy.\n2. **The phone that runs the games.**\n   - Turn on **USB debugging**: Settings \u2192 About phone \u2192 Software information \u2192 tap Build number 7 times, then Developer options \u2192 USB debugging.\n   - Plug it in with a data cable and tap **Allow** (tick *Always allow from this computer*).\n   - On Samsung, turn **Auto Blocker** off: Settings \u2192 Security and privacy.\n   - The Phone tab ticks off each step.\n3. **Kimi.** Settings \u2192 paste your Kimi API key (`sk-\u2026`) \u2192 Save \u2192 Test connection.\n4. **Your everyday phone.**\n   - Install `Falcor.Hub-Remote-0.2.0.apk`.\n   - In Falcor.Hub: Settings \u2192 Phone app \u2192 **Pair a phone**, then scan the QR code with the Remote (or type the address and code).\n   - Press **Let my phone through Windows Firewall** once and choose Yes when Windows asks.\n\n## Using it\n\n- **Phone tab.**\n  - Live mirror of the phone (about 1\u20133 pictures a second; **Full-speed window** opens scrcpy for 30 fps).\n  - **Take Control**: click to tap, drag to swipe, hold to long-press, wheel to scroll, type in the box. Back / Home / Apps buttons.\n  - **Start / Stop Autopilot.**\n- **Games tab.** Every game and challenge you accepted, as a grid of the apps\' own icons (read from the app on the phone; a pixel letter when it has none).\n  - Each tile shows the game\'s icon, name, challenges, what it has collected (or what its challenges offer) and its status.\n  - Click a game: its page shows the game\'s current level, the total earnings per unit (collected: the game showed it claimed or credited; pending; and the offer you entered; never added across units, and every claim counts: a daily reward claimed on 7 days is 7 rewards), every challenge with its status and level progress, the **reward tracker** (each reward with its date, amount and where Falcor saw it), the game\'s reward tiers and objectives from what Falcor learned, and what Falcor knows.\n  - Coins, gems or points a game pays while Falcor plays are counted from its own balance on screen before and after the run.\n- **Offers from earning apps** (Games \u2192 **Add offer**). For a game you picked in an earning app:\n  - **Capture from the phone**: open the game\'s offer page in the earning app on the phone and press Capture. Falcor reads the game\'s name, each milestone and its reward, the total, the deadline and what is already done, links the game if it is installed, and shows it all in a form: check it, fix anything, Save.\n  - **Enter by hand**: the same form, empty. **Mistplay\'s screen is never read** (its rules need a review first), so its offers are entered by hand.\n  - The game then shows in Games on the computer and the phone with its icon, the offer (via which app, milestones, what each pays, done or not, earned of possible, days left) and a box per milestone to tick it done. Capturing the same offer again later keeps what you ticked.\n  - A milestone that needs a purchase is marked as yours to decide; a "Reach level N" milestone Falcor saw the game reach is marked for you to confirm in the earning app.\n  - A game from a manual-only app (Mistplay) is never played by Autopilot and gets no ads: its playtime is the reward. You play it; Falcor tracks it.\n  - **Open game** opens it on the phone and gives you control on the mirror. **Teach again**, **New challenge**, the guide and **Ask Falcor** are there too.\n- **New games are learned by themselves.** When you create a game or daily task (in Tasks, in chat or from your phone) for an app Falcor has not learned yet, Falcor opens it on the phone and starts **Teach Falcor**: play it on the mirror while it records the name, the challenge, the screens and their text, and your taps.\n  - When you leave the game (Home, or another app), recording stops by itself and Falcor writes the guide (Falcor AI with your Kimi key; on this computer without AI when there is no key or the monthly limit is reached). The game then shows in Games with its icon and guide.\n  - If nothing was played (nobody touched it, or 5 minutes pass without a touch), nothing is kept. Signups are not taught: they are Falcor\'s to do.\n- **Tasks tab.**\n  - Create a task: a daily check-in, a game to a level, a free signup or a reward balance check, on an app installed on the phone.\n  - **Approve it.** Tick that the app\'s own rules allow automation; a signup also needs the $0 confirmation and your consent.\n  - Autopilot then runs it when it is due, or press **Run now**.\n- **Stats tab.** Today\'s runs and verified results, rewards per unit (never added across units), and recent runs.\n- **On your phone (Remote):** Home (the phone\'s state, today\'s stats, a live screen thumbnail you can open full screen, activity, and Start/Stop Autopilot at the bottom), **Games** (the same grid and game pages, with Open game: it opens the game on the plugged-in phone and gives control straight back), **Falcor** (the same chat) and **Tasks** (Run now, Pause, Resume and the approval gate). Stop is always in the header.\n- **Stop** is always in the header (Ctrl+Shift+X). It stops every phone and turns Autopilot off; a red bar shows until you press Clear. It also works from the Remote.\n- **Teach Falcor** (Phone tab).\n  - Open the app on the phone, press **Teach Falcor**, name it and say what you will show.\n  - Play it on the mirror. The mirror is live video inside the window; every touch goes through Falcor and is recorded.\n  - The red Recording bar has the time, **Mark this** (with a note), Pause and Stop. The Remote shows it and can stop it.\n  - After Stop, Falcor shows what the guide will cost. Choose **Write guide**, **Text only (cheaper)** or **Save without AI** (free).\n  - Falcor keeps one small picture (about 480 px) of each distinct screen and drops ads, loading screens and near-duplicates. It never records password, card, ID or code screens.\n- **Falcor tab: chat with Falcor** (also on your phone, the same conversation). Ctrl+K opens it from anywhere.\n  - Ask about your games, tasks, what Falcor learned, stats, rewards, Autopilot, or how Falcor.Hub works.\n  - Tell it what to do: start or stop Autopilot, run, pause or resume a task, create or edit a task, fix a guide, change an app rule, start a teaching session.\n  - Anything that creates, edits or removes something shows a card; nothing changes until you tap **Confirm**. Approving a task shows the same ticks as the Tasks tab; only your taps approve it.\n  - Say **stop** at any time: everything stops at once, even with no internet.\n  - Falcor never shows secrets, never taps on the phone for you through chat, and never touches Mistplay.\n- **How Falcor works out what to do on a screen**, cheapest first:\n  - the task\'s own logic: claim buttons ("Claim", "Claim Day 3", "Collect 50 coins"), signup forms, balances, and the screens every game has (loading, Play, Next, Continue, Retry, free Collect, Skip ad, upgrades paid with the game\'s own coins);\n  - your **Teach recipe** for that app (the buttons you pressed, followed by what they say, never a money button);\n  - a move it already verified on that very screen (also from earlier runs: a game\'s move found once is pressed again without asking);\n  - then Falcor AI (Kimi), with your guide, told which presses already did nothing there. A wrong answer is sent back once with the reason; Falcor looks again before giving up.\n  - **Games with no built-in player** are checked against the level on screen ("Level 3", "LV. 3", "Stage 3"; never "Unlock at Level 10"), within a 150-move AI budget per run. For games drawn without text (most Unity games), Falcor AI gets a small picture and reads the level from it; the target counts only when two pictures in a row agree. Without a Kimi key, such a game goes back to you.\n  - **Prices and ads in a game** ("Buy now", "$0.99", "Double coins (watch ad)") are played around: Falcor\'s own taps can never land on a price, a purchase, an ad, an install or a bet, whatever proposed them. A payment screen (a card, a deposit, a paid plan) still stops the run and comes back to you. Popups are closed with their own \xD7, and ad screens are skipped or waited out.\n- **Rewarded ads** are on for every game. When a game offers a reward for an ad ("Double coins (watch ad)", "Free spin: watch ad"), Falcor plays it, waits out its countdown, closes it once the reward is granted and carries on. It never taps inside the ad and never buys anything; at most 10 ads per run.\n  - Only while you are there to watch: Falcor.Hub in front, the computer used in the last 5 minutes, or the phone app open. Otherwise the offer is passed by and the activity says why.\n  - A game\'s page in Games can turn them off (and on again) for that game. Never for Mistplay.\n  - Ad networks and some games may treat ads started this way as invalid; that risk is yours for that game.\n- **Edit a task** with its pencil button in Tasks: what it does, the target level, the daily reset hour, the reward note and a signup\'s details. Changing what it does sends it back to Needs review.\n- **Knowledge tab.**\n  - Every app Falcor learned, with its guide: summary, objectives, reward tiers, screens, step-by-step recipes and watch-outs. Each part says **seen** or **AI**.\n  - Press **Edit** to correct the guide, or delete pictures you don\'t want kept. Rename, Export or Delete each app.\n  - Ask Falcor about a guide from the Falcor tab (the guide\'s chat button focuses on it). A task it drafts lands in Tasks as *Needs review*; nothing runs until you approve it.\n  - Teaching the same app again updates its guide and lists what changed. Autopilot uses the guide when it runs a task on that app.\n  - **What you show is applied straight away**, also a game\'s first-time intro that Falcor records by itself: on each screen, the button you pressed there becomes a step Autopilot presses on that screen without asking (for any task on that app, for 6 months, as long as the screen looks the same). The Games page shows how many steps Falcor knows for each game.\n  - The guide\'s **watch-outs** are obeyed: a button it says never to press ("Never press Begin again", "Don\'t tap Reset") is never pressed by Autopilot, whatever suggested it. Add one with Edit, or answer one of Falcor\'s questions.\n- **Kimi spending.** Stats shows this month\'s spending for teaching, chat and Autopilot. Settings has a monthly limit; when it is reached, Falcor asks before sending more.\n\n**What Falcor never does:**\n- payments, cards, deposits or paid trials;\n- codes sent to you;\n- CAPTCHAs and ID checks;\n- typing a secret anywhere but its own field;\n- buying anything, or tapping inside an ad ("Install now", "Learn more");\n- playing an ad nobody watches (see **Rewarded ads**);\n- messages to people.\n\nThose screens come back to you. Screens with passwords, ID checks or card details are never shown in the mirror ("Privacy pause").\n\n**Mistplay is manual only.** Its terms prohibit automated rewarded play, so Falcor never touches it, and a plain "allowed" rule cannot change that.\n\n## Updates\n\nYou install once. After that:\n- **Falcor.Hub updates itself.** It checks [Falcor-Hub-Releases](https://github.com/thekidgilly/Falcor-Hub-Releases) at start and every 10 minutes, downloads a new update pack, checks every file\'s SHA-256, and shows **Restart to update** (never while a task runs). "What\'s new" shows once after the restart. If a new pack fails to start twice, Falcor.Hub goes back to the previous version by itself.\n- **The Remote\'s screens come from Falcor.Hub** (`/app/` on port 5175), so they update with it. The APK only needs reinstalling when its shell changes (rare).\n- A new installer is needed only when Electron, sql.js, adb or scrcpy change; the pack then says so (`minInstall`).\n\nPublishing an update (from `desktop/`, with the releases repo cloned next to this one):\n\n```\n# bump "version" in desktop/package.json (and remote/package.json if its screens changed)\nnpm test && npm run pack -- --notes "What changed, in a line or two"\ncd ../../falcor-hub-releases && git add -A && git commit -m "Falcor.Hub 0.2.1" && git push\n```\n\n## Develop\n\nRequires Node 22. Each folder is its own npm project.\n\n```\ncd desktop && npm install\nnpm run simulated            # the window with Falcor\'s simulated phone (no real phone needed)\nnpm test                     # engine and phone-app API on the simulated phone, and ten owned test games played end to end\nnode test/games-bench.mjs    # the games scorecard: success, AI calls, tokens, cost, taps and time per game\nxvfb-run -a node test/window.mjs   # the real window, driven end to end (Linux)\nnpm run dist:win             # Windows installer in desktop/release/ (downloads and checks adb + scrcpy)\n\ncd remote && npm install\nnpm test                     # the Remote\'s connection code against desktop/dist (build desktop first)\nnpm run build && npx cap add android && node scripts/prepare-android.mjs && cd android && ./gradlew assembleRelease\n```\n\nRelease APKs are signed when `FALCOR_KEYSTORE`, `FALCOR_KEYSTORE_PASSWORD` and `FALCOR_KEY_ALIAS` are set. Every update must use the same key.\n';
 
 // src/app.ts
 async function createHub(o) {
@@ -10327,7 +10747,7 @@ async function createHub(o) {
     return { key, model: store.get("kimi_model") || void 0 };
   };
   const knowledge = new Knowledge({ store, now: Date.now, kimi, fetch: o.fetch });
-  let conductor = null, watchTimer = null;
+  let conductor = null, remote = null, watchTimer = null;
   const changed = () => {
     o.onChange?.();
     if (!watchTimer) {
@@ -10356,6 +10776,9 @@ async function createHub(o) {
       return planStep(knowledge.track(set, "autopilot"), { ...input, observation: { ...input.observation, screenshot: null } }, signal, o.fetch, knowledge.plannerGuide(input.mission.app), small && small.mime !== "image/svg+xml" ? { mime: small.mime, data: small.data } : null);
     },
     recipes: (pkg) => knowledge.get(pkg)?.guide?.recipes.map((r) => ({ name: r.name, steps: r.steps.map((x) => ({ label: x.label })) })) || [],
+    avoid: (pkg) => knowledge.avoidLabels(pkg),
+    // The owner is there to watch a rewarded ad: the window says so (main.ts), or the phone app is open.
+    present: () => !!o.present?.() || !!remote?.activeWithin(2e4),
     vision: () => readsImages(store.get("kimi_model") || void 0) && !!o.shrink,
     onTeachEnd: (rec, shots, end) => {
       if (end.auto && !rec.touches.some((t) => t.kind !== "key")) {
@@ -10368,7 +10791,19 @@ async function createHub(o) {
       if (end.auto) void analyze(rec.pkg, rec.id, rec.name);
     },
     appName: (pkg) => knowledge.name(pkg),
-    learned: () => knowledge.list().map((k) => ({ pkg: k.pkg, name: k.name, sessions: k.sessions, hasGuide: k.hasGuide, lastSessionAt: k.lastSessionAt, summary: knowledge.get(k.pkg)?.guide?.summary.text || "" })),
+    learned: () => knowledge.list().map((k) => {
+      const g = knowledge.get(k.pkg)?.guide;
+      return {
+        pkg: k.pkg,
+        name: k.name,
+        sessions: k.sessions,
+        hasGuide: k.hasGuide,
+        lastSessionAt: k.lastSessionAt,
+        summary: g?.summary.text || "",
+        rewards: (g?.rewards || []).map((r) => ({ tier: r.tier, requirement: r.requirement, reward: r.reward, amount: r.amount, unit: r.unit, timeLimit: r.timeLimit })),
+        objectives: (g?.objectives || []).map((o2) => o2.text + (o2.requirement ? " (" + o2.requirement + ")" : ""))
+      };
+    }),
     autoTeach: o.autoTeach
   });
   async function analyze(pkg, id, name) {
@@ -10402,7 +10837,7 @@ async function createHub(o) {
     }
   });
   await conductor.watch();
-  const remote = new RemoteServer(engine, o.remotePort, o.remoteUi, conductor);
+  remote = new RemoteServer(engine, o.remotePort, o.remoteUi, conductor);
   return { engine, store, remote, sim, kimi, knowledge, conductor };
 }
 
@@ -10711,7 +11146,7 @@ async function startVideo(o) {
 
 // src/main.ts
 var where = globalThis.falcorHub || { appRoot: (0, import_node_path7.join)(__dirname, ".."), packRoot: (0, import_node_path7.join)(__dirname, ".."), packVersion: null, installVersion: import_electron2.app.getVersion(), packsDir: (0, import_node_path7.join)(import_electron2.app.getPath("userData"), "packs") };
-var VERSION = "0.6.0";
+var VERSION = "0.11.0";
 var simulated = process.argv.includes("--simulated");
 if (!import_electron2.app.requestSingleInstanceLock()) import_electron2.app.quit();
 var dataDir = () => (0, import_node_path7.join)(import_electron2.app.getPath("userData"), simulated ? "simulated" : "live");
@@ -10827,7 +11262,20 @@ var anyRunning = () => !!hub && hub.engine.devices().some((d) => d.running);
 async function boot() {
   (0, import_node_fs6.mkdirSync)(dataDir(), { recursive: true });
   const p = paths();
-  hub = await createHub({ dataDir: dataDir(), simulated, adbPath: p.adb, secrets, wasmDir: (0, import_node_path7.join)(where.appRoot, "node_modules", "sql.js", "dist"), remoteUi: (0, import_node_path7.join)(where.packRoot, "remote-ui"), onChange: push, shrink, update: () => updater?.state() || null, autoTeach: true });
+  hub = await createHub({
+    dataDir: dataDir(),
+    simulated,
+    adbPath: p.adb,
+    secrets,
+    wasmDir: (0, import_node_path7.join)(where.appRoot, "node_modules", "sql.js", "dist"),
+    remoteUi: (0, import_node_path7.join)(where.packRoot, "remote-ui"),
+    onChange: push,
+    shrink,
+    update: () => updater?.state() || null,
+    autoTeach: true,
+    // The owner is at the computer: Falcor.Hub is in front, or the computer was used in the last 5 minutes.
+    present: () => !!win && !win.isDestroyed() && win.isVisible() && !win.isMinimized() && win.isFocused() || import_electron2.powerMonitor.getSystemIdleTime() < 300
+  });
   hub.engine.start();
   await hub.remote.start().catch((e) => hub.engine.say("The phone app connection could not start: " + (e instanceof Error ? e.message : String(e))));
   if (!p.adb) hub.engine.say("Android platform tools (adb) are missing from this install.");
@@ -10992,6 +11440,12 @@ var handlers = {
     return i ? "data:" + i.mime + ";base64," + i.data : null;
   },
   openApp: (a) => need().engine.openApp(String(a.deviceId), String(a.pkg), true),
+  setAds: (a) => need().engine.setAds(String(a.pkg), a.on === true),
+  captureOffer: (a) => need().engine.captureOffer(String(a.deviceId)),
+  installedApps: (a) => need().engine.refreshApps(String(a.deviceId)).then((list) => list.map((p) => ({ pkg: p, name: need().engine.labelOf(p) }))),
+  saveOffer: (a) => need().engine.saveOffer(a.offer),
+  tickOffer: (a) => need().engine.tickOffer(String(a.id), Number(a.index), a.done === true),
+  removeOffer: (a) => need().engine.removeOffer(String(a.id)),
   shot: (a) => {
     const p = need().knowledge.shot(String(a.id));
     return p ? "data:" + p.mime + ";base64," + p.data : null;
