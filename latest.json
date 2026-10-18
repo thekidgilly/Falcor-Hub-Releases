@@ -1,17 +1,17 @@
 {
-  "version": "0.15.1",
-  "notes": "Clearer start-up: crisp FALCOR.HUB text and a redrawn Falcor dragon on the computer and the phone app.",
-  "publishedAt": "2026-10-18T04:10:33.393Z",
+  "version": "0.15.2",
+  "notes": "Live phone viewing no longer has privacy overlays or replacement cards. Manual taps, swipes, typing and app launches work across all apps. Recording and automated tasks stay separate. Updated desktop and phone interface in one update.",
+  "publishedAt": "2026-10-18T07:01:08.138Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "c7bbbbdebb0cbc5791071a6232f4c7f141fd5b1e9cd3e68ca8e033a10f0182d4",
-      "size": 721062
+      "sha256": "4a0c96aa1f09f7f93616ecbf79852e31cef8949ec3137510e963406b65a98cd8",
+      "size": 718235
     },
     {
       "path": "dist/preload.js",
-      "sha256": "49ad31d442a145e16d69951e26e37546ee896fce9a481d4afba89056351deb36",
-      "size": 1448
+      "sha256": "b62074610276592f62042b9eb1a6f780ee70601495d41dfc6368ab8eeae7701c",
+      "size": 1435
     },
     {
       "path": "remote-ui/assets/esm-B7fXffpm.js",
@@ -65,8 +65,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "d9f7f9d85ba148b23b5ea6fda98a547fb4f494971a212446d86f1d6ee0e1d742",
-      "size": 106642
+      "sha256": "e4c9193a819dc5366b14b3f95b60ae7905d8813fe962b68444dda3f23628588c",
+      "size": 106061
     },
     {
       "path": "ui/dragon.png",
@@ -95,8 +95,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "b3dcfa4ce621473544df2ff7cdc1dc197bcc61c747977174ec1aa3e494d283de",
-      "size": 36470
+      "sha256": "29ebba90c3884c2dac187012157e5c15b462786dee50110a85d83d60e0155c09",
+      "size": 36280
     },
     {
       "path": "ui/motion.css",
@@ -115,8 +115,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "204e8da8d3452cd6380fd994f83677ceb25baaceb0e2973f9e7c4fd31f4b7ed3",
-      "size": 49302
+      "sha256": "619e93a9bf1d8ea05ece63f9d0e6c62c4d46ad37eb6ee2893b80f0119d9b3994",
+      "size": 48996
     }
   ]
 }
