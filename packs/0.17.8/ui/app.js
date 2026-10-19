@@ -565,10 +565,11 @@ function renderGame(g) {
 function renderAutopilot(g, d) {
   $('gpap').hidden = g.pkg.startsWith('offer:');
   const c = g.campaign, on = !!c && c.active && !c.paused, goals = g.apGoals || [];
-  const sig = goals.map(x => x.objective + ':' + x.label).join('|'), sel = $('gpgoal');
+  const sig = (g.smart && g.smart.runnable ? 'plan|' : '') + goals.map(x => x.objective + ':' + x.label).join('|'), sel = $('gpgoal');
+  renderPlan(g);
   if (sel.dataset.sig !== sig) {
     const keep = sel.value;
-    sel.innerHTML = goals.map((x, i) => '<option value="' + i + '">' + esc(x.label) + '</option>').join('') + '<option value="level">Level…</option>';
+    sel.innerHTML = (g.smart && g.smart.runnable ? '<option value="plan">Smart Playbook (recommended)</option>' : '') + goals.map((x, i) => '<option value="' + i + '">' + esc(x.label) + '</option>').join('') + '<option value="level">Level…</option>';
     sel.dataset.sig = sig; if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
   }
   $('gplevelbox').hidden = sel.value !== 'level'; $('gpgoalbox').hidden = on;
@@ -590,8 +591,33 @@ function renderAutopilot(g, d) {
   htmlOnce($('gpapbody'), L.join(''));
 }
 $('gpgoal').onchange = () => { $('gplevelbox').hidden = $('gpgoal').value !== 'level'; if (!$('gplevelbox').hidden) $('gplevel').focus(); };
+// Smart Playbook (plans.ts): the offer's whole ladder as one plan; Run Playbook approves it once and the game's campaign
+// walks it milestone after milestone, coming back by itself (also while the Phone tab's Autopilot is off).
+function renderPlan(g) {
+  const v = g.smart, box = $('gpplan');
+  box.hidden = !v || (!v.plan.steps.length && !v.plan.unknowns.length);
+  if (box.hidden) return;
+  const p = v.plan, st = {draft: ['DRAFT', 'muted'], active: ['RUNNING', 'green'], paused: ['PAUSED', 'sand'], done: ['DONE', 'green'], ended: ['ENDED', 'muted']}[p.status] || ['DRAFT', 'muted'];
+  const strat = v.strategies.length > 1 && (p.status === 'draft' || p.status === 'done' || p.status === 'ended') ? '<select id="gpplanstrat" title="Strategy">' + v.strategies.map(x => '<option value="' + x.id + '"' + (x.id === p.strategy ? ' selected' : '') + '>' + esc(x.label) + '</option>').join('') + '</select>' : '';
+  htmlOnce(box, '<div class="top"><p class="eyebrow">// RECOMMENDED PLAYBOOK</p><span class="pill ' + st[1] + '">' + st[0] + '</span></div>' + strat
+    + '<ol class="planladder">' + p.steps.map(x => '<li class="' + x.state + (v.next && v.next.msId === x.msId ? ' now' : '') + '"><span>' + (x.state === 'reached' ? '✓ ' : x.state === 'needs_you' ? '✋ ' : '') + esc(x.text) + '</span><b>' + (x.amount !== null ? esc(x.amount) + ' ' + esc(x.unit) : 'reward unknown') + '</b>' + (x.why ? '<em>' + esc(x.why) + '</em>' : '') + '</li>').join('') + '</ol>'
+    + '<p class="small"><em>Next</em> ' + (v.next ? esc(v.next.text) : 'nothing left to play') + (v.nextAt ? ' · ' + esc(when(v.nextAt)) : '') + (v.nextWhy && p.status === 'active' ? ' · ' + esc(v.nextWhy) : '') + '</p>'
+    + '<p class="small"><em>Deadline</em> ' + (p.deadline.at ? esc(new Date(p.deadline.at).toLocaleString()) + ' (' + esc(p.deadline.source) + ')' : 'unknown') + ' · <em>Time per level</em> ' + (p.estimate.minPerLevel ? '≈ ' + p.estimate.minPerLevel + ' min' : 'unknown') + ' · ' + esc(p.estimate.note) + '</p>'
+    + p.notes.map(n => '<p class="small muted">' + esc(n) + '</p>').join('') + p.unknowns.map(n => '<p class="small sand">' + esc(n) + '</p>').join('')
+    + (p.ended ? '<p class="small">' + esc(p.ended) + '</p>' : '') + '<p class="small muted">' + esc(v.note) + '</p>');
+  const s = $('gpplanstrat'); if (s) s.onchange = () => call('gamePlaybook', {pkg: g.pkg, op: 'generate', strategy: s.value}).then(r => { g.smart = r; renderPlan(g); });
+}
+async function planRun(g, d, extra = {}) {
+  const strategy = $('gpplanstrat') ? $('gpplanstrat').value : g.smart.plan.strategy;
+  let r = await call('gamePlaybook', {pkg: g.pkg, op: 'run', deviceId: d.id, strategy, ...extra});
+  if (r && r.needsApproval) { const ok = await apApprove({...r.needsApproval, run: true}); if (!ok) return; extra = {...extra, rulesAllow: true}; r = await call('gamePlaybook', {pkg: g.pkg, op: 'run', deviceId: d.id, strategy, ...extra}); }
+  if (r && r.conflict) { const choice = await qAsk(r.conflict); if (!choice) return; r = await call('gamePlaybook', {pkg: g.pkg, op: 'run', deviceId: d.id, strategy, ...extra, choice}); }
+  if (r && r.already) toast(g.name + ': the playbook is already running.', 'warn');
+  else if (r && (r.started || r.queued)) toast('Smart Playbook on for ' + g.name + '. It comes back by itself until every milestone is verified.');
+}
 async function apStart(extra = {}) {
   const g = S.games.find(x => x.pkg === gamePkg), d = dev(); if (!g || !d) return;
+  if ((g.campaign && g.campaign.planId && g.campaign.paused && !extra.fresh) || ($('gpgoal').value === 'plan' && g.smart && g.smart.runnable && !(g.campaign && g.campaign.paused && !g.campaign.planId))) return planRun(g, d, extra);
   const v = $('gpgoal').value, goal = v === 'level' ? {objective: 'level', target: Number($('gplevel').value)} : (() => { const x = (g.apGoals || [])[Number(v)] || {objective: 'next'}; return {objective: x.objective, target: x.target, offerId: x.offerId, missionId: x.missionId}; })();
   if (g.campaign && g.campaign.paused && !extra.fresh) Object.assign(goal, {objective: g.campaign.objective, target: g.campaign.target, offerId: g.campaign.offerId, missionId: g.campaign.missionId});
   if (goal.objective === 'level' && !(goal.target >= 1)) { toast('Type the level to reach.', 'warn'); $('gplevel').focus(); return; }
@@ -609,8 +635,8 @@ async function apStart(extra = {}) {
 function apApprove(n) {
   return new Promise(resolve => {
     let done = false; const end = v => { if (done) return; done = true; qSheet.close(); resolve(v); };
-    qSheet.open(qSheet.head('APPROVE GAME AUTOPILOT', n.name) + '<p class="small">Goal: <b>' + esc(n.goal) + '</b>. ' + (n.existing ? 'Its task waits for your approval.' : 'A task for it is made when you approve.') + '</p><ul class="small">' + n.rules.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>'
-      + '<label class="small"><input type="checkbox" id="aprules"> I approve these rules</label><div class="row"><button class="primary" id="apgo" disabled>' + icon('check') + 'Approve and start</button><button data-close>Cancel</button></div>', b => {
+    qSheet.open(qSheet.head(n.run ? 'RUN SMART PLAYBOOK' : 'APPROVE GAME AUTOPILOT', n.name) + '<p class="small">Goal: <b>' + esc(n.goal) + '</b>. ' + (n.existing ? 'Its task waits for your approval.' : 'A task for it is made when you approve.') + '</p><ul class="small">' + n.rules.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>'
+      + '<label class="small"><input type="checkbox" id="aprules"> I approve these rules</label><div class="row"><button class="primary" id="apgo" disabled>' + icon('check') + (n.run ? 'Run Playbook' : 'Approve and start') + '</button><button data-close>Cancel</button></div>', b => {
       b.querySelector('#aprules').onchange = e => { b.querySelector('#apgo').disabled = !e.target.checked; };
       b.querySelector('#apgo').onclick = () => end(true);
       b.querySelector('[data-close]').addEventListener('click', () => end(false));
@@ -620,8 +646,9 @@ function apApprove(n) {
   });
 }
 $('gpapstart').onclick = () => void apStart().catch(() => null);
-$('gpappause').onclick = async () => { await call('gameAutopilot', {pkg: gamePkg, op: 'pause'}); toast('Game Autopilot paused. Nothing comes back by itself until you carry on.'); };
-$('gpapstop').onclick = async () => { await call('gameAutopilot', {pkg: gamePkg, op: 'stop'}); toast('Game Autopilot stopped. Its returns are cancelled.'); };
+const planOwned = () => { const g = S.games.find(x => x.pkg === gamePkg); return !!(g && g.campaign && g.campaign.planId); };
+$('gpappause').onclick = async () => { await call(planOwned() ? 'gamePlaybook' : 'gameAutopilot', {pkg: gamePkg, op: 'pause'}); toast('Game Autopilot paused. Nothing comes back by itself until you carry on.'); };
+$('gpapstop').onclick = async () => { await call(planOwned() ? 'gamePlaybook' : 'gameAutopilot', {pkg: gamePkg, op: 'stop'}); toast('Game Autopilot stopped. Its returns are cancelled.'); };
 // Rewarded ads: on for every game. Falcor plays an ad offer while the owner is here to watch it and closes it once the
 // reward is granted; a game can be turned off (and on again) here.
 function renderAds(g) {

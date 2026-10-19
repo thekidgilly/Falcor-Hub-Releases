@@ -50,6 +50,7 @@ var CALLS = [
   "openApp",
   "setAds",
   "gameAutopilot",
+  "gamePlaybook",
   "captureOffer",
   "captureStart",
   "captureMore",

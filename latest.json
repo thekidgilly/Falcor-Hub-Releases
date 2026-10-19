@@ -1,12 +1,12 @@
 {
-  "version": "0.17.7",
-  "notes": "Smart Playbooks: each game page shows a recommended plan for its whole offer (milestones, rewards, deadline, unknowns). Approve Run Playbook once and Falcor plays milestone after milestone by itself, also when Phone Autopilot is off (Falcor.Hub running, phone connected). Same on your phone. Games that open on a goal page are now played past it.",
-  "publishedAt": "2026-10-19T07:12:12.860Z",
+  "version": "0.17.8",
+  "notes": "Smarter game learning: Falcor stops repeating a learned move that goes nowhere and tries something new, remembers its last 12 moves in a game (cards seen, moves that failed), and tries a game move it is fairly sure of instead of stopping to ask you.",
+  "publishedAt": "2026-10-19T12:11:44.547Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "7935567b8e65de86be6ef253115dc473cd4cdf7d8f3c643291e7e828f55771d9",
-      "size": 943405
+      "sha256": "23bd006f05553f7abb27e724f833cee922dc00c38ae083d8d81af3086694c464",
+      "size": 945814
     },
     {
       "path": "dist/preload.js",
