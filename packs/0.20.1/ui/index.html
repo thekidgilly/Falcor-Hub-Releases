@@ -14,7 +14,7 @@
   <div class="brand"><span class="logo" id="logo"><img src="dragon.png" alt=""><i class="eye"></i></span><div><h1>FALCOR.HUB</h1><p class="eyebrow">Phone control</p></div></div>
   <div class="strip" id="strip">
     <button class="sys" data-go="phone"><span class="led" id="led-phone"></span><span id="sys-phone">Phone</span></button>
-    <button class="sys" data-go="phone"><span class="led" id="led-auto"></span><span id="sys-auto">Autopilot</span></button>
+    <button class="sys" data-go="phone"><span class="led" id="led-auto"></span><span id="sys-auto">Queue</span></button>
     <button class="sys" data-go="settings:ai"><span class="led" id="led-kimi"></span><span id="sys-kimi">Kimi</span></button>
     <button class="sys" data-go="settings:phoneapp"><span class="led" id="led-remote"></span><span id="sys-remote">Remote</span></button>
   </div>
@@ -104,8 +104,8 @@
         <div class="winbody"><div class="devpanel" id="devicepanel">
           <div class="top"><h2><svg class="ico"><use href="#i-phone"></use></svg><span id="devname">Phone</span></h2><span class="state" id="devstate"><span class="led"></span><span></span></span></div>
           <dl class="spec" id="devinfo"><dt>Model</dt><dd id="d-model"></dd><dt>Android</dt><dd id="d-android"></dd><dt>App in front</dt><dd id="d-app"></dd><dt id="d-batt-l">Battery</dt><dd id="d-batt"></dd><dt>Control</dt><dd id="d-control"></dd></dl>
-          <button id="autopilot" class="primary big"><span class="led"></span><span id="autolabel">Start Autopilot</span></button>
-          <div class="qmodes"><button class="small" id="runready" title="Run only what is due now, one after another. Autopilot stays off and later times wait."><svg class="ico"><use href="#i-queue"></use></svg>Run Ready<span class="qcount" id="readycount"></span></button><span class="muted small" id="autonote">Autopilot runs today's queue at its times. Take Control pauses it on this phone.</span></div>
+          <button id="qtoggle" class="big"><span class="led"></span><span id="qtogglelabel">Pause queue</span></button>
+          <p class="muted small" id="autonote">What you schedule (games, playbooks, creations) runs here at its time, one after another. Take Control pauses the run on this phone.</p>
           <select id="devpick" hidden></select>
         </div></div>
       </section>
@@ -190,7 +190,7 @@
         <button class="small" id="sbafter" title="Finish the group or loop it is in, then stop" hidden>Stop after group</button>
         <button class="small danger" id="sbstop" title="Stop the run" hidden><svg class="ico"><use href="#i-stop"></use></svg>Stop</button>
         <span class="sep"></span>
-        <button class="small icon" id="sbqueue" title="Add to today's queue (it runs in its turn while Autopilot runs, or with Run Ready)"><svg class="ico"><use href="#i-queue"></use></svg></button>
+        <button class="small icon" id="sbqueue" title="Add to today's queue (it runs in its turn)"><svg class="ico"><use href="#i-queue"></use></svg></button>
         <button class="small icon" id="sbsched" title="Set a schedule (the Daily Queue)"><svg class="ico"><use href="#i-calendar"></use></svg></button>
         <button class="small icon" id="sbprefs" title="Sandbox settings"><svg class="ico"><use href="#i-settings"></use></svg></button>
         <button class="small icon" id="sbhelp" title="Help and shortcuts (?)"><svg class="ico"><use href="#i-help"></use></svg></button>
@@ -315,13 +315,16 @@
           <button id="gpofferedit" title="Correct the offer: names, amounts, deadline, stages"><svg class="ico"><use href="#i-edit"></use></svg>Edit offer</button>
           <button id="gpofferrefresh" title="Open the offer page in the earning app on the phone, then read it again and see what changed"><svg class="ico"><use href="#i-update"></use></svg>Refresh offer</button>
           <button id="gpauto" title="Change what Falcor does in this game"><svg class="ico"><use href="#i-edit"></use></svg>Edit automation</button>
-          <button id="gpteach" title="Open the game and record while you play it"><svg class="ico"><use href="#i-rec"></use></svg>Teach again</button>
+          <button id="gpteach" title="Play it your way: Falcor records and learns from you (no time to fill, nothing else to press)"><svg class="ico"><use href="#i-rec"></use></svg>Teach Falcor</button>
           <button id="gptask"><svg class="ico"><use href="#i-plus"></use></svg>New challenge</button>
           <button class="icon" id="gpguide" title="The guide in Knowledge"><svg class="ico"><use href="#i-book"></use></svg></button>
           <button class="icon" id="gpchat" title="Ask Falcor about this game"><svg class="ico"><use href="#i-chat"></use></svg></button>
+          <button class="icon danger" id="gpremove" title="Remove this game from Games"><svg class="ico"><use href="#i-trash"></use></svg></button>
         </div>
       </div>
+      <div id="gpprep"></div>
       <div class="gpauto" id="gpautoline"></div>
+      <div class="panel gptrain" id="gptrain" hidden></div>
       <div class="panel gpap" id="gpap">
         <div class="gpplan" id="gpplan" hidden></div>
         <div class="gpaphead"><p class="eyebrow">// GAME AUTOPILOT</p>
@@ -474,10 +477,16 @@
           <p class="muted small">Falcor asks Kimi for a step on a screen it does not know, to write guides and to chat. Your key is sealed on this computer and only ever sent to Kimi.</p>
           <form class="grid" id="kimiform">
             <label class="wide">API key<input id="kimikey" type="password" placeholder="sk-… (leave empty to keep the saved key)" autocomplete="off"></label>
-            <label>Model<select id="kimimodel"><option value="kimi-k3">kimi-k3 (reads pictures)</option><option value="kimi-k2.5">kimi-k2.5</option><option value="custom">Custom…</option></select></label>
+            <label>Single model<select id="kimimodel"><option value="kimi-k3">kimi-k3</option><option value="kimi-k2.6">kimi-k2.6</option><option value="kimi-k2.7-code">kimi-k2.7-code</option><option value="custom">Custom…</option></select></label>
             <label id="kimicustomwrap" hidden>Custom model<input id="kimicustom" maxlength="80"></label>
             <div class="wide row"><button class="primary">Save</button><button type="button" id="kimitest">Test connection</button><button type="button" class="danger" id="kimiremove">Remove key</button><span class="muted small" id="kimiping"></span></div>
           </form>
+          <p class="eyebrow" data-gap>// INTELLIGENT MODEL ROUTING</p>
+          <label class="row small"><input type="checkbox" id="routeauto"> Automatic routing: each task uses its own model. Off: every task uses the model above.</label>
+          <form id="routeform"><ul class="rows routes" id="routes"></ul>
+            <div class="row"><button class="primary" id="routesave">Save routing</button><button type="button" id="routereset">Reset to defaults</button><span class="muted small" id="routemsg"></span></div>
+          </form>
+          <p class="muted small" id="routecaps"></p>
           <p class="eyebrow" data-gap>// SPENDING</p>
           <div class="meter" id="limitmeter"></div>
           <form class="row" id="limitform"><label class="small muted">Monthly limit ($)</label><input id="limit" type="number" min="0" step="0.5" placeholder="no limit"><button>Save limit</button></form>

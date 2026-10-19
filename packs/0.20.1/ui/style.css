@@ -770,3 +770,22 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .planladder li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 3px 6px; border-left: 2px solid var(--line); }
 .planladder li.reached { color: var(--muted); border-left-color: var(--green); } .planladder li.now { border-left-color: var(--accent); background: var(--panel-2); }
 .planladder li.needs_you { border-left-color: var(--sand); } .planladder li em { grid-column: 1 / -1; color: var(--sand); }
+.routes li select { min-width: 190px; } .routes li > .muted.small { min-width: 150px; }
+
+/* A captured game's online research: its bar and steps, then Ready to play (pixel.js#prepHtml, the card's .gprep). */
+.prep { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); margin: 8px 0; } .prep.running { border-color: #5CE59A55; } .prep.failed { border-color: #F5B54466; }
+.prep .bar, .gprep .bar { display: block; height: 6px; background: #ffffff14; } .prep .bar i, .gprep .bar i { display: block; height: 100%; background: #5CE59A; transition: width .4s steps(8); }
+.prep ul.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 12px; color: #8a8a8a; } .prep ul.steps li.ok { color: #5CE59A; } .prep ul.steps li.now { color: #F5B544; }
+.prep.done b .ico { margin-right: 6px; } .gprep { display: grid; gap: 3px; font-size: 11px; letter-spacing: .04em; color: #F5B544; margin-top: 4px; } .gprep.done { color: #5CE59A; } .gprep.failed { color: #8a8a8a; }
+.prep.done b { color: #5CE59A; display: inline-flex; align-items: center; gap: 6px; }
+
+/* A newly captured game's setup checklist and Teach Falcor's lessons (training.ts) */
+.gptrain { display: grid; gap: 6px; } .gptrain .top { display: flex; justify-content: space-between; align-items: center; gap: var(--s2); } .gptrain .top .eyebrow { margin: 0; }
+.gptrain p { margin: 0; } .gptrain em { font-style: normal; color: var(--muted); }
+.gptrain .checklist, .gptrain .lessons { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: var(--t12); }
+.gptrain .checklist li span { font-family: var(--voice); }
+.gptrain .lessons li { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--s2); align-items: center; } .gptrain .lessons li .muted { grid-column: 1; }
+.gptrain .lessons li button { grid-row: 1 / span 2; grid-column: 2; }
+.gptrain .bar { display: block; height: 6px; background: #ffffff14; } .gptrain .bar i { display: block; height: 100%; background: var(--accent); transition: width .4s steps(8); }
+.pill.rec { animation: recblink 1s steps(2) infinite; } @keyframes recblink { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .pill.rec { animation: none; } }

@@ -1,17 +1,17 @@
 {
-  "version": "0.20.0",
-  "notes": "New games learn from you first: after you capture a new game, just open it and play five minutes (any number of sittings, on the phone or the mirror). Falcor records by itself, learns how you get in (as a guest if you were one) and how you play, then unlocks its automation. Until then Start Autopilot, Run Playbook, Run available activity and Schedule stay locked for that game. New Teach Falcor button on each game's page (computer and phone): press it, play your way, leave the game or press Finish & Learn; the next run uses what you showed, and a lesson that makes things worse is undone by itself.",
-  "publishedAt": "2026-10-19T17:33:34.688Z",
+  "version": "0.20.1",
+  "notes": "Delete creations and remove games: each creation card has Delete (its schedules are turned off), and each game's page has Remove game (its Autopilot stops and its tasks, schedules, offers and what Falcor learned are deleted; the app stays on your phone). On the computer and the phone app.",
+  "publishedAt": "2026-10-19T17:47:16.338Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "d8d65e491b788e3e6e6da2a56bc900595bd8b5a4edbe7b4b0f8de017816ebb83",
-      "size": 1007401
+      "sha256": "c287139e5a7ea2acfd13eccaac6a0de5f30c4eb88e23ad9841bbf5c40b243d81",
+      "size": 1009404
     },
     {
       "path": "dist/preload.js",
-      "sha256": "4212a26aac9bd6b5664eed7ead1bc165a8cabc94d8b36291daaf462ae6b3b0d0",
-      "size": 1686
+      "sha256": "323c04106725d50255d7dee69ec411fd07410eb0eff4595e5bc584a78d193dba",
+      "size": 1702
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-CEF_N8TC.css",
-      "sha256": "d796c3c6817a61d1e25ea0c13fb087acc1d2bded2db439cae96836a5a83a2c6a",
-      "size": 53142
+      "path": "remote-ui/assets/index-C4lLHXZl.js",
+      "sha256": "83dd1b7da2360d42ad09c9ddcb4fea7e41c78c13510e7b3d90bc2212c2fadb17",
+      "size": 169139
     },
     {
-      "path": "remote-ui/assets/index-DG08plu5.js",
-      "sha256": "394e6e53f6f49542862ed4db2b42cfaf41dfa1bed7b2b5b7ce111ff1a88bdc7b",
-      "size": 168433
+      "path": "remote-ui/assets/index-I43jXfmx.css",
+      "sha256": "a391c9f81cda22d7f8b0322cc03965229f5ab501e6e3406600e9617f4a5ef74a",
+      "size": 53178
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "7978f267fe1f6af4b8ea5bdd292e98b99f00e9add2ca3ced430731a3f184d665",
+      "sha256": "430e81343def1e4fe67eaddc3129d4344e5a6bd55ecef9f1807ff95265480873",
       "size": 3760
     },
     {
@@ -75,8 +75,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "5e64b5a02b0e87001ef0e9f8422ea9681de6fb2e107a8821f536c757451888ef",
-      "size": 140528
+      "sha256": "38fb29b0f2a61c6604416dc3fb60e50dba64689d35baaf1fb6cbb26ba5a1621c",
+      "size": 141187
     },
     {
       "path": "ui/app.png",
@@ -90,8 +90,8 @@
     },
     {
       "path": "ui/creations.js",
-      "sha256": "180ac486caa1a7a9ed9eacee3b57e8d9263a8a2bd44e2533945e15d4e311bfad",
-      "size": 17771
+      "sha256": "442c503d17afc2502b5dc90ad0c472e1ce527c491462b9e770dda2ba5a628d54",
+      "size": 18110
     },
     {
       "path": "ui/desk.js",
@@ -125,8 +125,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "19e22c4096d29e56b54285c49470830ab103278c6e5b0b9d293f3a88206644bf",
-      "size": 52440
+      "sha256": "544ea85cd392942400db890e4c1cc76edce55b7f6cff1382c492c71debca0d30",
+      "size": 52588
     },
     {
       "path": "ui/motion.css",
