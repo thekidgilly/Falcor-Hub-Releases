@@ -762,3 +762,11 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .tt[data-mood="green"] b { color: var(--green); } .tt[data-mood="sand"] b { color: var(--sand); } .tt[data-mood="red"] b { color: var(--red); } .tt[data-mood="muted"] b { color: var(--muted); }
 .todaybox .spec, .linkbox .spec, .todaybox .meter { margin: 0; }
 .linkbox .spec .led { margin-right: 6px; }
+
+/* Smart Playbook on a game's page: the plan's ladder above the Game Autopilot buttons. */
+.gpplan { display: grid; gap: 6px; margin-bottom: var(--s3); padding-bottom: var(--s3); border-bottom: 1px solid var(--line); }
+.gpplan .top .eyebrow { margin: 0; } .gpplan select { justify-self: start; } .gpplan p { margin: 0; } .gpplan em { font-style: normal; color: var(--muted); }
+.planladder { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: var(--t12); }
+.planladder li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 3px 6px; border-left: 2px solid var(--line); }
+.planladder li.reached { color: var(--muted); border-left-color: var(--green); } .planladder li.now { border-left-color: var(--accent); background: var(--panel-2); }
+.planladder li.needs_you { border-left-color: var(--sand); } .planladder li em { grid-column: 1 / -1; color: var(--sand); }
