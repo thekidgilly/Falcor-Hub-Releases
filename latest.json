@@ -1,12 +1,12 @@
 {
-  "version": "0.17.1",
-  "notes": "Sandbox studio: on the computer, Focus opens the editor across the window, Panels hides the library and settings, the sequence tray can be resized, and Stop all sits in the editor. On the phone, the Sandbox editor gets fuller drawers, an outline, search, duplicate, undo/redo and drag to reorder. Optional click feedback (off by default).",
-  "publishedAt": "2026-10-19T01:48:59.799Z",
+  "version": "0.17.2",
+  "notes": "The Phone tab is now windows you can move, resize, maximize and hide, including the phone screen. Windows menu adds Needs you, Apps, Creations, Today and Connection; Layout offers Classic, Focus and Grid; Lock keeps them in place. Your arrangement is saved, with its own for sideways games.",
+  "publishedAt": "2026-10-19T03:00:50.574Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "102060c22b3cb58e9e5fb384350dfa86b5f5772e3e741c0d05708b676d23aaa1",
-      "size": 873286
+      "sha256": "48223062bcc26f95ea239f2c7e11033f35f92483e23cfd720d89e729ebb395ba",
+      "size": 874097
     },
     {
       "path": "dist/preload.js",
@@ -34,9 +34,9 @@
       "size": 50527
     },
     {
-      "path": "remote-ui/assets/index-NGmkpL5Q.js",
-      "sha256": "88890347bbdb3117881538749be8c5df65f1d702c86af28585387e12c469ea67",
-      "size": 152340
+      "path": "remote-ui/assets/index-rATe5k01.js",
+      "sha256": "a9992899f14a1ba253f04bfe7e8666be2c2393cdc537946a0523be46216c85d8",
+      "size": 153095
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "e2da827ed9ae267351111271f97a5515593d3040d402e8a87c792832009757aa",
+      "sha256": "7fe151658ad2ab0bf04f6d4bb3956129a64679d8f9bb300a3cdd986d3c1e656f",
       "size": 3760
     },
     {
@@ -75,8 +75,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "103ead92e5c06eea5b2b00cec2c57f4df61f4055f90d7ac2fad83b0bd8b6c362",
-      "size": 124904
+      "sha256": "ce2dba6626ecd172420394c07b35c7d2463458271c29fb95f2cd2cfdb53bb6d4",
+      "size": 124360
     },
     {
       "path": "ui/app.png",
@@ -92,6 +92,11 @@
       "path": "ui/creations.js",
       "sha256": "180ac486caa1a7a9ed9eacee3b57e8d9263a8a2bd44e2533945e15d4e311bfad",
       "size": 17771
+    },
+    {
+      "path": "ui/desk.js",
+      "sha256": "de5df0032790e3b0e7e343ed9e5f5452def467da5c1682f8e2f291807a794989",
+      "size": 44635
     },
     {
       "path": "ui/dragon.png",
@@ -120,8 +125,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "62c3a6b233aca3327d5178eb3d25bcb9774e82e466d029e8a57ea8cb051ed00a",
-      "size": 46184
+      "sha256": "6cd4bad7b187a8817baf9334abd6ec3693390b266f9557cc6ca2a98fa605c018",
+      "size": 50852
     },
     {
       "path": "ui/motion.css",
@@ -130,12 +135,12 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "d32362d9b076bc730951922cd288de6fa7240246d2ef0e1d535acd532cced590",
-      "size": 52005
+      "sha256": "6f548ff8f549ff9f00f3cf563ca12ba13acaf773e00ce15c9399296729d112c1",
+      "size": 52828
     },
     {
       "path": "ui/queue.js",
-      "sha256": "baad1f3b8cfc0ca431fd72693104c39839f7baae75ae906f19769d7fce729068",
+      "sha256": "6eec6a35cc883eaf5e84747829d9b7f24e00c5831e178a7362fbe68733bee88b",
       "size": 49694
     },
     {
@@ -145,8 +150,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "c191c430f67e7f638c571eb16d527cbb9e7678d0eaed0c4927e771961bc7c6db",
-      "size": 73097
+      "sha256": "43ab9b27779374b10ecd4126ff980d438a09eb2cca811417ebce5591fccad1a3",
+      "size": 83397
     },
     {
       "path": "ui/tokens.css",
