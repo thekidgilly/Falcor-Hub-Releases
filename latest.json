@@ -1,17 +1,17 @@
 {
-  "version": "0.17.6",
-  "notes": "Capture Game now recognizes offer pages that start with goal cards (\"0 / 12\" progress) and no longer mistakes a goal's count (\"Remove 12 gems\") for a reward.",
-  "publishedAt": "2026-10-19T06:53:14.220Z",
+  "version": "0.17.7",
+  "notes": "Smart Playbooks: each game page shows a recommended plan for its whole offer (milestones, rewards, deadline, unknowns). Approve Run Playbook once and Falcor plays milestone after milestone by itself, also when Phone Autopilot is off (Falcor.Hub running, phone connected). Same on your phone. Games that open on a goal page are now played past it.",
+  "publishedAt": "2026-10-19T07:12:12.860Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "02acec8ab3d178bbd8a29acf3a53b8bf7c05967f1694267aa4e28897cb105840",
-      "size": 928749
+      "sha256": "7935567b8e65de86be6ef253115dc473cd4cdf7d8f3c643291e7e828f55771d9",
+      "size": 943405
     },
     {
       "path": "dist/preload.js",
-      "sha256": "d8e8570ac26cad3019b6999c3e943e2c77118a6c8142afabaefd2f8eb2914fc8",
-      "size": 1637
+      "sha256": "8a14874666eee8a544cef7acb42c70dacf96f1d04266dee7f33575e2c0192d81",
+      "size": 1655
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-BoIZQDr7.js",
-      "sha256": "12edf693e9208b516e91ba8a743a6cd19c2544f620f914110c33f41f2436c97f",
-      "size": 157947
+      "path": "remote-ui/assets/index-B_lBIS5E.js",
+      "sha256": "a1cabac63d468add417f4fe5a1480d64aa9a389bf50567e392b67c1e32fec3ab",
+      "size": 161257
     },
     {
-      "path": "remote-ui/assets/index-BvI_XPLL.css",
-      "sha256": "b6a4e514be96dfe5e2d5d506cf20cdcc495e8a6620b39bf2514877d6c446c295",
-      "size": 50864
+      "path": "remote-ui/assets/index-C3opmOO_.css",
+      "sha256": "33a0cc4bc38d82f7584563bd7a6bc9e7aed6852d73a39b96a72a0a64d397a0c9",
+      "size": 51619
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "6fedde95d45f14317c86daf0a2aaccc268756a2f267b1ebd6ae921748248c3db",
+      "sha256": "192a645556c8909d94837ee5b667b0856e9acdd3f4bb282fe72f23cb02baebb5",
       "size": 3760
     },
     {
@@ -75,8 +75,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "10ed30090ddb0c7e31a66fa6194e1836906836c9f90ab5b7c23369368e5b1e5d",
-      "size": 130719
+      "sha256": "ace1209b0bcea8a745ef25146d2b4d138dc582cfc61bbef660fc2b234018066a",
+      "size": 134707
     },
     {
       "path": "ui/app.png",
@@ -125,8 +125,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "c846a7411d7de8be7b2aefc6912473f3472a9c8485a6db778cba181a9549fbc9",
-      "size": 51887
+      "sha256": "2a4de57ec8b2a594faca8e926b4e2a6551c9f8d31cbe5c5e63eef593e08f0554",
+      "size": 51941
     },
     {
       "path": "ui/motion.css",
@@ -150,8 +150,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "758af94d675f0daa7548dc7ddd8daad76668bab85348730b49680d9b2cc7e4b9",
-      "size": 83986
+      "sha256": "d266a6025d6965cf0259fd15f488da0ba3fca48af06c02ba58383d28da000020",
+      "size": 84906
     },
     {
       "path": "ui/tokens.css",

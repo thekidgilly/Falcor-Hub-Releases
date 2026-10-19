@@ -322,6 +322,15 @@
         </div>
       </div>
       <div class="gpauto" id="gpautoline"></div>
+      <div class="panel gpap" id="gpap">
+        <div class="gpplan" id="gpplan" hidden></div>
+        <div class="gpaphead"><p class="eyebrow">// GAME AUTOPILOT</p>
+          <div class="row"><span class="row" id="gpgoalbox"><select id="gpgoal" title="What Falcor plays toward"></select><span id="gplevelbox" hidden><input id="gplevel" type="number" min="1" max="100000" placeholder="level" title="The level to reach"></span></span>
+            <button class="primary" id="gpapstart" title="Falcor plays this game toward the goal now, then comes back by itself until it is verified"><svg class="ico"><use href="#i-play"></use></svg>Start Autopilot</button>
+            <button id="gpappause" title="Stop for now; nothing comes back by itself until you start it again" hidden><svg class="ico"><use href="#i-pause"></use></svg>Pause</button>
+            <button class="danger" id="gpapstop" title="End it: the run stops and its returns are cancelled" hidden><svg class="ico"><use href="#i-stop"></use></svg>Stop Autopilot</button></div></div>
+        <div id="gpapbody"></div>
+      </div>
       <div class="panel" id="gpofferbox" hidden><p class="eyebrow">// REWARD LADDER</p><p class="muted small">A goal reached in the game is not money: credited and paid out are. Set a stage from its menu; "observed" came from the earning app's page, "you" from you, "Falcor" from the game's level.</p><div id="gpoffers"></div></div>
       <div class="panel" id="gpweb" hidden><p class="eyebrow">// FROM THE WEB</p><div id="gpwebbody"></div></div>
       <div class="tiles gtiles" id="gptiles"></div>

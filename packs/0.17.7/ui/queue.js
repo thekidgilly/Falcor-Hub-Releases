@@ -376,6 +376,7 @@
     sheet(head('HISTORY', o.name || 'History') + '<ul class="seqlist">' + ([...rows, ...older].join('') || '<li class="muted small">No runs yet.</li>') + '</ul><div class="row"><button data-close>Close</button></div>');
   }
   window.qHistory = qHistory;
+  window.qAsk = ask; window.qSheet = {open: sheet, head, close: closeSheet};
 
   // ------------------------------------------------------------------ the Tasks, Games and Sandbox tabs' buttons
   document.addEventListener('click', async e => {

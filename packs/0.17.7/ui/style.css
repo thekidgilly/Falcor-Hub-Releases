@@ -592,6 +592,9 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .tsched { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 4px; } .tsched label { align-items: center; color: var(--muted); font-size: var(--t12); } .tsched .ico { width: 12px; height: 12px; color: var(--accent); }
 /* A narrow queue or Device window (each window body is a size container, desk.js): tighter rows, the note goes. */
 @container (max-width: 280px) { .qrow { grid-template-columns: 18px 18px minmax(0, 1fr) auto 18px; gap: 4px; } .qbar .seg button { padding: 3px 5px; } .qmodes #autonote { display: none; } }
+.gpap .gpaphead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; } .gpap .gpaphead .row { flex-wrap: wrap; gap: 6px; } .gpap select { max-width: 280px; } .gpap input[type=number] { width: 90px; }
+.gpapstate { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin-top: 8px; font-size: var(--t12); } .gpapstate em { font-style: normal; color: var(--muted); margin-right: 4px; }
+.gpapreview { margin-top: 8px; font-size: var(--t12); } .gpapreview ul { margin: 4px 0; padding-left: 16px; } .gpapreview li { margin: 2px 0; }
 .gpauto { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: var(--t12); } .gpauto:empty { display: none; } .gpauto .ico { width: 12px; height: 12px; color: var(--accent); }
 /* Sandbox landing: Create | My sequences; the editor is its own page with a way back. */
 .pane.sandbox.home > :not(.sbhome):not(#rec):not(.sbsheet) { display: none !important; }
@@ -759,3 +762,11 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .tt[data-mood="green"] b { color: var(--green); } .tt[data-mood="sand"] b { color: var(--sand); } .tt[data-mood="red"] b { color: var(--red); } .tt[data-mood="muted"] b { color: var(--muted); }
 .todaybox .spec, .linkbox .spec, .todaybox .meter { margin: 0; }
 .linkbox .spec .led { margin-right: 6px; }
+
+/* Smart Playbook on a game's page: the plan's ladder above the Game Autopilot buttons. */
+.gpplan { display: grid; gap: 6px; margin-bottom: var(--s3); padding-bottom: var(--s3); border-bottom: 1px solid var(--line); }
+.gpplan .top .eyebrow { margin: 0; } .gpplan select { justify-self: start; } .gpplan p { margin: 0; } .gpplan em { font-style: normal; color: var(--muted); }
+.planladder { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: var(--t12); }
+.planladder li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 3px 6px; border-left: 2px solid var(--line); }
+.planladder li.reached { color: var(--muted); border-left-color: var(--green); } .planladder li.now { border-left-color: var(--accent); background: var(--panel-2); }
+.planladder li.needs_you { border-left-color: var(--sand); } .planladder li em { grid-column: 1 / -1; color: var(--sand); }
