@@ -1,17 +1,17 @@
 {
-  "version": "0.16.9",
-  "notes": "Capture Game reads game names correctly on every layout, including names like \"Amaze GO!\" (it no longer picks a button like \"View details\"). When a game is played sideways, the Phone tab switches to landscape: the mirror fills the left side and the panels line up on the right, and it switches back when the game is upright.",
-  "publishedAt": "2026-10-18T23:55:18.166Z",
+  "version": "0.17.0",
+  "notes": "Tasks is now Creations: every sequence you build in Sandbox shows as a card with Run now, Schedule, History and Edit (your other tasks are under Other automations). Stats is now Activity: a clear list of what ran, when, on which phone and how it ended. The phone app's fifth tab is Creations too, and its Sandbox Create / My sequences switch works again.",
+  "publishedAt": "2026-10-19T01:03:01.300Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "fd4304a610de5843898d22119642f12475f2e5568a0c9e553d53d26a01e03475",
-      "size": 858999
+      "sha256": "fea5c5a8f42adca9b420551ab65824238710c6cd648b000d8a3fe6a24630bce5",
+      "size": 873286
     },
     {
       "path": "dist/preload.js",
-      "sha256": "e0e2ae78fc8527cd607c72440ddabed61fec0e6a420303901b70ab63d858eabc",
-      "size": 1607
+      "sha256": "1c36cb55d3c630b6c24ecd02d086186a2707af28bd537cce6dcf550a8c56688a",
+      "size": 1618
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-CN3RHcsV.js",
-      "sha256": "35e5a708b114d3dd5a8087c91dca4b9f76cbf04e59801a64d828a638bbfc0354",
-      "size": 138300
+      "path": "remote-ui/assets/index-CXSSDwI5.js",
+      "sha256": "ca919ebd190e4cfe61bb6fc7ca2302dda40562504f148a8ad6e127d76f982c57",
+      "size": 146490
     },
     {
-      "path": "remote-ui/assets/index-J2O5uKcG.css",
-      "sha256": "3352b4cdb9be27aa65c41015358c738ef4182b834be2ef442ffc5cbbe83142e8",
-      "size": 45590
+      "path": "remote-ui/assets/index-d0F8CTJm.css",
+      "sha256": "d3ab98512a59e010dbbcb9f638e8e75a0718ebc3fe0c1eac88c88d63ed462e52",
+      "size": 46740
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,8 +65,8 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "d29a24a4d142d96f8b5934184dafa325573c20cb60c06ee6570dd9f6d4d8b13f",
-      "size": 3756
+      "sha256": "0b7d668176f4b98d0c9e9a306f614bdaf192bd8201c6369524fa20a59dacf0fd",
+      "size": 3760
     },
     {
       "path": "ui/app.ico",
@@ -75,8 +75,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "5a91b5cdea844bcdbb3787cff4fe3de02af053eedd35a0e994a580a49f1cfeda",
-      "size": 129139
+      "sha256": "103ead92e5c06eea5b2b00cec2c57f4df61f4055f90d7ac2fad83b0bd8b6c362",
+      "size": 124904
     },
     {
       "path": "ui/app.png",
@@ -87,6 +87,11 @@
       "path": "ui/boot-flight.png",
       "sha256": "47f64862652b15ed7fba59e682c688feb75258b22b83e19a20ec8cb8580ef34e",
       "size": 1169088
+    },
+    {
+      "path": "ui/creations.js",
+      "sha256": "180ac486caa1a7a9ed9eacee3b57e8d9263a8a2bd44e2533945e15d4e311bfad",
+      "size": 17771
     },
     {
       "path": "ui/dragon.png",
@@ -115,8 +120,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "e65207ac0a2d437401fb1e1407ba9c189d9914c6045de8d2d58aa2b48201d94f",
-      "size": 44050
+      "sha256": "63582f233d1c781cf3d6a0702e156078f3b4d8aa59bae8f42a9934eda3ff0d0c",
+      "size": 45938
     },
     {
       "path": "ui/motion.css",
@@ -140,8 +145,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "0b34a64d46337861d4d82d8f3f9cee846de1b05348972954b63d998c364d8d9a",
-      "size": 68867
+      "sha256": "87bd76ab598ebb64e14d8adbc36d332533589910ec0ecb3f5e18cb6c63b42327",
+      "size": 72233
     },
     {
       "path": "ui/tokens.css",
