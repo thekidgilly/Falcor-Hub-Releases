@@ -1,12 +1,12 @@
 {
-  "version": "0.17.4",
-  "notes": "Game Autopilot uses what Capture game finds online: the tips always reach Falcor AI (a long guide no longer pushes them out), and a button the web warns about is never pressed. A slow search is kept when it arrives, and tips follow a game name you correct. Offer pages with a pinned 'Play & earn' button are read correctly, and Start Autopilot on the next milestone no longer replays the one just reached.",
-  "publishedAt": "2026-10-19T04:57:47.096Z",
+  "version": "0.17.5",
+  "notes": "Game Autopilot can now drag (swap, merge, slide) and trace words in one stroke. A game's 'try another move' message no longer counts as progress, so Falcor stops repeating wrong moves. Each game keeps a playbook of what Falcor learned, given to the next session; a button that wiped progress is never pressed again. Offer pages with coin emojis, 'Complete level N' goals and symbol headings are read correctly, and the web search works with kimi-k3.",
+  "publishedAt": "2026-10-19T06:23:53.446Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "3ff1f783f976edbd9d3a46787c4cedbb6e6230422d291fcb1db22482eda9de48",
-      "size": 912650
+      "sha256": "5aeb04c61b77c73da45973d64dfe09fc1854e66a570e223f9b65178efa87b73d",
+      "size": 928457
     },
     {
       "path": "dist/preload.js",
