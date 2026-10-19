@@ -1,12 +1,12 @@
 {
-  "version": "0.17.8",
-  "notes": "Smarter game learning: Falcor stops repeating a learned move that goes nowhere and tries something new, remembers its last 12 moves in a game (cards seen, moves that failed), and tries a game move it is fairly sure of instead of stopping to ask you.",
-  "publishedAt": "2026-10-19T12:11:44.547Z",
+  "version": "0.17.9",
+  "notes": "Polish and fixes from live testing with Kimi on 19 games: Falcor counts a selected cell as a change, keeps trying different moves on a game screen instead of stopping too soon, sends the game's picture when a board has no words, and allows longer answers for board games. A button that did nothing once is no longer banned for good, a trap is recognised only when the level drops on the same screen, finished campaigns never leave a return behind, and stopping a playbook from chat or a busy phone no longer loses it. Fewer needless screenshots (lower Kimi cost).",
+  "publishedAt": "2026-10-19T14:10:29.002Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "23bd006f05553f7abb27e724f833cee922dc00c38ae083d8d81af3086694c464",
-      "size": 945814
+      "sha256": "406f00d642468f916c658ac5f940e9383d4e441239600211eb500c03502dac6b",
+      "size": 947314
     },
     {
       "path": "dist/preload.js",
