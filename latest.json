@@ -1,17 +1,17 @@
 {
-  "version": "0.17.2",
-  "notes": "The Phone tab is now windows you can move, resize, maximize and hide, including the phone screen. Windows menu adds Needs you, Apps, Creations, Today and Connection; Layout offers Classic, Focus and Grid; Lock keeps them in place. Your arrangement is saved, with its own for sideways games.",
-  "publishedAt": "2026-10-19T03:00:50.574Z",
+  "version": "0.17.3",
+  "notes": "Game Autopilot: Start, Pause and Stop Autopilot on a game's page (and on your phone) toward the next level, an offer milestone, a level or a task. It comes back by itself until the goal is verified, keeps a short review after every session and learns from it. Fixes the loop where a slow plan was refused as stale: Falcor looks again right before each tap. Counters and locked levels are never read as the level; anything that could cost money is refused.",
+  "publishedAt": "2026-10-19T04:27:25.166Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "48223062bcc26f95ea239f2c7e11033f35f92483e23cfd720d89e729ebb395ba",
-      "size": 874097
+      "sha256": "19ffb1a9ec337fff32fe8d4fdd198a38fc9eb1ddf7a19bd98a76afdbf3510d2a",
+      "size": 911268
     },
     {
       "path": "dist/preload.js",
-      "sha256": "1c36cb55d3c630b6c24ecd02d086186a2707af28bd537cce6dcf550a8c56688a",
-      "size": 1618
+      "sha256": "d8e8570ac26cad3019b6999c3e943e2c77118a6c8142afabaefd2f8eb2914fc8",
+      "size": 1637
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-DEF3euj0.css",
-      "sha256": "d3a139a796811b6a4d3201e50046e92642b4882e02ebaf6dba2fc40e11ee486b",
-      "size": 50527
+      "path": "remote-ui/assets/index-BoIZQDr7.js",
+      "sha256": "12edf693e9208b516e91ba8a743a6cd19c2544f620f914110c33f41f2436c97f",
+      "size": 157947
     },
     {
-      "path": "remote-ui/assets/index-rATe5k01.js",
-      "sha256": "a9992899f14a1ba253f04bfe7e8666be2c2393cdc537946a0523be46216c85d8",
-      "size": 153095
+      "path": "remote-ui/assets/index-BvI_XPLL.css",
+      "sha256": "b6a4e514be96dfe5e2d5d506cf20cdcc495e8a6620b39bf2514877d6c446c295",
+      "size": 50864
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "7fe151658ad2ab0bf04f6d4bb3956129a64679d8f9bb300a3cdd986d3c1e656f",
+      "sha256": "6fedde95d45f14317c86daf0a2aaccc268756a2f267b1ebd6ae921748248c3db",
       "size": 3760
     },
     {
@@ -75,8 +75,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "ce2dba6626ecd172420394c07b35c7d2463458271c29fb95f2cd2cfdb53bb6d4",
-      "size": 124360
+      "sha256": "10ed30090ddb0c7e31a66fa6194e1836906836c9f90ab5b7c23369368e5b1e5d",
+      "size": 130719
     },
     {
       "path": "ui/app.png",
@@ -125,8 +125,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "6cd4bad7b187a8817baf9334abd6ec3693390b266f9557cc6ca2a98fa605c018",
-      "size": 50852
+      "sha256": "c846a7411d7de8be7b2aefc6912473f3472a9c8485a6db778cba181a9549fbc9",
+      "size": 51887
     },
     {
       "path": "ui/motion.css",
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/queue.js",
-      "sha256": "6eec6a35cc883eaf5e84747829d9b7f24e00c5831e178a7362fbe68733bee88b",
-      "size": 49694
+      "sha256": "095b989acc95c752271bbbb9b82889cbeccb84918ba0091f288a3736f77f9d71",
+      "size": 49771
     },
     {
       "path": "ui/sandbox.js",
@@ -150,8 +150,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "43ab9b27779374b10ecd4126ff980d438a09eb2cca811417ebce5591fccad1a3",
-      "size": 83397
+      "sha256": "758af94d675f0daa7548dc7ddd8daad76668bab85348730b49680d9b2cc7e4b9",
+      "size": 83986
     },
     {
       "path": "ui/tokens.css",
