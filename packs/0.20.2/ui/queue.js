@@ -56,15 +56,15 @@
         + (q.paused ? '<div class="row"><button class="small primary" data-qctl="resume">' + icon('play') + 'Resume the queue</button></div>' : '') + '</div>';
     } else {
       const todo = S.queue ? S.queue.items.filter(i => i.deviceId === d.id && i.status === 'READY').length : 0;
-      html = '<div class="idle"><span class="sleep"><img src="dragon.png" alt=""></span><span>Nothing is running.' + (next ? '<br>Next: <b>' + esc(next.name) + '</b> · ' + esc(hm(next.at)) + ' ' + esc(when(next.at)) : '<br>Schedule a game, a task or a sequence, then start Autopilot.') + (todo ? '<br><span class="sand">' + todo + ' due now: Start Autopilot or Run Ready.</span>' : '') + '</span></div>'
+      html = '<div class="idle"><span class="sleep"><img src="dragon.png" alt=""></span><span>Nothing is running.' + (next ? '<br>Next: <b>' + esc(next.name) + '</b> · ' + esc(hm(next.at)) + ' ' + esc(when(next.at)) : '<br>Schedule a game, a playbook or a creation: it runs here at its time.') + (todo ? '<br><span class="sand">' + todo + ' due now' + (q && q.paused ? ': the queue is paused.' : ': starting in turn.') + '</span>' : '') + '</span></div>'
         + (q && q.paused ? '<div class="row"><button class="small primary" data-qctl="resume">' + icon('play') + 'Resume the queue</button></div>' : '');
     }
     htmlOnce($('missionbody'), html); tickTimes();
-    // Run Ready: only when Autopilot is off and something is due now.
-    const ready = S.queue ? S.queue.items.filter(i => i.deviceId === d.id && i.status === 'READY' && /Run Ready/.test(i.reason)).length : 0;
-    text($('readycount'), q && q.mode === 'ready' ? q.batch : ready || '');
-    $('runready').disabled = !!(d.autopilot || d.emergency || (q && q.mode === 'ready') || !ready);
-    $('runready').title = d.autopilot ? 'Autopilot is already running today\'s queue.' : q && q.mode === 'ready' ? 'Running what was due.' : ready ? 'Run the ' + ready + ' activit' + (ready === 1 ? 'y' : 'ies') + ' due now, one after another. Autopilot stays off; later times wait.' : 'Nothing is due right now.';
+    // The queue's one switch: paused, nothing new starts by itself; running, what is scheduled starts at its time.
+    const paused = !!(q && q.paused);
+    text($('qtogglelabel'), paused ? 'Resume queue' : 'Pause queue');
+    $('qtoggle').className = (paused ? 'primary' : '') + ' big'; $('qtoggle').firstElementChild.className = 'led' + (paused ? '' : ' active');
+    $('qtoggle').disabled = !!d.emergency; $('qtoggle').dataset.op = paused ? 'resume' : 'pause';
   };
   function tickTimes() {
     for (const el of document.querySelectorAll('[data-start]')) { const ms = Date.now() - Number(el.dataset.start), dur = Number(el.dataset.dur); text(el, dur ? minsOf(ms) + ' / ' + dur + ' MIN' : clock(ms)); }
@@ -80,7 +80,7 @@
     }
     if (sbc && d.sandbox) { await call('sandbox', {op: sbc.dataset.sbctl, runId: d.sandbox.runId}); }
   });
-  $('runready').onclick = async () => { const d = dev(); if (!d) return; const r = await qcall('runReady', {deviceId: d.id}); toast(r.count ? 'Run Ready: ' + r.count + ' activit' + (r.count === 1 ? 'y' : 'ies') + ', one after another. Later times wait for Autopilot.' : r.why || 'Nothing is due right now.', r.count ? 'ok' : 'warn'); };
+  $('qtoggle').onclick = async () => { const d = dev(); if (!d) return; const op = $('qtoggle').dataset.op || 'pause'; await qcall(op, {deviceId: d.id}); toast(op === 'pause' ? 'Queue paused. Nothing new starts until you resume it.' : 'Queue resumed: scheduled activities start at their times.'); };
 
   // ------------------------------------------------------------------ Today's Queue (a window on the Phone tab)
   document.querySelectorAll('#qviews button').forEach(b => b.onclick = () => { Q.view = b.dataset.v; Q.data = null; document.querySelectorAll('#qviews button').forEach(x => cls(x, 'on', x === b)); $('qlist').innerHTML = ''; delete $('qlist').dataset.ready; void load(true); });
@@ -113,7 +113,7 @@
         rows.push({k: i.key, i, n: num.get(i.key)});
       }
       if (Q.view === 'today' && ended.length && !Q.fold) rows.push({k: 'unfold', unfold: true});
-      if (Q.view === 'today' && v.whenDue.length) { rows.push({k: 'g:due', head: 'WHEN DUE · ' + v.whenDue.length, tip: 'Approved tasks without a schedule: Autopilot runs them whenever they are due.'}); for (const w of v.whenDue) rows.push({k: 'w:' + w.id, w}); }
+      if (Q.view === 'today' && v.whenDue.length) { rows.push({k: 'g:due', head: 'WHEN DUE · ' + v.whenDue.length, tip: 'Approved tasks without a schedule: schedule one (···) to line it up in the queue.'}); for (const w of v.whenDue) rows.push({k: 'w:' + w.id, w}); }
       if (!items.length && !v.whenDue?.length) rows.push({k: 'empty', empty: S.queue.schedules ? (Q.view === 'today' ? 'Nothing scheduled today.' : 'Nothing scheduled ' + (Q.view === 'tomorrow' ? 'tomorrow' : 'in the next 7 days') + '.') + (qdev() && qdev().next ? ' Next: ' + qdev().next.name + ', ' + dayOf(qdev().next.at).toLowerCase() + ' ' + hm(qdev().next.at) + '.' : '') : 'No activities scheduled yet. Press + (or Schedule on a game, a task or a sequence).'});
       else if (Q.view === 'today' && !left && items.length) rows.push({k: 'alldone', empty: 'All of today\'s activities are done.'});
     }
@@ -223,7 +223,7 @@
       r = await qcall('runNow', {target, key: o.key, deviceId: d.id, choice});
     }
     if (r.already) toast((o.name || 'It') + ' is already running.', 'warn');
-    else if (r.queued) toast('Added to the queue: it runs in its turn' + (d.autopilot ? '.' : ' while Autopilot runs (or press Run Ready).'));
+    else if (r.queued) toast('Added to the queue: it runs in its turn.');
     else if (r.started) toast('Running ' + (r.session.name || o.name || 'it') + ' now. The queue itself does not start.');
     return r;
   };
@@ -273,8 +273,8 @@
       + '<div class="seg qrules" id="qe-kind">' + RULES.map(([v, n]) => '<button type="button" data-k="' + v + '" class="' + (r.kind === v ? 'on' : '') + '">' + n + '</button>').join('') + '</div>'
       + '<div class="grid3"><label>Starts at<input id="qe-time" type="time" value="' + esc(r.time || '09:00') + '"></label><label>Runs for (min)<input id="qe-dur" type="number" min="1" max="360" placeholder="its own" value="' + esc(s.durationMin ?? '') + '"></label><label>Priority<select id="qe-pri">' + [1, 2, 3, 4, 5].map(p => '<option value="' + p + '"' + (s.priority === p ? ' selected' : '') + '>' + PRI[p] + '</option>').join('') + '</select></label></div>'
       + '<div class="grid3" id="qe-extra"></div>'
-      + '<div class="qchecks"><label class="check"><input type="checkbox" id="qe-on"' + (s.enabled ? ' checked' : '') + '> Add to the Daily Queue (it runs while Autopilot runs, or with Run Ready)</label>'
-      + '<label class="check"><input type="checkbox" id="qe-auto"' + (s.autoStart ? ' checked' : '') + '> Automatic Start: start it by itself at its time, even with Autopilot off (only while this computer is on, Falcor.Hub is open and the phone is plugged in and unlocked)</label></div>'
+      + '<div class="qchecks"><label class="check"><input type="checkbox" id="qe-on"' + (s.enabled ? ' checked' : '') + '> Add to the Daily Queue: it starts by itself at its time, one after another with the rest (while this computer is on, Falcor.Hub is open and the phone is plugged in and unlocked)</label>'
+      + '</div>'
       + '<details class="qadv"' + (cur && (cur.deps.length || cur.earlyMin || cur.missed !== 'skip' || cur.retry !== 'safe') ? ' open' : '') + '><summary>Advanced: window, missed runs, retries, prerequisites</summary>'
       + '<div class="grid3"><label>May start early (min)<input id="qe-early" type="number" min="0" max="240" value="' + s.earlyMin + '"></label><label>May start late (min)<input id="qe-late" type="number" min="1" max="1440" value="' + s.lateMin + '"></label><label>If it was missed<select id="qe-missed"><option value="skip">skip it (missed)</option><option value="late">run when available</option><option value="ask">ask me before running</option></select></label></div>'
       + '<div class="grid3"><label>Attempts<input id="qe-att" type="number" min="1" max="5" value="' + s.maxAttempts + '"></label><label>Try again<select id="qe-retry"><option value="safe">only when safe</option><option value="never">never</option><option value="always">always (it may repeat steps)</option></select></label><label>Minutes between tries<input id="qe-rmin" type="number" min="1" max="120" value="' + s.retryMin + '"></label></div>'
@@ -306,7 +306,7 @@
         const v = id => b.querySelector(id) ? b.querySelector(id).value : '', t = target(), info = targets && t ? targets.find(x => tv(x.target) === tv(t)) : null;
         const deps = [...b.querySelectorAll('.qdep')].map(row => ({scheduleId: row.querySelector('[data-dep]').value, mode: row.querySelector('[data-mode]').value})).filter(x => x.scheduleId);
         return {target: t, kind: info ? info.kind : o.kind, pkg: info ? info.pkg : o.pkg, name: v('#qe-name').trim() || (info ? info.name : o.name || ''), deviceId: v('#qe-dev') || (cur && cur.deviceId) || (d && d.id), rule, tz: v('#qe-tz').trim() || tz,
-          durationMin: v('#qe-dur') === '' ? null : Number(v('#qe-dur')), priority: Number(v('#qe-pri')), enabled: b.querySelector('#qe-on').checked, autoStart: b.querySelector('#qe-auto').checked,
+          durationMin: v('#qe-dur') === '' ? null : Number(v('#qe-dur')), priority: Number(v('#qe-pri')), enabled: b.querySelector('#qe-on').checked, autoStart: true,
           earlyMin: Number(v('#qe-early') || 0), lateMin: Number(v('#qe-late') || 30), missed: v('#qe-missed'), maxAttempts: Number(v('#qe-att') || 2), retry: v('#qe-retry'), retryMin: Number(v('#qe-rmin') || 5),
           startDate: v('#qe-start') || null, endDate: v('#qe-end') || null, maxRuns: v('#qe-max') === '' ? null : Number(v('#qe-max')), deps, revisionId: v('#qe-ver') || null, scheduleId: cur ? cur.id : null};
       };
@@ -353,7 +353,7 @@
     const r = await qcall('details', {key}), i = r.item, s = r.schedule, live = i.live, ended = ['COMPLETED', 'FAILED', 'SKIPPED', 'MISSED', 'CANCELLED', 'INTERRUPTED'].includes(i.status);
     const dl = [['Status', pill(i.status, i.label) + (i.reason ? ' <span class="small">' + esc(i.reason) + '</span>' : '')], ['What it runs', esc((KIND[i.kind] || KIND.task)[1])], ['When', esc(dayOf(i.at) + ' ' + i.time) + (i.window ? ' <span class="muted small">(may start ' + esc(hm(i.window.start)) + '–' + esc(hm(i.window.late)) + (i.window.cutoff > i.window.late ? ', at the latest ' + esc(hm(i.window.cutoff)) : '') + ')</span>' : '')],
       ['Schedule', esc(s ? s.words + (s.enabled ? '' : ' (off)') : 'deleted')], ['Runs for', esc(i.durationMin ? i.durationMin + ' min' : i.estMin ? 'about ' + i.estMin + ' min (from its runs)' : 'its own limit')], ['Priority', esc(PRI[i.priority] || 'Normal')],
-      ['Attempts', esc(i.attempts + ' of ' + i.maxAttempts + (i.failures ? ' (' + i.failures + ' failed)' : ''))], ['Starts by itself', i.autoStart ? 'Yes (Automatic Start)' : 'No: while Autopilot runs, or Run Ready'],
+      ['Attempts', esc(i.attempts + ' of ' + i.maxAttempts + (i.failures ? ' (' + i.failures + ' failed)' : ''))], ['Starts by itself', 'Yes, at its time (unless the queue is paused)'],
       ...(i.deps.length ? [['Waits for', i.deps.map(x => esc(x.name) + ' <span class="muted small">(' + esc({success: 'succeeds', skip: 'succeeds, else skip', finish: 'finishes', wait: 'is done or not due'}[x.mode]) + ': ' + esc(x.state === 'ok' ? 'ready' : x.why || x.state) + ')</span>').join('<br>')]] : []),
       ...(i.result ? [['Result', (i.verified ? '<span class="green">✓ verified</span> ' : '<span class="muted">not verified</span> ') + esc(i.result)]] : [])];
     sheet(head('ACTIVITY', i.name) + '<dl class="qdl">' + dl.map(([k, v]) => '<dt>' + esc(k) + '</dt><dd>' + v + '</dd>').join('') + '</dl>'

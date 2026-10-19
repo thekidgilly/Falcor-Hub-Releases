@@ -1,12 +1,12 @@
 {
-  "version": "0.20.1",
-  "notes": "Delete creations and remove games: each creation card has Delete (its schedules are turned off), and each game's page has Remove game (its Autopilot stops and its tasks, schedules, offers and what Falcor learned are deleted; the app stays on your phone). On the computer and the phone app.",
-  "publishedAt": "2026-10-19T17:47:16.338Z",
+  "version": "0.20.2",
+  "notes": "Training timer and smarter Teach: while you play a new game's first five minutes, the time left shows on the Phone tab's recording bar, the game's card and the phone app. Teach Falcor on a game's page now opens the game for you, and what you show is played on the very next run (it used to be saved but Falcor kept its own older move). Recording no longer switches to the Sandbox tab.",
+  "publishedAt": "2026-10-19T18:11:48.481Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "c287139e5a7ea2acfd13eccaac6a0de5f30c4eb88e23ad9841bbf5c40b243d81",
-      "size": 1009404
+      "sha256": "1ae89c7a987fee8395b912d32323eb95d42fb18be057b2682f90114c93cb9572",
+      "size": 1010704
     },
     {
       "path": "dist/preload.js",
@@ -29,9 +29,9 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-C4lLHXZl.js",
-      "sha256": "83dd1b7da2360d42ad09c9ddcb4fea7e41c78c13510e7b3d90bc2212c2fadb17",
-      "size": 169139
+      "path": "remote-ui/assets/index-25qB9p5d.js",
+      "sha256": "fd5886dfd49144449b979381369b8bf9f54ffe1d247a2642c85557093026404f",
+      "size": 169174
     },
     {
       "path": "remote-ui/assets/index-I43jXfmx.css",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "430e81343def1e4fe67eaddc3129d4344e5a6bd55ecef9f1807ff95265480873",
+      "sha256": "4067b6b55b05121325e258883f0591c4860190aa633f0c4edf4ee6add71ce4e8",
       "size": 3760
     },
     {
@@ -75,8 +75,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "38fb29b0f2a61c6604416dc3fb60e50dba64689d35baaf1fb6cbb26ba5a1621c",
-      "size": 141187
+      "sha256": "12247b4949e29c87335c4d3ad22fd5165c755e6888728e796324c149f7f93b46",
+      "size": 141878
     },
     {
       "path": "ui/app.png",
