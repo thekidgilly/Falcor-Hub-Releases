@@ -1,17 +1,17 @@
 {
-  "version": "0.19.0",
-  "notes": "Picture-drawn games (Unity, like Screw Out 3D) are played again: each tap or drag is told apart by where it lands, so one tap that did nothing no longer blocks every other move, and the screen-sized game surface is never treated as a button. Tutorials that say drag or rotate get a drag. Start Autopilot or Run Playbook on a game page now opens the Phone tab. The Phone tab's Start Autopilot button is gone: what you schedule runs at its time, one after another, with Pause queue / Resume queue. After a capture, each game shows a research bar (how to play, tips, a guide and its screenshots, Falcor's notes) and then Ready to play; Autopilot reads these notes before every move and each session's playbook builds on them.",
-  "publishedAt": "2026-10-19T16:34:35.386Z",
+  "version": "0.20.0",
+  "notes": "New games learn from you first: after you capture a new game, just open it and play five minutes (any number of sittings, on the phone or the mirror). Falcor records by itself, learns how you get in (as a guest if you were one) and how you play, then unlocks its automation. Until then Start Autopilot, Run Playbook, Run available activity and Schedule stay locked for that game. New Teach Falcor button on each game's page (computer and phone): press it, play your way, leave the game or press Finish & Learn; the next run uses what you showed, and a lesson that makes things worse is undone by itself.",
+  "publishedAt": "2026-10-19T17:33:34.688Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "5f80314f04e05582a79caf9483f075cb80aff609a6785be1853f5cd72969a38d",
-      "size": 968689
+      "sha256": "d8d65e491b788e3e6e6da2a56bc900595bd8b5a4edbe7b4b0f8de017816ebb83",
+      "size": 1007401
     },
     {
       "path": "dist/preload.js",
-      "sha256": "f6d210d71f39231fb9e2f5fd9d692000b82a4323d33b96865772648512e2d11b",
-      "size": 1671
+      "sha256": "4212a26aac9bd6b5664eed7ead1bc165a8cabc94d8b36291daaf462ae6b3b0d0",
+      "size": 1686
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-C4fBXxVB.js",
-      "sha256": "3efbaa14f78c665f0b0ced3d9a3be8b146de427483191715c94270abb4e12ed5",
-      "size": 162956
+      "path": "remote-ui/assets/index-CEF_N8TC.css",
+      "sha256": "d796c3c6817a61d1e25ea0c13fb087acc1d2bded2db439cae96836a5a83a2c6a",
+      "size": 53142
     },
     {
-      "path": "remote-ui/assets/index-_LZPjWyj.css",
-      "sha256": "f458bb92b590de0344f0b8419ab02db2dbf90514880bb30b83c8c9bc43f1de5d",
-      "size": 52381
+      "path": "remote-ui/assets/index-DG08plu5.js",
+      "sha256": "394e6e53f6f49542862ed4db2b42cfaf41dfa1bed7b2b5b7ce111ff1a88bdc7b",
+      "size": 168433
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "53c20bff45f0149ef1dffc9a96a0de7e7460d0e7a132e9c46fa7b594ac53d8db",
+      "sha256": "7978f267fe1f6af4b8ea5bdd292e98b99f00e9add2ca3ced430731a3f184d665",
       "size": 3760
     },
     {
@@ -75,8 +75,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "c9abdc351d2c4664729c1b0aeea7a2d3c00721f6327564226c90f8be91a6944e",
-      "size": 138402
+      "sha256": "5e64b5a02b0e87001ef0e9f8422ea9681de6fb2e107a8821f536c757451888ef",
+      "size": 140528
     },
     {
       "path": "ui/app.png",
@@ -125,8 +125,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "bb633112a3ed60ab0f6383b7081d2fce39aa33757d7fe06c8699e9373df45af9",
-      "size": 52328
+      "sha256": "19e22c4096d29e56b54285c49470830ab103278c6e5b0b9d293f3a88206644bf",
+      "size": 52440
     },
     {
       "path": "ui/motion.css",
@@ -135,8 +135,8 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "9ed8539b9703228fcda062abeee5a95e763af46a10b87f7b22b5cedecc3498cd",
-      "size": 55003
+      "sha256": "7b2ce8540a1b6f53141e9bd492b1c21103a3199a277e88fbedd5ef9273345e48",
+      "size": 59818
     },
     {
       "path": "ui/queue.js",
@@ -150,8 +150,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "099cbde049cd6cce608f52de7bb2970673fd1ea136fbbfaad9bf2915c373be03",
-      "size": 85998
+      "sha256": "095d50b02a60b50ae3de3f5ea3f174c5d822c46b8e76a33c10f700baacd34799",
+      "size": 87126
     },
     {
       "path": "ui/tokens.css",
