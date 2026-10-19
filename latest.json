@@ -1,11 +1,11 @@
 {
-  "version": "0.17.0",
-  "notes": "Tasks is now Creations: every sequence you build in Sandbox shows as a card with Run now, Schedule, History and Edit (your other tasks are under Other automations). Stats is now Activity: a clear list of what ran, when, on which phone and how it ended. The phone app's fifth tab is Creations too, and its Sandbox Create / My sequences switch works again.",
-  "publishedAt": "2026-10-19T01:03:01.300Z",
+  "version": "0.17.1",
+  "notes": "Sandbox studio: on the computer, Focus opens the editor across the window, Panels hides the library and settings, the sequence tray can be resized, and Stop all sits in the editor. On the phone, the Sandbox editor gets fuller drawers, an outline, search, duplicate, undo/redo and drag to reorder. Optional click feedback (off by default).",
+  "publishedAt": "2026-10-19T01:48:59.799Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "fea5c5a8f42adca9b420551ab65824238710c6cd648b000d8a3fe6a24630bce5",
+      "sha256": "102060c22b3cb58e9e5fb384350dfa86b5f5772e3e741c0d05708b676d23aaa1",
       "size": 873286
     },
     {
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-CXSSDwI5.js",
-      "sha256": "ca919ebd190e4cfe61bb6fc7ca2302dda40562504f148a8ad6e127d76f982c57",
-      "size": 146490
+      "path": "remote-ui/assets/index-DEF3euj0.css",
+      "sha256": "d3a139a796811b6a4d3201e50046e92642b4882e02ebaf6dba2fc40e11ee486b",
+      "size": 50527
     },
     {
-      "path": "remote-ui/assets/index-d0F8CTJm.css",
-      "sha256": "d3ab98512a59e010dbbcb9f638e8e75a0718ebc3fe0c1eac88c88d63ed462e52",
-      "size": 46740
+      "path": "remote-ui/assets/index-NGmkpL5Q.js",
+      "sha256": "88890347bbdb3117881538749be8c5df65f1d702c86af28585387e12c469ea67",
+      "size": 152340
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "0b7d668176f4b98d0c9e9a306f614bdaf192bd8201c6369524fa20a59dacf0fd",
+      "sha256": "e2da827ed9ae267351111271f97a5515593d3040d402e8a87c792832009757aa",
       "size": 3760
     },
     {
@@ -120,8 +120,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "63582f233d1c781cf3d6a0702e156078f3b4d8aa59bae8f42a9934eda3ff0d0c",
-      "size": 45938
+      "sha256": "62c3a6b233aca3327d5178eb3d25bcb9774e82e466d029e8a57ea8cb051ed00a",
+      "size": 46184
     },
     {
       "path": "ui/motion.css",
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "046a4c58a6d18b0d8bc8ef161dd3094124f30f64f01e78eba076393ad5b944a3",
-      "size": 50898
+      "sha256": "d32362d9b076bc730951922cd288de6fa7240246d2ef0e1d535acd532cced590",
+      "size": 52005
     },
     {
       "path": "ui/queue.js",
@@ -140,13 +140,13 @@
     },
     {
       "path": "ui/sandbox.js",
-      "sha256": "5881c5868653c13298b2cf89c290f6daca9b9d8b237daf47e1d24de0fab2c507",
-      "size": 90241
+      "sha256": "b7a32a997e510703403d4ac00f24aead2d0d1c8a946fc47aa095a9440f3d3b32",
+      "size": 91256
     },
     {
       "path": "ui/style.css",
-      "sha256": "87bd76ab598ebb64e14d8adbc36d332533589910ec0ecb3f5e18cb6c63b42327",
-      "size": 72233
+      "sha256": "c191c430f67e7f638c571eb16d527cbb9e7678d0eaed0c4927e771961bc7c6db",
+      "size": 73097
     },
     {
       "path": "ui/tokens.css",
