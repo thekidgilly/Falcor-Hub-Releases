@@ -1,12 +1,12 @@
 {
-  "version": "0.18.0",
-  "notes": "Intelligent model routing: Settings → AI can give each AI job its own Kimi model (research, offer pictures, Autopilot planning, guides, game learning, chat; kimi-k2.6 recommended), or keep one model for everything as before (your current setup is kept). Game research now uses Moonshot's web search API, since the old built-in search retires on 20 October. Each model gets the request it needs, spending is counted at each model's own price (searches included), and Test checks each job's model. PlayHaven training games: all 25 playable.",
-  "publishedAt": "2026-10-19T15:54:57.172Z",
+  "version": "0.19.0",
+  "notes": "Picture-drawn games (Unity, like Screw Out 3D) are played again: each tap or drag is told apart by where it lands, so one tap that did nothing no longer blocks every other move, and the screen-sized game surface is never treated as a button. Tutorials that say drag or rotate get a drag. Start Autopilot or Run Playbook on a game page now opens the Phone tab. The Phone tab's Start Autopilot button is gone: what you schedule runs at its time, one after another, with Pause queue / Resume queue. After a capture, each game shows a research bar (how to play, tips, a guide and its screenshots, Falcor's notes) and then Ready to play; Autopilot reads these notes before every move and each session's playbook builds on them.",
+  "publishedAt": "2026-10-19T16:34:35.386Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "ba39f41ebda239af90d0abab2172c512ea656848a1d68e2d392a32800590a63b",
-      "size": 962034
+      "sha256": "5f80314f04e05582a79caf9483f075cb80aff609a6785be1853f5cd72969a38d",
+      "size": 968689
     },
     {
       "path": "dist/preload.js",
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-B_lBIS5E.js",
-      "sha256": "a1cabac63d468add417f4fe5a1480d64aa9a389bf50567e392b67c1e32fec3ab",
-      "size": 161257
+      "path": "remote-ui/assets/index-C4fBXxVB.js",
+      "sha256": "3efbaa14f78c665f0b0ced3d9a3be8b146de427483191715c94270abb4e12ed5",
+      "size": 162956
     },
     {
-      "path": "remote-ui/assets/index-C3opmOO_.css",
-      "sha256": "33a0cc4bc38d82f7584563bd7a6bc9e7aed6852d73a39b96a72a0a64d397a0c9",
-      "size": 51619
+      "path": "remote-ui/assets/index-_LZPjWyj.css",
+      "sha256": "f458bb92b590de0344f0b8419ab02db2dbf90514880bb30b83c8c9bc43f1de5d",
+      "size": 52381
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "192a645556c8909d94837ee5b667b0856e9acdd3f4bb282fe72f23cb02baebb5",
+      "sha256": "53c20bff45f0149ef1dffc9a96a0de7e7460d0e7a132e9c46fa7b594ac53d8db",
       "size": 3760
     },
     {
@@ -75,8 +75,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "873f6511f41bac97b1fc2b1b19045d1558873c15779d7fa14ea3e697ada464bf",
-      "size": 138525
+      "sha256": "c9abdc351d2c4664729c1b0aeea7a2d3c00721f6327564226c90f8be91a6944e",
+      "size": 138402
     },
     {
       "path": "ui/app.png",
@@ -125,8 +125,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "34716176e06e620eb37fac659cec88170d1df7b2e6f7205fa00c9c42a2446ebf",
-      "size": 52576
+      "sha256": "bb633112a3ed60ab0f6383b7081d2fce39aa33757d7fe06c8699e9373df45af9",
+      "size": 52328
     },
     {
       "path": "ui/motion.css",
@@ -135,13 +135,13 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "6f548ff8f549ff9f00f3cf563ca12ba13acaf773e00ce15c9399296729d112c1",
-      "size": 52828
+      "sha256": "9ed8539b9703228fcda062abeee5a95e763af46a10b87f7b22b5cedecc3498cd",
+      "size": 55003
     },
     {
       "path": "ui/queue.js",
-      "sha256": "095b989acc95c752271bbbb9b82889cbeccb84918ba0091f288a3736f77f9d71",
-      "size": 49771
+      "sha256": "f8c0478c704c433d7d9da43cb4923d613c5dbd37292cfbd85e5b53f7b6053602",
+      "size": 49256
     },
     {
       "path": "ui/sandbox.js",
@@ -150,8 +150,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "a823cc419389a58f8590144a7b80c56a890aa10ef3441f707ac87be506fbad8c",
-      "size": 84994
+      "sha256": "099cbde049cd6cce608f52de7bb2970673fd1ea136fbbfaad9bf2915c373be03",
+      "size": 85998
     },
     {
       "path": "ui/tokens.css",
