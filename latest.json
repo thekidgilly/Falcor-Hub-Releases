@@ -1,12 +1,12 @@
 {
-  "version": "0.17.5",
-  "notes": "Game Autopilot can now drag (swap, merge, slide) and trace words in one stroke. A game's 'try another move' message no longer counts as progress, so Falcor stops repeating wrong moves. Each game keeps a playbook of what Falcor learned, given to the next session; a button that wiped progress is never pressed again. Offer pages with coin emojis, 'Complete level N' goals and symbol headings are read correctly, and the web search works with kimi-k3.",
-  "publishedAt": "2026-10-19T06:23:53.446Z",
+  "version": "0.17.6",
+  "notes": "Capture Game now recognizes offer pages that start with goal cards (\"0 / 12\" progress) and no longer mistakes a goal's count (\"Remove 12 gems\") for a reward.",
+  "publishedAt": "2026-10-19T06:53:14.220Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "5aeb04c61b77c73da45973d64dfe09fc1854e66a570e223f9b65178efa87b73d",
-      "size": 928457
+      "sha256": "02acec8ab3d178bbd8a29acf3a53b8bf7c05967f1694267aa4e28897cb105840",
+      "size": 928749
     },
     {
       "path": "dist/preload.js",
