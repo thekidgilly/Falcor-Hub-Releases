@@ -1,12 +1,12 @@
 {
-  "version": "0.21.3",
-  "notes": "Simpler game page: Open game, Teach Falcor and More; one Autopilot panel (the Smart Playbook leads, its Start sets up the game's daily sessions); Kingdom, Island and World goals join the playbook; long milestone paths folded; earnings in one panel; duplicate tiles removed. Phone app: the same simplification.",
-  "publishedAt": "2026-10-20T16:21:52.617Z",
+  "version": "0.21.4",
+  "notes": "Milestone names no longer show empty boxes from earning-app icons, the Run Playbook sheet says its schedule note once, and Current activity shows how long Falcor AI has been thinking.",
+  "publishedAt": "2026-10-20T16:44:08.098Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "e4d5732666e5061d1de0c9ff3620896bed1b7b9eab206d698e8bb11113ced55e",
-      "size": 1079630
+      "sha256": "ec2a72752943a5c78924dd8a5021455e1839df8194049b0c1a1447fddfce33ca",
+      "size": 1080102
     },
     {
       "path": "dist/preload.js",
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "c0663f65ff016b16c302f16f2e31757254145a851986170b76ccc49800ab6c31",
-      "size": 136772
+      "sha256": "c7e087f065fb017ca2eaef5638ac7e0d969d39adf090893f957cdbfc08f120f7",
+      "size": 136606
     },
     {
       "path": "ui/app.png",
@@ -145,8 +145,8 @@
     },
     {
       "path": "ui/queue.js",
-      "sha256": "c2d92c85cb32cd4b306403b318229cce47fd488b6acf7656c2ff7b8df9f80010",
-      "size": 49258
+      "sha256": "2b4b3ac8ac83f9512e0be844c9926829d065eefecf6b6a45c1bc0c4641b93732",
+      "size": 49764
     },
     {
       "path": "ui/sandbox.js",
