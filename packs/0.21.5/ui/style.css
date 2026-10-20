@@ -818,3 +818,44 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 @media (max-width: 1100px) { .airoutes li { grid-template-columns: 1fr 1fr; } }
 .aitable { width: 100%; border-collapse: collapse; font-size: var(--t12); } .aitable th, .aitable td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); } .aitable th { font: var(--t11) var(--voice); color: var(--muted); }
 .gpai { font-size: var(--t12); color: var(--muted); }
+.qbar { flex-wrap: wrap; row-gap: 6px; } .qbar #qtoggle { margin-left: auto; }
+/* Smart Playbook: the premium panel (pixel.js#playbookHtml). Green glow on what matters, the rest quiet. */
+.gpplan:not([hidden]) { margin-bottom: var(--s3); }
+.pb { position: relative; padding: 18px 20px; border: 1px solid #5CE59A33; background: radial-gradient(120% 140% at 0% 0%, #5CE59A12 0%, transparent 55%), linear-gradient(180deg, #0f1411 0%, #0A0A0A 100%); box-shadow: 0 0 0 1px #000 inset, 0 0 28px #5CE59A14; }
+.pb::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 1px; background: linear-gradient(90deg, transparent, #5CE59A, transparent); opacity: .7; }
+.pb.pb-paused { border-color: #F5B54444; box-shadow: 0 0 28px #F5B54412; } .pb.pb-paused::before { background: linear-gradient(90deg, transparent, #F5B544, transparent); }
+.pbhead { display: flex; align-items: center; justify-content: space-between; }
+.pbglow { color: #5CE59A; text-shadow: 0 0 8px #5CE59A88; letter-spacing: .18em; }
+.pbhero { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin: 12px 0 16px; }
+.pbsum { display: grid; gap: 4px; }
+.pbkick { font: 11px var(--voice, monospace); letter-spacing: .2em; color: #8a8a8a; }
+.pbbig { font: 34px/1.05 var(--voice, monospace); color: #F5B544; text-shadow: 0 0 14px #F5B54466, 0 0 2px #F5B544; letter-spacing: .02em; }
+.pbsub { color: #b8b8b8; font-size: 13px; }
+.pbcta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pbcta .pbgo { padding: 12px 20px; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; box-shadow: 0 0 18px #5CE59A55, 0 0 0 1px #5CE59A inset; }
+.pbcta .pbgo:not([disabled]):hover { box-shadow: 0 0 26px #5CE59A88, 0 0 0 1px #5CE59A inset; }
+.pbcta .pbgo[disabled] { box-shadow: none; opacity: .55; }
+.pbwhy { flex-basis: 100%; color: #F5B544; font-size: 12px; }
+.pbpath { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 2px; }
+.pbpath li { display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 10px; padding: 7px 8px; border-left: 1px solid #262626; color: #cfcfcf; }
+.pbpath li i { width: 8px; height: 8px; background: #333; justify-self: center; }
+.pbpath li.reached { color: #8a8a8a; } .pbpath li.reached i { background: #5CE59A; box-shadow: 0 0 6px #5CE59A; } .pbpath li.reached span { text-decoration: line-through; text-decoration-color: #5CE59A66; }
+.pbpath li.now { color: #fff; background: linear-gradient(90deg, #5CE59A14, transparent 70%); border-left-color: #5CE59A; } .pbpath li.now i { background: #5CE59A; box-shadow: 0 0 10px #5CE59A; animation: pbpulse 1.2s steps(2) infinite; }
+.pbpath li.needs_you { color: #8a8a8a; } .pbpath li.needs_you em { color: #F5B544; font-style: normal; } .pbpath li.needs_you i { background: #F5B54466; }
+.pbpath li b { color: #F5B544; font-weight: 400; }
+@keyframes pbpulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .pbpath li.now i { animation: none; } }
+.pbcal { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; padding: 10px 0 2px; border-top: 1px dashed #262626; font-size: 13px; color: #cfcfcf; }
+.pbnow { color: #b8b8b8; font-size: 12px; margin: 6px 0 0; }
+.pbmore { margin-top: 10px; color: #8a8a8a; font-size: 12px; } .pbmore summary { cursor: pointer; letter-spacing: .12em; text-transform: uppercase; font-size: 11px; } .pbmore p { margin: 6px 0; } .pbmore em { color: #cfcfcf; font-style: normal; }
+.pbcta .pbgo { background: #5CE59A; color: #0A0A0A; border-color: #5CE59A; } .pbcta .pbgo .ico { fill: #0A0A0A; color: #0A0A0A; }
+.pbcta .pbgo[disabled] { background: #1d2a22; color: #5CE59A99; border-color: #5CE59A44; }
+.pb .pill.green { color: #5CE59A; border-color: #5CE59A; box-shadow: 0 0 8px #5CE59A55; }
+/* A game's page: Open game, Teach Falcor and everything else under More (the Autopilot panel below is the main act). */
+.gmore { position: relative; }
+.gmore > summary { list-style: none; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 14px; border: 1px solid #333; background: #111; color: #e8e8e8; font: 13px var(--voice, monospace); letter-spacing: .04em; min-height: 36px; }
+.gmore > summary::-webkit-details-marker { display: none; }
+.gmore[open] > summary { border-color: #5CE59A; color: #5CE59A; }
+.gmore .gmenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; display: grid; gap: 4px; min-width: 240px; padding: 10px; background: #0d0d0d; border: 1px solid #333; box-shadow: 0 12px 32px #000c; }
+.gmore .gmenu .eyebrow { margin: 6px 2px 2px; font-size: 10px; }
+.gmore .gmenu button { justify-content: flex-start; width: 100%; }

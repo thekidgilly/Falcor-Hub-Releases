@@ -554,7 +554,7 @@
       + '<dl class="spec"><dt>Queue</dt><dd>' + (c && c.total ? c.completed + ' of ' + c.total + ' done' + (c.left ? ' · ' + c.left + ' left' : '') : 'Nothing planned today') + '</dd>'
       + '<dt>Next</dt><dd>' + (nx ? esc(nx.name) + '<small>' + esc(time(nx.at)) + ' · ' + esc(when(nx.at)) + '</small>' : '—') + '</dd>'
       + '<dt>Runs</dt><dd>' + (TD.rows ? rows.length + plus + ' today' : 'Reading…') + '</dd>'
-      + '<dt>AI</dt><dd>' + esc(money(spent)) + (lim !== null && lim !== undefined ? ' of ' + esc(money(lim)) : '') + ' this month<small>estimated; the bill from Moonshot is exact</small></dd></dl>'
+      + '<dt>AI</dt><dd>' + esc(money(spent)) + (lim !== null && lim !== undefined ? ' of ' + esc(money(lim)) : '') + ' this month<small>estimated; the provider\'s bill is exact</small></dd></dl>'
       + (lim ? '<div class="meter' + (frac >= 1 ? ' bad' : frac >= .8 ? ' warn' : '') + '">' + Array.from({length: 20}, (_, i) => '<i class="' + (i < Math.round(frac * 20) ? 'on' : '') + '"></i>').join('') + '</div>' : ''));
   }
 

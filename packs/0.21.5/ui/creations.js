@@ -177,7 +177,7 @@
     else drawRows(box, AC.rows, AC.outcome !== 'all' || AC.from || AC.to ? 'Nothing matches these filters.' : 'Nothing has run yet. Run a creation, or start Autopilot on the Phone tab.');
     $('actmore').hidden = !AC.next;
     const sp = S.spend || {teach: 0, chat: 0, autopilot: 0}, total = sp.teach + sp.chat + sp.autopilot;
-    text($('actusage'), 'AI this month (estimated): ' + money(total) + (S.limit !== null && S.limit !== undefined ? ' of ' + money(S.limit) : '') + ' · the bill from Moonshot is exact');
+    text($('actusage'), 'AI this month (estimated): ' + money(total) + (S.limit !== null && S.limit !== undefined ? ' of ' + money(S.limit) : '') + ' · the provider\'s bill is exact');
   }
   window.renderActivity = function () {
     drawActivity();

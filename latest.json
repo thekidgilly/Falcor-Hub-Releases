@@ -1,12 +1,12 @@
 {
-  "version": "0.21.4",
-  "notes": "Milestone names no longer show empty boxes from earning-app icons, the Run Playbook sheet says its schedule note once, and Current activity shows how long Falcor AI has been thinking.",
-  "publishedAt": "2026-10-20T16:44:08.098Z",
+  "version": "0.21.5",
+  "notes": "Falcor now plays hold-to-build games like Animals & Coins: it holds instead of tapping, reads whether a hold was too short or too long, and remembers the hold that worked on each screen so it replays it without asking Falcor AI.",
+  "publishedAt": "2026-10-20T17:09:38.259Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "ec2a72752943a5c78924dd8a5021455e1839df8194049b0c1a1447fddfce33ca",
-      "size": 1080102
+      "sha256": "8fbb40dae58255c24e14df75754dd1b864c3561271fe513ed0a1d786fd0ebce0",
+      "size": 1088290
     },
     {
       "path": "dist/preload.js",
