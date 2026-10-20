@@ -20,6 +20,9 @@
   const kindIcon = (kind, pkg) => { const u = pkg && icons.get(pkg); return u ? '<img src="' + esc(u) + '" alt="">' : icon((KIND[kind] || KIND.task)[0]); };
   const pill = (status, label) => '<span class="qpill s-' + (MOOD[status] || 'muted') + '">' + (status === 'RUNNING' ? '<i class="led active"></i>' : '') + esc(String(label || status).toUpperCase()) + '</span>';
   const minsOf = ms => Math.max(0, Math.floor(ms / 60000));
+  // The run's step line; while Falcor AI is asked, how long it has been thinking, so a slow answer never looks frozen.
+  let seenStep = {t: '', at: 0};
+  const stepLine = t => { if (t !== seenStep.t) seenStep = {t, at: Date.now()}; return '<div class="step">' + esc(t) + (/^Asking Falcor AI/.test(t) ? ' <span class="muted" data-since="' + seenStep.at + '"></span>' : '') + '</div>'; };
 
   // ------------------------------------------------------------------ the current activity (a window on the Phone tab)
   window.renderCurrent = function (d) {
@@ -34,7 +37,7 @@
       html = '<div class="qcur s-' + (MOOD[cur.status] || 'run') + '"><div class="qhead"><span class="qico">' + kindIcon(cur.kind, cur.pkg) + '</span><b>' + esc(cur.name) + '</b><span class="qtime" data-start="' + cur.startedAt + '" data-dur="' + (cur.durationMin || '') + '"></span></div>'
         + '<div class="qsub">' + pill(cur.status, cur.label) + '<span>' + esc(word) + ' · ' + esc(cur.triggerLabel) + (cur.attempt > 1 ? ' · attempt ' + cur.attempt : '') + '</span></div>'
         + (cur.durationMin ? '<div class="progress qprog" data-style="--n:' + n + '">' + Array.from({length: n}, (_, i) => '<i class="' + (i < on ? 'on' : '') + '"></i>').join('') + '</div>' : '')
-        + '<div class="step">' + esc(cur.reason || d.step || 'Working…') + '</div>'
+        + stepLine(cur.reason || d.step || 'Working…')
         + '<div class="row qctl">' + (paused || (q && q.paused) ? '<button class="small primary" data-qctl="resume">' + icon('play') + 'Resume</button>' : '<button class="small" data-qctl="pause">' + icon('pause') + 'Pause</button>')
         + (cur.key ? '<button class="small" data-qctl="skip" title="Skip it and go on with the next">' + icon('skip') + 'Skip</button>' : '')
         + '<button class="small danger" data-qctl="stop" title="Stop it' + (cur.key ? ' and the queue' : '') + '">' + icon('stop') + 'Stop</button>'
@@ -44,7 +47,7 @@
       const n = run.targetLevel ? Math.min(20, run.targetLevel) : 10, done = run.targetLevel ? Math.round(Math.min(1, (run.level || 0) / run.targetLevel) * n) : 0;
       html = '<div class="mission"><div class="what"><b>' + esc(run.app) + '</b> · ' + esc(run.objective) + ' <span class="muted small">· when due</span></div>'
         + (run.targetLevel ? '<div class="progress" data-style="--n:' + n + '">' + Array.from({length: n}, (_, i) => '<i class="' + (i < done ? 'on' : '') + '"></i>').join('') + '</div><span class="muted small">Level ' + esc(run.level ?? '?') + ' of ' + esc(run.targetLevel) + '</span>' : '')
-        + '<div class="step">' + esc(d.step || 'Working…') + '</div><div class="row"><span class="muted small">Elapsed ' + clock(Date.now() - (run.history.find(h => h.to === 'Running')?.at || Date.now())) + '</span><span class="grow"></span><button class="small" data-task="' + esc(run.id) + '" data-act="pause">' + icon('pause') + 'Pause</button></div></div>';
+        + stepLine(d.step || 'Working…') + '<div class="row"><span class="muted small">Elapsed ' + clock(Date.now() - (run.history.find(h => h.to === 'Running')?.at || Date.now())) + '</span><span class="grow"></span><button class="small" data-task="' + esc(run.id) + '" data-act="pause">' + icon('pause') + 'Pause</button></div></div>';
     } else if (sbl) {
       const paused = sbl.status === 'PAUSED' || sbl.status === 'NEEDS_ATTENTION';
       html = '<div class="qcur s-run"><div class="qhead"><span class="qico">' + icon('sandbox') + '</span><b>' + esc(sbl.title) + '</b><span class="qtime">' + clock(sbl.elapsedMs || 0) + '</span></div><div class="qsub">' + pill(paused ? 'PAUSED' : 'RUNNING', paused ? 'Paused' : 'Running') + '<span>Sequence · Sandbox</span></div><div class="step">' + esc(sbl.step || sbl.reason || '') + '</div>'
@@ -68,6 +71,7 @@
   };
   function tickTimes() {
     for (const el of document.querySelectorAll('[data-start]')) { const ms = Date.now() - Number(el.dataset.start), dur = Number(el.dataset.dur); text(el, dur ? minsOf(ms) + ' / ' + dur + ' MIN' : clock(ms)); }
+    for (const el of document.querySelectorAll('[data-since]')) text(el, '· thinking ' + Math.max(0, Math.round((Date.now() - Number(el.dataset.since)) / 1000)) + ' s');
   }
   setInterval(() => { if (tab === 'phone') tickTimes(); }, 1000);
   $('missionbody').addEventListener('click', async e => {

@@ -851,3 +851,11 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .pbcta .pbgo { background: #5CE59A; color: #0A0A0A; border-color: #5CE59A; } .pbcta .pbgo .ico { fill: #0A0A0A; color: #0A0A0A; }
 .pbcta .pbgo[disabled] { background: #1d2a22; color: #5CE59A99; border-color: #5CE59A44; }
 .pb .pill.green { color: #5CE59A; border-color: #5CE59A; box-shadow: 0 0 8px #5CE59A55; }
+/* A game's page: Open game, Teach Falcor and everything else under More (the Autopilot panel below is the main act). */
+.gmore { position: relative; }
+.gmore > summary { list-style: none; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 14px; border: 1px solid #333; background: #111; color: #e8e8e8; font: 13px var(--voice, monospace); letter-spacing: .04em; min-height: 36px; }
+.gmore > summary::-webkit-details-marker { display: none; }
+.gmore[open] > summary { border-color: #5CE59A; color: #5CE59A; }
+.gmore .gmenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; display: grid; gap: 4px; min-width: 240px; padding: 10px; background: #0d0d0d; border: 1px solid #333; box-shadow: 0 12px 32px #000c; }
+.gmore .gmenu .eyebrow { margin: 6px 2px 2px; font-size: 10px; }
+.gmore .gmenu button { justify-content: flex-start; width: 100%; }

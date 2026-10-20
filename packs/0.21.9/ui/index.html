@@ -308,20 +308,26 @@
         <div class="gstats" id="gpstats"></div>
         <div class="row gacts">
           <button id="gpopen" title="Open it on the phone and take control"><svg class="ico"><use href="#i-phone"></use></svg>Open game</button>
-          <button class="primary" id="gpplay" title="Play now: Falcor runs this game's automation now (the queue does not start)"><svg class="ico"><use href="#i-play"></use></svg>Run available activity</button>
-          <button id="gpsched" title="Put it in the Daily Queue at a time"><svg class="ico"><use href="#i-calendar"></use></svg>Schedule</button>
-          <button id="gpofferedit" title="Correct the offer: names, amounts, deadline, stages"><svg class="ico"><use href="#i-edit"></use></svg>Edit offer</button>
-          <button id="gpofferrefresh" title="Open the offer page in the earning app on the phone, then read it again and see what changed"><svg class="ico"><use href="#i-update"></use></svg>Refresh offer</button>
-          <button id="gpauto" title="Change what Falcor does in this game"><svg class="ico"><use href="#i-edit"></use></svg>Edit automation</button>
           <button id="gpteach" title="Play it your way: Falcor records and learns from you (no time to fill, nothing else to press)"><svg class="ico"><use href="#i-rec"></use></svg>Teach Falcor</button>
-          <button id="gptask"><svg class="ico"><use href="#i-plus"></use></svg>New challenge</button>
-          <button class="icon" id="gpguide" title="The guide in Knowledge"><svg class="ico"><use href="#i-book"></use></svg></button>
-          <button class="icon" id="gpchat" title="Ask Falcor about this game"><svg class="ico"><use href="#i-chat"></use></svg></button>
-          <button class="icon danger" id="gpremove" title="Remove this game from Games"><svg class="ico"><use href="#i-trash"></use></svg></button>
+          <details class="gmore" id="gpmore"><summary title="Offer, tasks and the rest">More<svg class="ico caret"><use href="#i-chevron"></use></svg></summary>
+            <div class="gmenu">
+              <p class="eyebrow">// OFFER</p>
+              <button id="gpofferedit" title="Correct the offer: names, amounts, deadline, stages"><svg class="ico"><use href="#i-edit"></use></svg>Edit offer</button>
+              <button id="gpofferrefresh" title="Open the offer page in the earning app on the phone, then read it again and see what changed"><svg class="ico"><use href="#i-update"></use></svg>Refresh offer</button>
+              <p class="eyebrow">// TASKS BY HAND</p>
+              <button id="gpplay" title="Play now: Falcor runs this game's task now (the queue does not start)"><svg class="ico"><use href="#i-play"></use></svg>Run its task now</button>
+              <button id="gpsched" title="Put it in the Daily Queue at a time"><svg class="ico"><use href="#i-calendar"></use></svg>Schedule its task</button>
+              <button id="gpauto" title="Change what Falcor does in this game"><svg class="ico"><use href="#i-edit"></use></svg>Edit automation</button>
+              <button id="gptask"><svg class="ico"><use href="#i-plus"></use></svg>Add a task</button>
+              <p class="eyebrow">// GAME</p>
+              <button id="gpguide" title="The guide in Knowledge"><svg class="ico"><use href="#i-book"></use></svg>Guide</button>
+              <button id="gpchat" title="Ask Falcor about this game"><svg class="ico"><use href="#i-chat"></use></svg>Ask Falcor</button>
+              <button class="danger" id="gpremove" title="Remove this game from Games"><svg class="ico"><use href="#i-trash"></use></svg>Remove game</button>
+            </div></details>
         </div>
       </div>
       <div id="gpprep"></div>
-      <div class="gpauto" id="gpautoline"></div>
+      <div class="gpauto" id="gpautoline" hidden></div>
       <div class="panel gptrain" id="gptrain" hidden></div>
       <div class="panel gpap" id="gpap">
         <div class="gpplan" id="gpplan" hidden></div>
@@ -334,10 +340,8 @@
       </div>
       <div class="panel" id="gpofferbox" hidden><p class="eyebrow">// REWARD LADDER</p><p class="muted small">A goal reached in the game is not money: credited and paid out are. Set a stage from its menu; "observed" came from the earning app's page, "you" from you, "Falcor" from the game's level.</p><div id="gpoffers"></div></div>
       <div class="panel" id="gpweb" hidden><p class="eyebrow">// FROM THE WEB</p><div id="gpwebbody"></div></div>
-      <div class="tiles gtiles" id="gptiles"></div>
-      <div class="panel"><p class="eyebrow">// TOTAL EARNINGS</p><p class="muted small">Per unit, never added across units. Collected means the game showed it claimed or credited; pending means the game says it is on its way.</p><div id="gpearn"></div></div>
-      <div class="panel"><p class="eyebrow">// CHALLENGES</p><div class="tasklist" id="gptasks"></div></div>
-      <div class="panel"><p class="eyebrow">// REWARD TRACKER</p><div id="gphist"></div></div>
+      <div class="panel"><p class="eyebrow">// EARNINGS IN THE GAME</p><p class="muted small">Per unit, never added across units. Collected means the game showed it claimed or credited; pending means the game says it is on its way.</p><div id="gpearn"></div><div id="gphist"></div></div>
+      <div class="panel"><p class="eyebrow">// TASKS IN THIS GAME</p><div class="tasklist" id="gptasks"></div></div>
       <div class="panel" id="gpactbox"><p class="eyebrow">// ACTIVITY</p><div id="gpact"></div></div>
       <div class="panel" id="gptierbox" hidden><p class="eyebrow">// REWARDS IN THIS GAME</p><p class="muted small">From what Falcor learned while you played it.</p><div id="gptiers"></div></div>
       <div class="panel" id="gpknow"><p class="eyebrow">// WHAT FALCOR KNOWS</p><div id="gpknowbody"></div></div>

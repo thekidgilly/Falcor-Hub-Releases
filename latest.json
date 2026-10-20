@@ -1,12 +1,12 @@
 {
-  "version": "0.21.7",
-  "notes": "Hold-to-build games play much better: Falcor sees when a hold misses, works out too short or too long, starts with short holds and remembers what worked. Your own tips for a game are kept and followed on every move. Building with a game's own coins is allowed (never real money or gems), and moving screens no longer throw away Falcor AI's plans.",
-  "publishedAt": "2026-10-20T18:31:15.073Z",
+  "version": "0.21.9",
+  "notes": "Smarter, faster game play: Falcor judges holds even when the game is always animating, never replays a hold on a menu, waits for moving screens before asking Falcor AI, closes pop-ups and ads only with their X or skip arrows (never their offer), and can always play rewarded ads for a game you allow. Your tips for a game are always followed first.",
+  "publishedAt": "2026-10-20T20:11:06.631Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "db49d0b0c6076451dbf3b46162a622481170aea516754d4c39e619503e8c99fa",
-      "size": 1093397
+      "sha256": "885ddf9aed15b276678567be464bc0b721dc34569396b90c327f16e67d265873",
+      "size": 1101391
     },
     {
       "path": "dist/preload.js",

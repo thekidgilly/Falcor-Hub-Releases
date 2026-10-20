@@ -504,6 +504,13 @@
   // Smart Playbook, the premium panel (both apps): what the milestones left are worth, glowing; ONE start button (no
   // choices: the plan follows its own schedule); the milestone path; the session calendar; the fine print folded away.
   // gate: {ok, why} whether it may start now (phone, Emergency Stop, install, training). Buttons carry data-pb.
+  // The path: reached milestones as one line, the next five, the rest folded away.
+  const pathHtml = (steps, next) => {
+    const li = x => '<li class="' + x.state + (next && next.msId === x.msId ? ' now' : '') + '"><i></i><span>' + esc(x.text) + (x.state === 'needs_you' ? ' <em>· needs you</em>' : '') + '</span><b>' + (x.amount !== null ? esc(money(x.amount, x.unit)) : '—') + '</b></li>';
+    const done = steps.filter(x => x.state === 'reached'), open = steps.filter(x => x.state !== 'reached'), head = open.slice(0, 5), rest = open.slice(5);
+    return '<ol class="pbpath">' + (done.length ? '<li class="reached"><i></i><span>' + done.length + ' milestone' + (done.length === 1 ? '' : 's') + ' reached</span><b></b></li>' : '') + head.map(li).join('') + '</ol>'
+      + (rest.length ? '<details class="pbmore"><summary>' + rest.length + ' more milestone' + (rest.length === 1 ? '' : 's') + '</summary><ol class="pbpath">' + rest.map(li).join('') + '</ol></details>' : '');
+  };
   const playbookHtml = (v, gate) => {
     if (!v || !v.plan || (!v.plan.steps.length && !v.plan.unknowns.length)) return '';
     const p = v.plan, day = t => new Date(t).toLocaleDateString([], {month: 'short', day: 'numeric'});
@@ -518,7 +525,7 @@
       + '<div class="pbhero"><div class="pbsum"><span class="pbkick">' + (todo ? 'POTENTIAL LEFT' : mine ? 'WHAT IS LEFT' : got ? 'EARNED ON THE WAY' : 'POTENTIAL') + '</span><b class="pbbig">' + (pot.length ? esc(pot.join(' + ')) : todo ? 'Reward unknown' : mine ? 'Over to you' : '✓ All done') + '</b>'
       + '<span class="pbsub">' + [todo ? todo + ' milestone' + (todo === 1 ? '' : 's') + ' to play' : '', got ? got + ' reached' : '', mine ? mine + ' need' + (mine === 1 ? 's' : '') + ' you' : ''].filter(Boolean).join(' · ') + '</span></div>'
       + '<div class="pbcta">' + cta + (gate && !gate.ok && !live ? '<span class="pbwhy">' + esc(gate.why) + '</span>' : '') + '</div></div>'
-      + '<ol class="pbpath">' + p.steps.map(x => '<li class="' + x.state + (v.next && v.next.msId === x.msId ? ' now' : '') + '"><i></i><span>' + esc(x.text) + (x.state === 'needs_you' ? ' <em>· needs you</em>' : '') + '</span><b>' + (x.amount !== null ? esc(money(x.amount, x.unit)) : '—') + '</b></li>').join('') + '</ol>'
+      + pathHtml(p.steps, v.next)
       + (cal && todo ? '<div class="pbcal"><span class="pbkick">SESSIONS</span><span>' + (live || paused ? (v.nextAt ? 'Next ' + esc(day(v.nextAt)) + ' ' + esc(new Date(v.nextAt).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})) + ' · ' : '') : 'Starts now, then ') + 'daily until ' + esc(day(cal.until)) + ' (' + (cal.byDeadline ? 'the offer\'s deadline' : 'up to ' + cal.horizonDays + ' days') + ')</span></div>' : '')
       + (v.nextWhy && live ? '<p class="pbnow">' + esc(v.nextWhy) + '</p>' : '') + (p.ended ? '<p class="pbnow">' + esc(p.ended) + '</p>' : '')
       + '<details class="pbmore"><summary>Details</summary><p><em>Deadline</em> ' + (p.deadline.at ? esc(new Date(p.deadline.at).toLocaleString()) + ' · ' + esc(p.deadline.source) : 'unknown') + '</p><p><em>Time per level</em> ' + (p.estimate.minPerLevel ? '≈ ' + p.estimate.minPerLevel + ' min' : 'unknown') + ' · ' + esc(p.estimate.note) + '</p>'

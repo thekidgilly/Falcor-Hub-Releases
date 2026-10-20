@@ -509,7 +509,8 @@ function renderGame(g) {
   const st = gameState(g), d = dev();
   htmlOnce($('gpicon'), iconHtml(g));
   text($('gpname'), g.name);
-  htmlOnce($('gpprep'), P.prepHtml(g.prep));
+  // (research done: nothing to show; the playbook below says it is ready)
+  htmlOnce($('gpprep'), g.prep && g.prep.phase !== 'done' ? P.prepHtml(g.prep) : '');
   $('gpweb').hidden = !g.research; htmlOnce($('gpwebbody'), P.researchHtml(g.research));
   htmlOnce($('gpmeta'), (g.pkg.startsWith('offer:') ? 'Offer only' : '<code>' + esc(g.pkg) + '</code>') + ' · <span class="' + st.mood + '">' + esc(st.label) + '</span>' + (g.level !== null && g.level !== undefined ? ' · level ' + esc(g.level) : '') + (g.lastPlayed ? ' · last played ' + new Date(g.lastPlayed).toLocaleString() : '') + (g.installed ? '' : ' · <span class="sand">' + (g.pkg.startsWith('offer:') ? 'not installed on the phone yet: it links by itself once it is' : 'not on the phone') + '</span>'));
   $('gpopen').disabled = !d || !g.installed || !!d.running || !!d.emergency;
@@ -527,8 +528,6 @@ function renderGame(g) {
   $('gpauto').innerHTML = icon(au.setup ? 'plus' : 'edit') + (au.setup ? 'Set up automation' : 'Edit automation'); $('gpauto').disabled = !au.ready && !au.setup;
   htmlOnce($('gpautoline'), au.ready ? '<span class="pill green">READY</span><span>Plays: <b>' + esc(au.name) + '</b></span>' + (g.schedules || []).map(x => '<span class="muted">' + icon('calendar') + ' ' + esc(x.words) + (x.enabled && x.next ? ' · next ' + esc(when(x.next)) : x.enabled ? '' : ' · off') + '</span>').join('') : au.setup ? '<span class="pill sand">NEEDS SETUP</span><span class="muted">' + esc(au.why) + '</span>' : au.why ? '<span class="pill muted">MANUAL</span><span class="muted">' + esc(au.why) + '</span>' : '');
   $('gpguide').disabled = !g.learned;
-  const tiles = [{k: 'ch', label: 'Challenges', v: g.tasks.length}, {k: 'active', label: 'Active', v: g.active}, {k: 'runs', label: 'Runs', v: g.runs}, {k: 'ver', label: 'Verified', v: g.verified}];
-  keyed($('gptiles'), tiles, t => t.k, () => P.el('<div class="panel tile"><span class="muted small"></span><b></b></div>'), (n, t) => { text(n.querySelector('.muted'), t.label); roll(n.querySelector('b'), t.v, String); });
   // The header: platform, status, the most it can pay, what was credited or paid out, and time left (when known).
   const tot = g.totals || [], stx = {active: ['Active', 'green'], completed: ['Completed', 'accent'], expired: ['Expired', 'red'], none: [st.label, st.mood]}[g.status] || [st.label, st.mood];
   const stats = [['PLATFORM', (g.platforms || []).join(' · ') || '—', ''], ['STATUS', stx[0], stx[1]], ['MAX REWARD', tot.filter(t => t.potential).map(t => P.money(t.potential, t.unit)).join(' + ') || '—', ''],
@@ -540,13 +539,13 @@ function renderGame(g) {
   $('gpofferbox').hidden = !(g.earning || []).length;
   htmlOnce($('gpoffers'), P.offersHtml(g, true)); P.fix($('gpoffers'));
   htmlOnce($('gpact'), P.activityHtml(g));
-  $('gpopen').hidden = $('gpteach').hidden = $('gptask').hidden = $('gpchat').hidden = $('gpguide').hidden = $('gptiles').hidden = g.pkg.startsWith('offer:');
+  $('gpopen').hidden = $('gpteach').hidden = $('gptask').hidden = $('gpchat').hidden = $('gpguide').hidden = g.pkg.startsWith('offer:');
   htmlOnce($('gpearn'), P.rewardsHtml(g)); P.fix($('gpearn'));
   htmlOnce($('gphist'), P.historyHtml(g));
   $('gptierbox').hidden = !(g.tiers || []).length && !(g.objectives || []).length;
   htmlOnce($('gptiers'), P.tiersHtml(g));
   const box = $('gptasks');
-  if (!g.tasks.length) htmlOnce(box, '<div class="empty" data-empty><span>No challenges for this game yet.</span></div>');
+  if (!g.tasks.length) htmlOnce(box, '<div class="empty" data-empty><span>No tasks for this game yet. Add one from More.</span></div>');
   else {
     if (box.querySelector('[data-empty]')) box.innerHTML = '';
     keyed(box, g.tasks, t => t.id, () => P.el('<div class="gtask"><div class="main"></div><div class="acts"></div></div>'), (n, t) => {
@@ -652,7 +651,7 @@ async function apStart(extra = {}) {
 function apApprove(n) {
   return new Promise(resolve => {
     let done = false; const end = v => { if (done) return; done = true; qSheet.close(); resolve(v); };
-    qSheet.open(qSheet.head(n.run ? 'RUN SMART PLAYBOOK' : 'APPROVE GAME AUTOPILOT', n.name) + '<p class="small">Goal: <b>' + esc(n.goal) + '</b>. ' + (n.existing ? 'Its task waits for your approval.' : 'A task for it is made when you approve.') + '</p><ul class="small">' + n.rules.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' + (n.run ? '<p class="small">Runs automatically at scheduled times even when Phone Autopilot is off. Requires Falcor Hub running and your phone connected.</p>' : '')
+    qSheet.open(qSheet.head(n.run ? 'RUN SMART PLAYBOOK' : 'APPROVE GAME AUTOPILOT', n.name) + '<p class="small">Goal: <b>' + esc(n.goal) + '</b>. ' + (n.existing ? 'Its task waits for your approval.' : 'A task for it is made when you approve.') + '</p><ul class="small">' + n.rules.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>'
       + '<label class="small"><input type="checkbox" id="aprules"> I approve these rules</label><div class="row"><button class="primary" id="apgo" disabled>' + icon('check') + (n.run ? 'Run Playbook' : 'Approve and start') + '</button><button data-close>Cancel</button></div>', b => {
       b.querySelector('#aprules').onchange = e => { b.querySelector('#apgo').disabled = !e.target.checked; };
       b.querySelector('#apgo').onclick = () => end(true);
@@ -876,6 +875,9 @@ $('gpremove').onclick = async () => {
   if (!confirm('Remove ' + g.name + ' from Games?\n\nIts Autopilot and playbook stop, and its tasks, schedules, offers and what Falcor learned about it are deleted. The app stays on your phone.')) return;
   try { await call('removeGame', {pkg: g.pkg}); gamePkg = null; S = await call('status'); renderGames(); toast(g.name + ' removed.'); } catch (e) { toast(e.message || String(e), 'warn'); }
 };
+// More: a choice closes the menu; so does a click anywhere else.
+$('gpmore').addEventListener('click', ev => { if (ev.target.closest('.gmenu button')) $('gpmore').open = false; });
+document.addEventListener('click', ev => { if ($('gpmore').open && !ev.target.closest('#gpmore')) $('gpmore').open = false; });
 $('gptask').onclick = () => { openDrawer(); draft.app = gamePkg; draft.step = 2; drawStep(); };
 const gameAuto = () => (S.games.find(x => x.pkg === gamePkg) || {}).automation || {};
 $('gpplay').onclick = () => { const g = S.games.find(x => x.pkg === gamePkg), au = gameAuto(); if (au.target) void qRun(au.target, {name: g ? g.name : ''}); };
