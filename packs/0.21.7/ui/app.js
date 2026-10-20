@@ -509,7 +509,8 @@ function renderGame(g) {
   const st = gameState(g), d = dev();
   htmlOnce($('gpicon'), iconHtml(g));
   text($('gpname'), g.name);
-  htmlOnce($('gpprep'), P.prepHtml(g.prep));
+  // (research done: nothing to show; the playbook below says it is ready)
+  htmlOnce($('gpprep'), g.prep && g.prep.phase !== 'done' ? P.prepHtml(g.prep) : '');
   $('gpweb').hidden = !g.research; htmlOnce($('gpwebbody'), P.researchHtml(g.research));
   htmlOnce($('gpmeta'), (g.pkg.startsWith('offer:') ? 'Offer only' : '<code>' + esc(g.pkg) + '</code>') + ' · <span class="' + st.mood + '">' + esc(st.label) + '</span>' + (g.level !== null && g.level !== undefined ? ' · level ' + esc(g.level) : '') + (g.lastPlayed ? ' · last played ' + new Date(g.lastPlayed).toLocaleString() : '') + (g.installed ? '' : ' · <span class="sand">' + (g.pkg.startsWith('offer:') ? 'not installed on the phone yet: it links by itself once it is' : 'not on the phone') + '</span>'));
   $('gpopen').disabled = !d || !g.installed || !!d.running || !!d.emergency;
@@ -527,8 +528,6 @@ function renderGame(g) {
   $('gpauto').innerHTML = icon(au.setup ? 'plus' : 'edit') + (au.setup ? 'Set up automation' : 'Edit automation'); $('gpauto').disabled = !au.ready && !au.setup;
   htmlOnce($('gpautoline'), au.ready ? '<span class="pill green">READY</span><span>Plays: <b>' + esc(au.name) + '</b></span>' + (g.schedules || []).map(x => '<span class="muted">' + icon('calendar') + ' ' + esc(x.words) + (x.enabled && x.next ? ' · next ' + esc(when(x.next)) : x.enabled ? '' : ' · off') + '</span>').join('') : au.setup ? '<span class="pill sand">NEEDS SETUP</span><span class="muted">' + esc(au.why) + '</span>' : au.why ? '<span class="pill muted">MANUAL</span><span class="muted">' + esc(au.why) + '</span>' : '');
   $('gpguide').disabled = !g.learned;
-  const tiles = [{k: 'ch', label: 'Challenges', v: g.tasks.length}, {k: 'active', label: 'Active', v: g.active}, {k: 'runs', label: 'Runs', v: g.runs}, {k: 'ver', label: 'Verified', v: g.verified}];
-  keyed($('gptiles'), tiles, t => t.k, () => P.el('<div class="panel tile"><span class="muted small"></span><b></b></div>'), (n, t) => { text(n.querySelector('.muted'), t.label); roll(n.querySelector('b'), t.v, String); });
   // The header: platform, status, the most it can pay, what was credited or paid out, and time left (when known).
   const tot = g.totals || [], stx = {active: ['Active', 'green'], completed: ['Completed', 'accent'], expired: ['Expired', 'red'], none: [st.label, st.mood]}[g.status] || [st.label, st.mood];
   const stats = [['PLATFORM', (g.platforms || []).join(' · ') || '—', ''], ['STATUS', stx[0], stx[1]], ['MAX REWARD', tot.filter(t => t.potential).map(t => P.money(t.potential, t.unit)).join(' + ') || '—', ''],
@@ -540,13 +539,13 @@ function renderGame(g) {
   $('gpofferbox').hidden = !(g.earning || []).length;
   htmlOnce($('gpoffers'), P.offersHtml(g, true)); P.fix($('gpoffers'));
   htmlOnce($('gpact'), P.activityHtml(g));
-  $('gpopen').hidden = $('gpteach').hidden = $('gptask').hidden = $('gpchat').hidden = $('gpguide').hidden = $('gptiles').hidden = g.pkg.startsWith('offer:');
+  $('gpopen').hidden = $('gpteach').hidden = $('gptask').hidden = $('gpchat').hidden = $('gpguide').hidden = g.pkg.startsWith('offer:');
   htmlOnce($('gpearn'), P.rewardsHtml(g)); P.fix($('gpearn'));
   htmlOnce($('gphist'), P.historyHtml(g));
   $('gptierbox').hidden = !(g.tiers || []).length && !(g.objectives || []).length;
   htmlOnce($('gptiers'), P.tiersHtml(g));
   const box = $('gptasks');
-  if (!g.tasks.length) htmlOnce(box, '<div class="empty" data-empty><span>No challenges for this game yet.</span></div>');
+  if (!g.tasks.length) htmlOnce(box, '<div class="empty" data-empty><span>No tasks for this game yet. Add one from More.</span></div>');
   else {
     if (box.querySelector('[data-empty]')) box.innerHTML = '';
     keyed(box, g.tasks, t => t.id, () => P.el('<div class="gtask"><div class="main"></div><div class="acts"></div></div>'), (n, t) => {
@@ -572,16 +571,18 @@ function renderGame(g) {
 function renderAutopilot(g, d) {
   $('gpap').hidden = g.pkg.startsWith('offer:');
   const c = g.campaign, on = !!c && c.active && !c.paused, goals = g.apGoals || [];
-  const sig = (g.smart && g.smart.runnable ? 'plan|' : '') + goals.map(x => x.objective + ':' + x.label).join('|'), sel = $('gpgoal');
+  const sig = goals.map(x => x.objective + ':' + x.label).join('|'), sel = $('gpgoal');
   renderPlan(g);
   // The model that plays (any provider), and the one that last actually answered a move.
   const ai = S.ai && S.ai.active; text($('gpai'), ai && ai.gaming ? '· ' + ai.gaming.model + ' · ' + ai.gaming.provider + (ai.lastPlan && ai.lastPlan.model !== ai.gaming.model ? ' (last move by ' + ai.lastPlan.model + ')' : '') : '· no gaming AI set');
   if (sel.dataset.sig !== sig) {
     const keep = sel.value;
-    sel.innerHTML = (g.smart && g.smart.runnable ? '<option value="plan">Smart Playbook (recommended)</option>' : '') + goals.map((x, i) => '<option value="' + i + '">' + esc(x.label) + '</option>').join('') + '<option value="level">Level…</option>';
+    sel.innerHTML = goals.map((x, i) => '<option value="' + i + '">' + esc(x.label) + '</option>').join('') + '<option value="level">Level…</option>';
     sel.dataset.sig = sig; if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
   }
   $('gplevelbox').hidden = sel.value !== 'level'; $('gpgoalbox').hidden = on;
+  // A game with a Smart Playbook: its panel is the one place to start, pause and stop; no goal to pick.
+  const pb = pbMode(g); $('gpaphead').hidden = pb;
   $('gpapstart').hidden = on; $('gpappause').hidden = $('gpapstop').hidden = !on;
   if (c && c.paused) $('gpapstop').hidden = false;
   $('gpapstart').disabled = !d || !!d.emergency || !g.installed || !!g.locked;
@@ -589,7 +590,8 @@ function renderAutopilot(g, d) {
   $('gpapstart').innerHTML = icon('play') + (c && c.paused ? 'Carry on' : 'Start Autopilot');
   const r = g.review, L = [];
   const state = !c ? ['OFF', 'muted'] : c.running ? ['PLAYING', 'green'] : on ? ['ON', 'green'] : c.paused ? ['PAUSED', 'sand'] : ['OFF', 'muted'];
-  L.push('<div class="gpapstate"><span class="pill ' + state[1] + '">' + state[0] + '</span>' + (c ? '<span><em>Goal</em>' + esc(c.goal) + '</span>' : '<span class="muted">Pick a goal and press Start Autopilot. Falcor plays it now (or in its turn in the queue), comes back by itself, and never buys anything.</span>')
+  // (a playbook shows its own state; below it only what is happening now and what the last session taught)
+  if (!pb || (c && (c.running || c.last))) L.push('<div class="gpapstate">' + (pb ? '' : '<span class="pill ' + state[1] + '">' + state[0] + '</span>') + (c ? '<span><em>Goal</em>' + esc(c.goal) + '</span>' : (pb ? '' : '<span class="muted">Pick a goal and press Start Autopilot. Falcor plays it now (or in its turn in the queue), comes back by itself, and never buys anything.</span>'))
     + (g.level !== null && g.level !== undefined ? '<span><em>Verified level</em>' + esc(g.level) + '</span>' : '')
     + (c && c.running && c.step ? '<span><em>Now</em>' + esc(c.step) + '</span>' : '')
     + (c && c.last ? '<span><em>Last session</em>' + esc(c.last.accepted) + ' input' + (c.last.accepted === 1 ? '' : 's') + ' accepted · ' + esc(String(c.last.outcome).toLowerCase().replace(/_/g, ' ')) + '</span>' : '')
@@ -602,22 +604,25 @@ function renderAutopilot(g, d) {
 $('gpgoal').onchange = () => { $('gplevelbox').hidden = $('gpgoal').value !== 'level'; if (!$('gplevelbox').hidden) $('gplevel').focus(); };
 // Smart Playbook (plans.ts): the offer's whole ladder as one plan; Run Playbook approves it once and the game's campaign
 // walks it milestone after milestone, coming back by itself (also while the Phone tab's Autopilot is off).
+// Smart Playbook: the premium panel (pixel.js#playbookHtml), one start button, no choices before it.
+function pbMode(g) { return !!(g.smart && (g.smart.runnable || ['active', 'paused'].includes(g.smart.plan.status) || (g.campaign && g.campaign.planId && (g.campaign.active || g.campaign.paused)))); }
 function renderPlan(g) {
-  const v = g.smart, box = $('gpplan');
-  box.hidden = !v || (!v.plan.steps.length && !v.plan.unknowns.length);
-  if (box.hidden) return;
-  const p = v.plan, st = {draft: ['DRAFT', 'muted'], active: ['RUNNING', 'green'], paused: ['PAUSED', 'sand'], done: ['DONE', 'green'], ended: ['ENDED', 'muted']}[p.status] || ['DRAFT', 'muted'];
-  const strat = v.strategies.length > 1 && (p.status === 'draft' || p.status === 'done' || p.status === 'ended') ? '<select id="gpplanstrat" title="Strategy">' + v.strategies.map(x => '<option value="' + x.id + '"' + (x.id === p.strategy ? ' selected' : '') + '>' + esc(x.label) + '</option>').join('') + '</select>' : '';
-  htmlOnce(box, '<div class="top"><p class="eyebrow">// RECOMMENDED PLAYBOOK</p><span class="pill ' + st[1] + '">' + st[0] + '</span></div>' + strat
-    + '<ol class="planladder">' + p.steps.map(x => '<li class="' + x.state + (v.next && v.next.msId === x.msId ? ' now' : '') + '"><span>' + (x.state === 'reached' ? '✓ ' : x.state === 'needs_you' ? '✋ ' : '') + esc(x.text) + '</span><b>' + (x.amount !== null ? esc(x.amount) + ' ' + esc(x.unit) : 'reward unknown') + '</b>' + (x.why ? '<em>' + esc(x.why) + '</em>' : '') + '</li>').join('') + '</ol>'
-    + '<p class="small"><em>Next</em> ' + (v.next ? esc(v.next.text) : 'nothing left to play') + (v.nextAt ? ' · ' + esc(when(v.nextAt)) : '') + (v.nextWhy && p.status === 'active' ? ' · ' + esc(v.nextWhy) : '') + '</p>'
-    + '<p class="small"><em>Deadline</em> ' + (p.deadline.at ? esc(new Date(p.deadline.at).toLocaleString()) + ' (' + esc(p.deadline.source) + ')' : 'unknown') + ' · <em>Time per level</em> ' + (p.estimate.minPerLevel ? '≈ ' + p.estimate.minPerLevel + ' min' : 'unknown') + ' · ' + esc(p.estimate.note) + '</p>'
-    + p.notes.map(n => '<p class="small muted">' + esc(n) + '</p>').join('') + p.unknowns.map(n => '<p class="small sand">' + esc(n) + '</p>').join('')
-    + (p.ended ? '<p class="small">' + esc(p.ended) + '</p>' : '') + '<p class="small muted">' + esc(v.note) + '</p>');
-  const s = $('gpplanstrat'); if (s) s.onchange = () => call('gamePlaybook', {pkg: g.pkg, op: 'generate', strategy: s.value}).then(r => { g.smart = r; renderPlan(g); });
+  const v = g.smart, box = $('gpplan'), d = dev();
+  const gate = !d ? {ok: false, why: 'Plug in the phone.'} : d.emergency ? {ok: false, why: 'Emergency Stop is on.'} : !g.installed ? {ok: false, why: 'Install the game on the phone first.'} : g.locked ? {ok: false, why: g.locked} : {ok: true, why: ''};
+  const html = pbMode(g) || (v && v.plan.steps.length) ? P.playbookHtml(v, gate) : '';
+  box.hidden = !html; htmlOnce(box, html);
 }
+$('gpplan').addEventListener('click', async e => {
+  const b = e.target.closest('[data-pb]'); if (!b || b.disabled) return;
+  const g = S.games.find(x => x.pkg === gamePkg), d = dev(); if (!g) return;
+  const k = b.dataset.pb; b.classList.add('busy');
+  try {
+    if (k === 'start' || k === 'carry') { if (!d) return; await planRun(g, d); }
+    else { await call('gamePlaybook', {pkg: g.pkg, op: k}); toast(k === 'pause' ? 'Playbook paused. Nothing comes back by itself until you carry on.' : 'Playbook stopped. Its sessions are cancelled.'); }
+  } finally { b.classList.remove('busy'); }
+});
 async function planRun(g, d, extra = {}) {
-  const strategy = $('gpplanstrat') ? $('gpplanstrat').value : g.smart.plan.strategy;
+  const strategy = g.smart.plan.strategy;
   let r = await call('gamePlaybook', {pkg: g.pkg, op: 'run', deviceId: d.id, strategy, ...extra});
   if (r && r.needsApproval) { const ok = await apApprove({...r.needsApproval, run: true}); if (!ok) return; extra = {...extra, rulesAllow: true}; r = await call('gamePlaybook', {pkg: g.pkg, op: 'run', deviceId: d.id, strategy, ...extra}); }
   if (r && r.conflict) { const choice = await qAsk(r.conflict); if (!choice) return; r = await call('gamePlaybook', {pkg: g.pkg, op: 'run', deviceId: d.id, strategy, ...extra, choice}); }
@@ -626,7 +631,7 @@ async function planRun(g, d, extra = {}) {
 }
 async function apStart(extra = {}) {
   const g = S.games.find(x => x.pkg === gamePkg), d = dev(); if (!g || !d) return;
-  if ((g.campaign && g.campaign.planId && g.campaign.paused && !extra.fresh) || ($('gpgoal').value === 'plan' && g.smart && g.smart.runnable && !(g.campaign && g.campaign.paused && !g.campaign.planId))) return planRun(g, d, extra);
+  if (g.campaign && g.campaign.planId && g.campaign.paused && !extra.fresh) return planRun(g, d, extra);
   const v = $('gpgoal').value, goal = v === 'level' ? {objective: 'level', target: Number($('gplevel').value)} : (() => { const x = (g.apGoals || [])[Number(v)] || {objective: 'next'}; return {objective: x.objective, target: x.target, offerId: x.offerId, missionId: x.missionId}; })();
   if (g.campaign && g.campaign.paused && !extra.fresh) Object.assign(goal, {objective: g.campaign.objective, target: g.campaign.target, offerId: g.campaign.offerId, missionId: g.campaign.missionId});
   if (goal.objective === 'level' && !(goal.target >= 1)) { toast('Type the level to reach.', 'warn'); $('gplevel').focus(); return; }
@@ -646,7 +651,7 @@ async function apStart(extra = {}) {
 function apApprove(n) {
   return new Promise(resolve => {
     let done = false; const end = v => { if (done) return; done = true; qSheet.close(); resolve(v); };
-    qSheet.open(qSheet.head(n.run ? 'RUN SMART PLAYBOOK' : 'APPROVE GAME AUTOPILOT', n.name) + '<p class="small">Goal: <b>' + esc(n.goal) + '</b>. ' + (n.existing ? 'Its task waits for your approval.' : 'A task for it is made when you approve.') + '</p><ul class="small">' + n.rules.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' + (n.run ? '<p class="small">Runs automatically at scheduled times even when Phone Autopilot is off. Requires Falcor Hub running and your phone connected.</p>' : '')
+    qSheet.open(qSheet.head(n.run ? 'RUN SMART PLAYBOOK' : 'APPROVE GAME AUTOPILOT', n.name) + '<p class="small">Goal: <b>' + esc(n.goal) + '</b>. ' + (n.existing ? 'Its task waits for your approval.' : 'A task for it is made when you approve.') + '</p><ul class="small">' + n.rules.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>'
       + '<label class="small"><input type="checkbox" id="aprules"> I approve these rules</label><div class="row"><button class="primary" id="apgo" disabled>' + icon('check') + (n.run ? 'Run Playbook' : 'Approve and start') + '</button><button data-close>Cancel</button></div>', b => {
       b.querySelector('#aprules').onchange = e => { b.querySelector('#apgo').disabled = !e.target.checked; };
       b.querySelector('#apgo').onclick = () => end(true);
@@ -870,6 +875,9 @@ $('gpremove').onclick = async () => {
   if (!confirm('Remove ' + g.name + ' from Games?\n\nIts Autopilot and playbook stop, and its tasks, schedules, offers and what Falcor learned about it are deleted. The app stays on your phone.')) return;
   try { await call('removeGame', {pkg: g.pkg}); gamePkg = null; S = await call('status'); renderGames(); toast(g.name + ' removed.'); } catch (e) { toast(e.message || String(e), 'warn'); }
 };
+// More: a choice closes the menu; so does a click anywhere else.
+$('gpmore').addEventListener('click', ev => { if (ev.target.closest('.gmenu button')) $('gpmore').open = false; });
+document.addEventListener('click', ev => { if ($('gpmore').open && !ev.target.closest('#gpmore')) $('gpmore').open = false; });
 $('gptask').onclick = () => { openDrawer(); draft.app = gamePkg; draft.step = 2; drawStep(); };
 const gameAuto = () => (S.games.find(x => x.pkg === gamePkg) || {}).automation || {};
 $('gpplay').onclick = () => { const g = S.games.find(x => x.pkg === gamePkg), au = gameAuto(); if (au.target) void qRun(au.target, {name: g ? g.name : ''}); };

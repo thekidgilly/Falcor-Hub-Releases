@@ -501,5 +501,35 @@
       if (m === 'Sound' || m === 'Both') { try { context ||= new AudioContext(); if (context.state === 'suspended') void context.resume(); const o = context.createOscillator(), g = context.createGain(); o.frequency.value = 700; g.gain.setValueAtTime(.025, context.currentTime); g.gain.exponentialRampToValueAtTime(.001, context.currentTime + .025); o.connect(g); g.connect(context.destination); o.start(); o.stop(context.currentTime + .03); } catch {} }
     }; return {mode, cycle, pulse};
   })();
-  window.Pixel = {editFeedback, MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced, monogram, num, unitIcon, earnLine, offersHtml, prepHtml, rewardsHtml, historyHtml, tiersHtml, progressHtml, motion, money, cardHtml, library, earnTiles, ladderHtml, activityHtml, MSTATE, noticesHtml, ago, setDragon, dragonSrc, avatarHtml, introHtml, INTRO, normIcon, researchHtml, trainHtml};
+  // Smart Playbook, the premium panel (both apps): what the milestones left are worth, glowing; ONE start button (no
+  // choices: the plan follows its own schedule); the milestone path; the session calendar; the fine print folded away.
+  // gate: {ok, why} whether it may start now (phone, Emergency Stop, install, training). Buttons carry data-pb.
+  // The path: reached milestones as one line, the next five, the rest folded away.
+  const pathHtml = (steps, next) => {
+    const li = x => '<li class="' + x.state + (next && next.msId === x.msId ? ' now' : '') + '"><i></i><span>' + esc(x.text) + (x.state === 'needs_you' ? ' <em>· needs you</em>' : '') + '</span><b>' + (x.amount !== null ? esc(money(x.amount, x.unit)) : '—') + '</b></li>';
+    const done = steps.filter(x => x.state === 'reached'), open = steps.filter(x => x.state !== 'reached'), head = open.slice(0, 5), rest = open.slice(5);
+    return '<ol class="pbpath">' + (done.length ? '<li class="reached"><i></i><span>' + done.length + ' milestone' + (done.length === 1 ? '' : 's') + ' reached</span><b></b></li>' : '') + head.map(li).join('') + '</ol>'
+      + (rest.length ? '<details class="pbmore"><summary>' + rest.length + ' more milestone' + (rest.length === 1 ? '' : 's') + '</summary><ol class="pbpath">' + rest.map(li).join('') + '</ol></details>' : '');
+  };
+  const playbookHtml = (v, gate) => {
+    if (!v || !v.plan || (!v.plan.steps.length && !v.plan.unknowns.length)) return '';
+    const p = v.plan, day = t => new Date(t).toLocaleDateString([], {month: 'short', day: 'numeric'});
+    const st = {draft: ['READY', 'green'], active: ['RUNNING', 'green'], paused: ['PAUSED', 'sand'], done: ['COMPLETE', 'green'], ended: ['ENDED', 'muted']}[p.status] || ['READY', 'green'];
+    const live = p.status === 'active', paused = p.status === 'paused', pot = (v.potential || []).map(x => money(x.amount, x.unit));
+    const todo = p.steps.filter(x => x.state === 'todo').length, mine = p.steps.filter(x => x.state === 'needs_you').length, got = p.steps.filter(x => x.state === 'reached').length;
+    const cal = v.calendar, btn = (k, label, cls) => '<button class="' + cls + '" data-pb="' + k + '"' + (k === 'start' || k === 'carry' ? (gate && !gate.ok ? ' disabled title="' + esc(gate.why) + '"' : '') : '') + '>' + label + '</button>';
+    const cta = live ? btn('pause', icon('pause') + 'Pause', '') + btn('stop', icon('stop') + 'Stop', 'danger')
+      : paused ? btn('carry', icon('play') + 'Carry on', 'primary big pbgo') + btn('stop', icon('stop') + 'Stop', 'danger')
+      : v.runnable ? btn('start', icon('play') + 'Start Playbook Autopilot', 'primary big pbgo') : '';
+    return '<div class="pb pb-' + p.status + '"><div class="pbhead"><p class="eyebrow pbglow">// SMART PLAYBOOK</p><span class="pill ' + st[1] + '">' + st[0] + '</span></div>'
+      + '<div class="pbhero"><div class="pbsum"><span class="pbkick">' + (todo ? 'POTENTIAL LEFT' : mine ? 'WHAT IS LEFT' : got ? 'EARNED ON THE WAY' : 'POTENTIAL') + '</span><b class="pbbig">' + (pot.length ? esc(pot.join(' + ')) : todo ? 'Reward unknown' : mine ? 'Over to you' : '✓ All done') + '</b>'
+      + '<span class="pbsub">' + [todo ? todo + ' milestone' + (todo === 1 ? '' : 's') + ' to play' : '', got ? got + ' reached' : '', mine ? mine + ' need' + (mine === 1 ? 's' : '') + ' you' : ''].filter(Boolean).join(' · ') + '</span></div>'
+      + '<div class="pbcta">' + cta + (gate && !gate.ok && !live ? '<span class="pbwhy">' + esc(gate.why) + '</span>' : '') + '</div></div>'
+      + pathHtml(p.steps, v.next)
+      + (cal && todo ? '<div class="pbcal"><span class="pbkick">SESSIONS</span><span>' + (live || paused ? (v.nextAt ? 'Next ' + esc(day(v.nextAt)) + ' ' + esc(new Date(v.nextAt).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})) + ' · ' : '') : 'Starts now, then ') + 'daily until ' + esc(day(cal.until)) + ' (' + (cal.byDeadline ? 'the offer\'s deadline' : 'up to ' + cal.horizonDays + ' days') + ')</span></div>' : '')
+      + (v.nextWhy && live ? '<p class="pbnow">' + esc(v.nextWhy) + '</p>' : '') + (p.ended ? '<p class="pbnow">' + esc(p.ended) + '</p>' : '')
+      + '<details class="pbmore"><summary>Details</summary><p><em>Deadline</em> ' + (p.deadline.at ? esc(new Date(p.deadline.at).toLocaleString()) + ' · ' + esc(p.deadline.source) : 'unknown') + '</p><p><em>Time per level</em> ' + (p.estimate.minPerLevel ? '≈ ' + p.estimate.minPerLevel + ' min' : 'unknown') + ' · ' + esc(p.estimate.note) + '</p>'
+      + p.notes.map(n => '<p>' + esc(n) + '</p>').join('') + p.unknowns.map(n => '<p class="sand">' + esc(n) + '</p>').join('') + '<p>' + esc(v.note) + ' It never buys anything and never taps inside an ad.</p></details></div>';
+  };
+  window.Pixel = {playbookHtml, editFeedback, MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced, monogram, num, unitIcon, earnLine, offersHtml, prepHtml, rewardsHtml, historyHtml, tiersHtml, progressHtml, motion, money, cardHtml, library, earnTiles, ladderHtml, activityHtml, MSTATE, noticesHtml, ago, setDragon, dragonSrc, avatarHtml, introHtml, INTRO, normIcon, researchHtml, trainHtml};
 })();

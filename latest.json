@@ -1,12 +1,12 @@
 {
-  "version": "0.21.5",
-  "notes": "Falcor now plays hold-to-build games like Animals & Coins: it holds instead of tapping, reads whether a hold was too short or too long, and remembers the hold that worked on each screen so it replays it without asking Falcor AI.",
-  "publishedAt": "2026-10-20T17:09:38.259Z",
+  "version": "0.21.7",
+  "notes": "Hold-to-build games play much better: Falcor sees when a hold misses, works out too short or too long, starts with short holds and remembers what worked. Your own tips for a game are kept and followed on every move. Building with a game's own coins is allowed (never real money or gems), and moving screens no longer throw away Falcor AI's plans.",
+  "publishedAt": "2026-10-20T18:31:15.073Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "8fbb40dae58255c24e14df75754dd1b864c3561271fe513ed0a1d786fd0ebce0",
-      "size": 1088290
+      "sha256": "db49d0b0c6076451dbf3b46162a622481170aea516754d4c39e619503e8c99fa",
+      "size": 1093397
     },
     {
       "path": "dist/preload.js",

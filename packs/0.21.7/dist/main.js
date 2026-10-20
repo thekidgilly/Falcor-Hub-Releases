@@ -4700,11 +4700,39 @@ function sceneMoved(a, b) {
   for (let i = 0; i < x.length; i++) if (Math.abs(x[i] - y[i]) >= 40) n++;
   return n >= 10;
 }
+function sceneSig(f) {
+  const g = f ? gridOf(f) : null;
+  return typeof g === "string" ? g.replace(/\d+/g, "#") : g;
+}
+function sameScene(a, b) {
+  if (typeof a === "string" || typeof b === "string") return a === b;
+  if (a.length !== b.length) return false;
+  let d = 0, n = 0;
+  for (let i = 0; i < a.length; i++) {
+    const x = Math.abs(a[i] - b[i]);
+    d += x;
+    if (x >= 40) n++;
+  }
+  return d / a.length < 1.5 && n < 4;
+}
 function sceneDiff(a, b) {
   if (a.data === b.data) return 0;
   const x = gridOf(a), y = gridOf(b);
   if (x === null || y === null || typeof x !== typeof y) return 255;
   if (typeof x === "string") return x === y ? 0 : 255;
+  let d = 0;
+  for (let i = 0; i < x.length; i++) d += Math.abs(x[i] - y[i]);
+  return d / x.length;
+}
+function sceneKey(f) {
+  const g = gridOf(f);
+  return g === null ? null : typeof g === "string" ? "s" + hash(g) : "g" + Buffer.from(g).toString("base64");
+}
+function keyDiff(a, b) {
+  if (a === b) return 0;
+  if (a[0] !== "g" || b[0] !== "g") return 255;
+  const x = Buffer.from(a.slice(1), "base64"), y = Buffer.from(b.slice(1), "base64");
+  if (x.length !== y.length) return 255;
   let d = 0;
   for (let i = 0; i < x.length; i++) d += Math.abs(x[i] - y[i]);
   return d / x.length;
@@ -5144,7 +5172,7 @@ function checkAction(env, obs, { allowedPackages, now }) {
   if (a.kind === "tap" || a.kind === "long_press") return { x: a.x, y: a.y };
   return {};
 }
-var PLAN_KEYS = /* @__PURE__ */ new Set(["method", "package", "observationId", "selector", "point", "from", "to", "points", "key", "text", "ms", "expectedEffect", "confidence", "evidence", "level", "then"]);
+var PLAN_KEYS = /* @__PURE__ */ new Set(["method", "package", "observationId", "selector", "point", "from", "to", "points", "key", "text", "ms", "expectedEffect", "confidence", "evidence", "level", "lastHold", "then"]);
 var FORBIDDEN = /\b(?:adb|shell|su|sh|bash|cmd|pm (?:install|uninstall|grant|clear)|am (?:start|force-stop|broadcast)|settings put|input (?:tap|swipe|text|keyevent)|screencap|uiautomator|rm |chmod|curl|wget|http:|https:|file:|intent:|javascript:)\b/i;
 function exact(obs, s2, what) {
   const all = findAll(obs.nodes, s2);
@@ -5179,7 +5207,8 @@ function parsePlan(raw, obs, { allowedPackages }) {
   const expectedEffect = String(p.expectedEffect || "").slice(0, 200), evidence = String(p.evidence || "").slice(0, 300);
   if (!["handoff", "done"].includes(method) && !expectedEffect) throw new ActionError("The plan must say what the action is expected to change.");
   if (p.level !== void 0 && p.level !== null && !(Number.isInteger(p.level) && p.level >= 0 && p.level <= 1e5)) throw new ActionError("The level must be a whole number or null.");
-  const plan = { method, package: p.package, observationId: obs.id, expectedEffect, confidence, evidence, ...p.level !== void 0 ? { level: p.level } : {} };
+  if (p.lastHold !== void 0 && p.lastHold !== null && !["short", "long", "good", "perfect"].includes(p.lastHold)) throw new ActionError('lastHold must be "short", "long", "good", "perfect" or null.');
+  const plan = { method, package: p.package, observationId: obs.id, expectedEffect, confidence, evidence, ...p.level !== void 0 ? { level: p.level } : {}, ...p.lastHold ? { lastHold: p.lastHold } : {} };
   let action = null;
   if (method === "selector") {
     const s2 = validSelector(p.selector);
@@ -5196,6 +5225,8 @@ function parsePlan(raw, obs, { allowedPackages }) {
     const at = targetOf(p.point ?? p.selector, obs, "hold");
     action = validateAction({ kind: "long_press", x: at.x, y: at.y, ms: p.ms ?? 800 });
     plan.point = { x: at.x, y: at.y };
+    plan.ms = action.ms;
+    plan.targets = [at.label];
   } else if (method === "drag" || method === "path") {
     const raw2 = method === "drag" ? [p.from, p.to] : Array.isArray(p.points) ? p.points : [];
     if (raw2.length < 2 || raw2.length > 12) throw new ActionError(method === "drag" ? 'A drag needs "from" and "to".' : 'A path needs 2 to 12 "points".');
@@ -5244,6 +5275,11 @@ function moneyReason(text2, { prices = true } = {}) {
 }
 var RISKY = /[$€£₹¥₩]\s?\d|\d\s?(?:usd|eur|gbp)\b|\b(?:buy|purchase|pay|paypal|checkout|subscribe|subscription|free trial|deposit|top ?up|recharge|wallet|credit card|debit card|add card|install|download|learn more|visit|get the app|watch|ads?|bet|wager|bundle|starter pack|vip pass|battle pass|cash ?out|withdraw|spend)\b|\bx[2-9]\b/i;
 var moneyIntent = (text2) => /[$€£₹¥₩]\s?\d|\b(?:buy|purchase|pay(?:ment)?|paypal|checkout|subscri(?:be|ption)|free trial|deposit|top ?up|recharge|wallet|credit card|in-app|iap|bundle|starter pack|vip|battle pass|cash ?out|withdraw|real money|price|shop offer|store offer|wager|bet)\b/i.test(String(text2 || ""));
+var coinSpend = (text2) => {
+  const t = String(text2 || "").replace(/\b(?:not|never|no|without|instead of)\b[^.;,)]{0,30}?\b(?:gems?|diamonds?|crystals?|real money|money)\b/gi, " ");
+  return /\b(?:coins?|gold)\b/i.test(t) && !/[$€£₹¥₩]|\b(?:real money|gems?|diamonds?|crystals?|in-app|iap|store|shop|bundle|pack|offer|subscri\w*|pay(?:ment)?|paypal|checkout|wallet|(?:credit|debit|gift|bank) card|card number|deposit|top ?up|recharge|vip|battle pass|cash ?out|withdraw|wager|bet)\b/i.test(t);
+};
+var dismissIntent = (aim) => /^\s*(?:close|dismiss|decline|shut|exit|cancel|skip|tap (?:the )?(?:×|x|close)|no thanks|not now|maybe later)(?![a-z])/i.test(String(aim || "")) && !/\b(?:and|then)\s+(?:buy|purchase|pay|get|claim|subscribe)\b/i.test(String(aim || ""));
 var riskyControl = (label) => RISKY.test(String(label || "")) && !/^(?:skip|close)(?: the| this)? ads?$/i.test(String(label || "").trim());
 var AD_OFFER = /\b(?:watch|view|play)\b.{0,24}\b(?:ads?|video)\b|\(\s*(?:watch\s+)?ads?\s*\)|\bads?\b.{0,12}\b(?:for|to get)\b/i;
 var NOT_AN_OFFER = /[$€£]\s?\d|\b(?:buy|purchase|pay|subscribe|install|download|learn more|visit|remove ads|no ads)\b/i;
@@ -5972,6 +6008,7 @@ function adapterFor(pkg) {
 
 // src/automation/android/runner.ts
 var FRESH_MS = 2500;
+var PREFETCH_GAP_MS = 60;
 var MAX_REPLANS = 5;
 var Stopped = class extends Error {
 };
@@ -6117,6 +6154,37 @@ function customStep(ctx) {
   return { unknown: "Unknown step." };
 }
 var STALE_GAP_MS = 5 * 6e4;
+var PLAN_MOVED = 16;
+var HOLD_WATCH_MS = 8e3;
+var HOLD_MOVED = 0.5;
+var HOLD_BACK = 0.25;
+var HOLD_NOTHING = 0.5;
+var HOLD_STEADY = 3;
+var SCENES = /* @__PURE__ */ new WeakMap();
+var SCENES_PER_GAME = 200;
+function sceneMoves(owner, pkg) {
+  let all = SCENES.get(owner);
+  if (!all) {
+    all = /* @__PURE__ */ new Map();
+    SCENES.set(owner, all);
+  }
+  let l = all.get(pkg);
+  if (!l) {
+    l = [];
+    all.set(pkg, l);
+  }
+  return l;
+}
+function rememberScene(owner, pkg, o, act, label) {
+  const sig = sceneSig(o.frame), l = sceneMoves(owner, pkg);
+  if (!sig || l.some((r) => !r.bad && sameScene(r.sig, sig) && r.label === label)) return;
+  l.push({ sig, act, label });
+  if (l.length > SCENES_PER_GAME) l.splice(0, l.length - SCENES_PER_GAME);
+}
+function recallScene(owner, pkg, o) {
+  const sig = sceneSig(o.frame);
+  return sig ? [...sceneMoves(owner, pkg)].reverse().find((r) => !r.bad && sameScene(r.sig, sig)) || null : null;
+}
 var REWARD_GRANTED = /\b(?:reward (?:granted|earned|received|unlocked|collected)|you(?:'ve| have)? (?:earned|got|received) (?:the |your )?reward|thanks for watching)\b/i;
 var COUNTDOWN = /\b(?:reward in|ad (?:closes|ends) in|skip in|close in)\s*\d+|\b\d{1,3}\s?(?:s|sec|seconds)\b/i;
 var MAX_ADS = 10;
@@ -6147,7 +6215,7 @@ function balancesOf(o) {
 function aiLevel(ctx) {
   const r = ctx.s.aiLevels || [];
   const [a, b] = r.slice(-2);
-  return a && b && a.obs !== b.obs && a.level === b.level ? b.level : null;
+  return a && b && a.obs !== b.obs && (a.level === b.level || b.level === a.level + 1) ? b.level : null;
 }
 function targetOf2(ctx) {
   const g = ctx.mission.game;
@@ -6524,21 +6592,37 @@ var MissionRunner = class {
         }
         if ("unknown" in step && ctx.s.aiPlay) {
           if (!d.planner) return finish("NEEDS_ATTENTION", mission.appLabel + " has no built-in player. Connect an AI provider in Settings \u2192 AI so Falcor AI can play it, or teach Falcor the game.", { kind: "unsupported_game", reason: "No player for this game" });
-          if (ctx.s.wantFrame && d.allowVision && !obs.frame) {
+          if (ctx.s.wantFrame && d.allowVision && !obs.frame && Number(ctx.s.noPicture = Number(ctx.s.noPicture || 0) + 1) <= 3) {
             obs = await look();
             visits.set(key2, seen - 1);
             continue;
           }
           const ahead = ctx.s.ahead;
-          if (ahead && ahead.moves.length && ahead.pkg === obs.package) {
+          const uses = ctx.s.recalled || (ctx.s.recalled = /* @__PURE__ */ new Map());
+          const lvl = Number(ctx.s.levelLast ?? checkpoint?.level ?? 0);
+          const scene = drawnOnly(obs) && obs.frame && !(ahead && ahead.moves.length) ? recallScene(d.procedures, mission.appPackage, obs) : null, use = scene && uses.get(scene);
+          const since = ctx.s.sinceAsk || (ctx.s.sinceAsk = /* @__PURE__ */ new Set());
+          const held = d.holds && drawnOnly(obs) && obs.frame && !(ahead && ahead.moves.length) ? d.holds.suggest(mission.appPackage, obs.frame) : null;
+          const check = !!held && Number(ctx.s.fromMemory || 0) >= 5;
+          if (held && !check) {
+            ctx.s.fromMemory = Number(ctx.s.fromMemory || 0) + 1;
+            step = { act: held.ms ? { kind: "long_press", x: held.x, y: held.y, ms: held.ms } : { kind: "tap", x: held.x, y: held.y }, expect: { kind: "changed" }, goal: (held.ms ? "Hold for " + held.ms + " ms" : "Tap") + " (" + held.why + ")", intent: "play" };
+          } else if (scene && !since.has(scene) && !(use && use.level === lvl && use.n >= 3)) {
+            since.add(scene);
+            uses.set(scene, { level: lvl, n: use && use.level === lvl ? use.n + 1 : 1 });
+            step = { act: scene.act, expect: { kind: "changed" }, goal: "Falcor AI (remembered): " + scene.label, intent: "play" };
+            ctx.s.remembered = scene;
+          } else if (ahead && ahead.moves.length && ahead.pkg === obs.package) {
             const a = ahead.moves.shift();
             step = { act: a, expect: a.kind === "wait" ? { kind: "none" } : { kind: "changed" }, goal: "Falcor AI (planned ahead): " + moveLabel(obs, a), intent: "play" };
           } else {
+            ctx.s.fromMemory = 0;
             if (++aiSteps > limits.maxAiSteps) return outOf("Falcor AI used its " + limits.maxAiSteps + " moves for this run without reaching the target.", "budget");
+            ctx.s.sinceAsk?.clear();
             const asked = await this.ask(obs, step.unknown, mission, signal, say, log, allowed, ctx);
             if ("handoff" in asked && /^(?:ai_rejected|ai_unavailable|low_confidence)$/.test(asked.handoff) && ++aiTrouble <= 3) {
               say(asked.reason + " Looking again.");
-              await d.sleep(1500 * aiTrouble, signal);
+              await d.sleep(500 * aiTrouble, signal);
               obs = await look();
               continue;
             }
@@ -6546,6 +6630,7 @@ var MissionRunner = class {
             aiTrouble = 0;
             ctx.s.ahead = "act" in asked && asked.then && asked.then.length ? { pkg: obs.package, moves: [...asked.then] } : void 0;
             step = "act" in asked && asked.intent === "navigate" ? { ...asked, intent: "play" } : asked;
+            if (check && held && held.ms && "act" in step && step.act.kind === "long_press") step = { ...step, act: { ...step.act, ms: held.ms }, goal: step.goal + " (held " + held.ms + " ms: " + held.why + ")" };
           }
         }
         if ("unknown" in step) {
@@ -6579,14 +6664,16 @@ var MissionRunner = class {
           say("Recovering: " + r.recover);
           if (r.action) obs = (await this.act(obs, { act: r.action, expect: { kind: "changed" }, goal: "Recover: " + r.recover, intent: "recover" }, { leaseId, seq: ++seq, allowed, limits, ctx, say })).after;
           else {
-            await d.sleep(1200, signal);
+            await d.sleep(600, signal);
             obs = await look();
           }
           continue;
         }
         if ("unknown" in step) return finish("NEEDS_ATTENTION", step.unknown, { kind: "needs_help", reason: step.unknown });
-        if (d.now() - obs.at > FRESH_MS) {
-          const fresh = await d.driver.observe(drawnOnly(obs) && obs.frame ? { frame: true } : void 0);
+        const pre = ctx.s.prefetched;
+        ctx.s.prefetched = null;
+        if (pre && d.driver.lastObservation === pre || d.now() - obs.at > FRESH_MS) {
+          const fresh = pre && d.now() - pre.at <= FRESH_MS && d.driver.lastObservation === pre ? pre : await d.driver.observe(drawnOnly(obs) && obs.frame ? { frame: true } : void 0);
           const why = stillValid(obs, fresh, step.act);
           if (why) {
             stats.replans++;
@@ -6594,6 +6681,13 @@ var MissionRunner = class {
             say("Planning again: " + why);
             visits.set(key2, seen - 1);
             obs = fresh;
+            if (drawnOnly(obs) && obs.frame) for (let i = 0; i < 6; i++) {
+              await d.sleep(700, signal);
+              const next = await d.driver.observe({ frame: true });
+              const settled2 = !!next.frame && !!obs.frame && sceneDiff(obs.frame, next.frame) < PLAN_MOVED;
+              obs = next;
+              if (settled2) break;
+            }
             continue;
           }
           obs = fresh;
@@ -6607,7 +6701,20 @@ var MissionRunner = class {
         }
         const res = await this.act(obs, step, { leaseId, seq: ++seq, allowed, limits, ctx, say });
         if (res.verdict !== "VERIFIED") ctx.s.ahead = void 0;
+        const recalled = ctx.s.remembered;
+        ctx.s.remembered = void 0;
+        if (recalled && res.verdict !== "VERIFIED") recalled.bad = true;
+        if (res.verdict === "VERIFIED" && !recalled && step.goal.startsWith("Falcor AI") && mission.type === "game_level" && drawnOnly(obs) && obs.frame && ["tap", "long_press", "swipe", "path"].includes(step.act.kind) && !(step.act.kind === "long_press" && d.holds)) rememberScene(d.procedures, mission.appPackage, obs, step.act, moveLabel(obs, step.act));
         actions++;
+        if (step.act.kind === "long_press" && step.intent === "play" && d.holds && drawnOnly(obs) && obs.frame && res.verdict !== "REJECTED" && res.verdict !== "NEEDS_ATTENTION") {
+          const h = await this.settleHold(obs, ctx), hold = step.act.kind === "long_press", ms2 = hold ? step.act.ms : 0;
+          const result = h.outcome === "moved" ? "ok" : (h.outcome === "back" || h.outcome === "unclear") && hold ? "missed" : "nothing";
+          d.holds.record(mission.appPackage, obs.frame, { x: step.act.x, y: step.act.y, ms: ms2 }, result, d.now());
+          if (hold) say(result === "ok" ? "The " + ms2 + " ms hold worked: the game moved on." : h.outcome === "unclear" ? "The " + ms2 + " ms hold: the screen never settled, so it is kept as a miss." : result === "missed" ? "The " + ms2 + " ms hold missed: the game came back to the same place." : "The " + ms2 + " ms hold did nothing (the game did not react there).");
+          ctx.s.holdShown = result === "missed" ? h.shown : null;
+          res.after = h.after;
+          res.verdict = result === "nothing" ? "NO_CHANGE" : "VERIFIED";
+        }
         if (step.intent === "watch_ad" && res.verdict !== "VERIFIED") ctx.s.watching = null;
         if (step.intent === "claim") {
           if (res.verdict === "VERIFIED") {
@@ -6641,7 +6748,7 @@ var MissionRunner = class {
           }
         } else if (res.verdict === "NEEDS_ATTENTION") {
         } else if (res.verdict === "NO_CHANGE" || res.verdict === "UNCERTAIN" || res.verdict === "STALE") {
-          if (res.verdict === "NO_CHANGE" && step.act.kind !== "wait" && step.act.kind !== "key" && step.act.kind !== "launch" && !step.goal.startsWith("Falcor AI (planned ahead)")) {
+          if (res.verdict === "NO_CHANGE" && step.act.kind !== "wait" && step.act.kind !== "key" && step.act.kind !== "launch" && !step.goal.startsWith("Falcor AI (planned ahead)") && !step.goal.startsWith("Falcor AI (remembered)")) {
             const all = ctx.s.noEffect || (ctx.s.noEffect = {}), k = steadyKey(obs);
             all[k] = [.../* @__PURE__ */ new Set([...all[k] || [], moveLabel(obs, step.act)])];
           }
@@ -6702,6 +6809,7 @@ var MissionRunner = class {
       return { verdict: "REJECTED", after: after2, error: ack.error, code: ack.code };
     }
     const settle = step.intent === "claim" ? limits.claimSettleMs : limits.settleMs, until = d.now() + settle;
+    const watched = step.act.kind === "long_press" && step.intent === "play" && !!d.holds && drawnOnly(before) && !!before.frame;
     let after = before, verdict = "STALE";
     let polls = 0;
     do {
@@ -6710,13 +6818,41 @@ var MissionRunner = class {
       after = await d.driver.observe(drawnOnly(before) && before.frame ? { frame: true } : void 0);
       verdict = verify(step.expect, before, after, ack, { prices: ctx.prices });
       if (verdict === "VERIFIED" || verdict === "NEEDS_ATTENTION" || step.expect.kind === "none" && verdict !== "STALE") break;
+      if (watched) break;
     } while (d.now() < until);
     if (step.expect.kind === "none" && verdict !== "STALE" && verdict !== "REJECTED") verdict = "VERIFIED";
     ctx.lastVerdict = verdict;
     if (verdict === "NO_CHANGE") ctx.stats.noEffect++;
-    if (verdict !== "VERIFIED") say("Not verified (" + verdict + "): " + step.goal);
+    if (verdict !== "VERIFIED" && !watched) say("Not verified (" + verdict + "): " + step.goal);
     if (box) d.onTarget?.({ ...box, state: verdict === "VERIFIED" ? "verified" : "failed" });
     return { verdict, after };
+  }
+  // After a hold: pictures every 400 ms until the scene comes back to the one before it (back: the hold missed, the player
+  // fell and stands where it stood), or a new scene holds steady (the game moved on), 8 s at most. A real game never
+  // matches its old picture exactly (clouds, sparkles, an idle character): measured on Animals & Coins, a respawn after a
+  // miss is ~4.5 from the picture before, a crossing ~40, a settled frame ~2 from the one before it. The picture least
+  // like the one before (the game's own "too short" or "perfect") is kept for Falcor AI.
+  // (miss 4.5 of 28 = 0.16: back; crossing 40 of 40: moved)
+  async settleHold(before, ctx) {
+    const d = this.d, began = d.now(), until = began + HOLD_WATCH_MS;
+    let after = before, prev = null, shown = null, most = 0, steady = 0, settled = false;
+    while (d.now() < until) {
+      await d.sleep(400, ctx.signal);
+      after = await d.driver.observe({ frame: true });
+      if (!after.frame || !before.frame || after.package !== before.package) return { after, outcome: "moved", shown };
+      const diff2 = sceneDiff(before.frame, after.frame);
+      if (diff2 > most) {
+        most = diff2;
+        shown = after.frame;
+      }
+      if (most >= HOLD_NOTHING && diff2 <= most * HOLD_BACK) return { after, outcome: "back", shown };
+      steady = prev?.frame && sceneDiff(prev.frame, after.frame) < HOLD_STEADY ? steady + 1 : 0;
+      settled ||= steady >= 2;
+      if (most >= HOLD_NOTHING && diff2 >= most * HOLD_MOVED && steady >= 3 && d.now() - began >= 3e3) return { after, outcome: "moved", shown };
+      prev = after;
+    }
+    const last = after.frame && before.frame ? sceneDiff(before.frame, after.frame) : 0;
+    return { after, outcome: most < HOLD_NOTHING ? "nothing" : !settled ? "unclear" : last <= most * HOLD_BACK ? "back" : "moved", shown };
   }
   // Unfamiliar screen: Falcor AI may propose one action as strict JSON; it is checked against the screen and the
   // mission's app, and anything below 60% confidence (40% for a game's move), any handoff, and any claim of being "done" goes to the owner. An
@@ -6728,18 +6864,22 @@ var MissionRunner = class {
     say("Asking Falcor AI: " + why);
     const input = {
       mission: { type: mission.type, objective: redact(mission.objective), app: mission.appPackage },
+      // (right after a missed hold, the picture that shows how it went: the game's "too short" or "too long")
       observation: {
         id: obs.id,
         package: obs.package,
         rotation: obs.rotation,
         size: [obs.width, obs.height],
-        screenshot: d.allowVision && obs.frame ? obs.frame.data : null,
+        screenshot: d.allowVision && obs.frame ? (ctx.s.holdShown || obs.frame).data : null,
         nodes: obs.nodes ? onTop(obs.nodes).filter((n) => (n.text || n.desc || n.clickable || n.editable) && !isSurface(obs, n)).slice(0, 120).map((n) => ({ text: n.password ? "" : redact(n.text).slice(0, 80), desc: redact(n.desc).slice(0, 80), id: n.resourceId.split("/").pop() || "", bounds: [n.bounds.l, n.bounds.t, n.bounds.r, n.bounds.b], clickable: n.clickable, editable: n.editable })) : null
       },
       // A game gets its last 12 moves and what they did (cards seen, moves that failed), so it plays on what it learned.
       recent: log.filter((l) => !l.startsWith("Asking Falcor AI")).slice(mission.type === "game_level" ? -12 : -4),
-      tools: ["selector", "point", "key", "wait", "handoff", "done"]
+      tools: ["selector", "point", "drag", "path", "hold", "key", "wait", "handoff", "done"]
     };
+    if (ctx.s.holdShown) input.recent.push("Your last hold missed; this picture was taken right after it: answer lastHold from the game's words.");
+    if (d.holds && drawnOnly(obs)) input.recent.push(...d.holds.notes(mission.appPackage, obs.frame));
+    ctx.s.holdShown = null;
     const tried = (ctx.s.noEffect || {})[steadyKey(obs)] || [];
     const harmful = (ctx.stats.harmful || []).map((h) => describeSelector({ text: h }) + " (it took the level down)");
     if (tried.length || harmful.length) input.didNothing = [...harmful, ...tried.slice(-8)];
@@ -6748,8 +6888,26 @@ var MissionRunner = class {
       try {
         const t0 = d.now();
         ctx.stats.aiCalls++;
-        raw = await Promise.race([d.planner(input, signal), new Promise((_, reject) => signal.addEventListener("abort", () => reject(new Stopped("Stopped while planning.")), { once: true }))]);
+        let thinking = true, fresh = null;
+        const watch = (async () => {
+          while (thinking && !signal.aborted) {
+            await new Promise((r) => setTimeout(r, PREFETCH_GAP_MS));
+            if (!thinking) break;
+            try {
+              fresh = await d.driver.observe(drawnOnly(obs) && obs.frame ? { frame: true } : void 0);
+            } catch {
+              break;
+            }
+          }
+        })();
+        try {
+          raw = await Promise.race([d.planner(input, signal), new Promise((_, reject) => signal.addEventListener("abort", () => reject(new Stopped("Stopped while planning.")), { once: true }))]);
+        } finally {
+          thinking = false;
+          await watch;
+        }
         ctx.stats.planMs.push(d.now() - t0);
+        ctx.s.prefetched = fresh;
       } catch (e) {
         if (e instanceof Stopped) throw e;
         return { handoff: "ai_unavailable", reason: why + " Falcor AI did not answer (" + (e instanceof Error ? e.message : "error") + ")." };
@@ -6760,9 +6918,10 @@ var MissionRunner = class {
           const r = ctx.s.aiLevels || (ctx.s.aiLevels = []);
           r.push({ obs: obs.id, level: plan.level });
         }
+        if ((plan.lastHold === "short" || plan.lastHold === "long") && d.holds) d.holds.read(mission.appPackage, plan.lastHold);
         if (plan.method === "handoff" || plan.method === "done") return { handoff: "ai_" + plan.method, reason: "Falcor AI: " + (plan.evidence || why) };
-        if (moneyIntent(plan.evidence + " " + plan.expectedEffect)) {
-          say('Refused a press that may cost money ("' + redact(String(plan.expectedEffect || plan.evidence)).slice(0, 80) + `"). Purchases are the owner's alone.`);
+        if (moneyIntent(plan.evidence + " " + plan.expectedEffect) && !dismissIntent(plan.expectedEffect) && !coinSpend(plan.evidence + " " + plan.expectedEffect)) {
+          say('Refused a press that may cost money ("' + redact(String(plan.expectedEffect || "")).slice(0, 80) + '"; seen: "' + redact(String(plan.evidence || "")).slice(0, 80) + `"). Purchases are the owner's alone.`);
           throw new ActionError("that press may cost real money (a price, a purchase, a store offer). Never propose purchases; pick a free move.");
         }
         if (plan.confidence < (mission.type === "game_level" ? 0.4 : 0.6) || !action) return { handoff: "low_confidence", reason: why + " Falcor AI is not sure (" + Math.round(plan.confidence * 100) + "%)." };
@@ -6841,7 +7000,7 @@ function stillValid(before, fresh, a) {
   if (a.kind === "tap_node") return find(fresh.nodes, a.selector) ? null : "what it meant to press (" + describeSelector(a.selector) + ") is no longer on the screen.";
   if (a.kind === "tap" || a.kind === "long_press" || a.kind === "swipe" || a.kind === "path") {
     if (fresh.uiSignature !== before.uiSignature) return "the screen changed while Falcor was planning.";
-    if (drawnOnly(before) && drawnOnly(fresh)) return before.frame && fresh.frame && sceneDiff(before.frame, fresh.frame) < SCENE_MOVED ? null : "the game's picture changed while Falcor was planning.";
+    if (drawnOnly(before) && drawnOnly(fresh)) return before.frame && fresh.frame && sceneDiff(before.frame, fresh.frame) < PLAN_MOVED ? null : "the game's picture changed while Falcor was planning.";
     return fresh.textHash === before.textHash ? null : "the screen changed while Falcor was planning.";
   }
   return null;
@@ -7007,6 +7166,7 @@ var Orchestrator = class _Orchestrator {
       onTarget: (t) => this.emit({ type: "target", deviceId, target: t }),
       recipes: d.recipes,
       avoid: d.avoid,
+      holds: d.holds,
       ads: d.ads,
       allowVision: !!d.vision?.(),
       claims: {
@@ -7151,6 +7311,82 @@ var Orchestrator = class _Orchestrator {
   }
   running(deviceId) {
     return this.active.get(deviceId) || null;
+  }
+};
+
+// src/automation/android/holds.ts
+var SAME = 8;
+var ALIKE = 30;
+var KEEP = 300;
+var V = 2;
+var HoldMemory = class {
+  store;
+  constructor(store) {
+    this.store = { load: (pkg) => store.load(pkg).filter((t) => t.v === V), save: (pkg, t) => store.save(pkg, t) };
+  }
+  // The move to make on this scene without asking anyone (ms 0: a tap), or null.
+  suggest(pkg, frame) {
+    const key2 = frame && sceneKey(frame);
+    if (!key2) return null;
+    const all = this.store.load(pkg), here = all.filter((t) => keyDiff(t.key, key2) < SAME), last = here.at(-1);
+    if (all.at(-1)?.result === "nothing") return null;
+    const good = all.filter((t) => t.result === "ok" && t.ms > 0).map((t) => t.ms).sort((a, b) => a - b);
+    if (good.length && last?.result === "missed") return null;
+    const ok = [...here].reverse().find((t) => t.result === "ok" && !here.some((m) => m.at > t.at && m.result !== "ok" && Math.abs(m.ms - t.ms) < 15));
+    if (ok) return { x: ok.x, y: ok.y, ms: ok.ms, why: "the " + (ok.ms ? "hold" : "tap") + " that worked on this scene before" };
+    const short = here.filter((t) => t.result === "short").map((t) => t.ms), long = here.filter((t) => t.result === "long").map((t) => t.ms);
+    const lo = short.length ? Math.max(...short) : 0, hi = long.length ? Math.min(...long) : 0;
+    if (good.length && lo && hi && hi - lo >= 30) return { x: last.x, y: last.y, ms: Math.round((lo + hi) / 2), why: "between " + lo + " ms (too short) and " + hi + " ms (too long) on this scene" };
+    if (good.length && lo && !hi) {
+      const ms3 = good.find((m) => m >= lo + 40) ?? Math.round(lo * 1.3);
+      return { x: last.x, y: last.y, ms: ms3, why: lo + " ms was too short here" };
+    }
+    if (good.length && hi && !lo) {
+      const ms3 = [...good].reverse().find((m) => m <= hi - 40) ?? Math.round(hi * 0.7);
+      return { x: last.x, y: last.y, ms: ms3, why: hi + " ms was too long here" };
+    }
+    const worked = all.filter((t) => t.result === "ok" && t.ms > 0), like = worked.filter((t) => keyDiff(t.key, key2) < ALIKE);
+    const missed = all.filter((t) => t.ms > 0 && t.result !== "ok" && t.result !== "nothing" && keyDiff(t.key, key2) < ALIKE);
+    if (!worked.length && missed.length >= 2) {
+      const ms3 = missed.map((t) => t.ms), tried = (m) => ms3.some((x) => Math.abs(x - m) < 40), at2 = missed.at(-1);
+      for (const m of [Math.round(Math.min(...ms3) * 0.55), Math.round(Math.min(...ms3) * 0.35), Math.round(Math.max(...ms3) * 1.5)]) if (m >= 150 && m <= 8e3 && !tried(m)) return { x: at2.x, y: at2.y, ms: m, why: "nothing has worked yet; " + ms3.length + " holds of " + Math.min(...ms3) + "\u2013" + Math.max(...ms3) + " ms missed" };
+    }
+    if (here.length) return null;
+    if (!like.length) return null;
+    const ms2 = [...worked.slice(-9).map((t) => t.ms)].sort((a, b) => a - b), mid = ms2[Math.floor(ms2.length / 2)], at = like.at(-1);
+    return { x: at.x, y: at.y, ms: mid, why: "the usual hold in this game (the middle of " + ms2.length + " that worked)" };
+  }
+  record(pkg, frame, t, result, now) {
+    const key2 = frame && sceneKey(frame);
+    if (!key2) return;
+    const all = this.store.load(pkg), ms2 = Math.round(t.ms || 0);
+    if (result === "missed" && ms2 > 0) {
+      const ok = all.filter((x) => x.result === "ok" && x.ms > 0 && keyDiff(x.key, key2) < ALIKE).map((x) => x.ms);
+      if (ok.length && ms2 < Math.min(...ok)) result = "short";
+      else if (ok.length && ms2 > Math.max(...ok)) result = "long";
+    }
+    this.store.save(pkg, [...all, { key: key2, x: t.x, y: t.y, ms: ms2, result, at: now, v: V }].slice(-KEEP));
+  }
+  // Falcor AI read how the last miss went (the game's "too short" or "too long").
+  read(pkg, result) {
+    const all = this.store.load(pkg), last = all.at(-1);
+    if (last?.result === "missed" && last.ms > 0 && all.some((t) => t.result === "ok" && t.ms > 0)) {
+      last.result = result;
+      this.store.save(pkg, all);
+    }
+  }
+  // What Falcor AI is told before it picks a hold (one line each): this scene's tries, the holds that worked in this game.
+  notes(pkg, frame) {
+    const key2 = frame && sceneKey(frame), all = this.store.load(pkg).filter((t) => t.ms > 0);
+    const here = key2 ? all.filter((t) => keyDiff(t.key, key2) < SAME) : [], good = all.filter((t) => t.result === "ok"), ok = good.map((t) => t.ms), at = good.at(-1);
+    const words2 = { ok: "worked", short: "too short", long: "too long", missed: "missed", nothing: "did nothing" };
+    const parts = [
+      here.length ? "Holds on this very scene: " + here.slice(-6).map((t) => t.ms + " ms " + words2[t.result]).join(", ") + "." : "",
+      ok.length ? "Holds that worked in this game: " + Math.min(...ok) + "\u2013" + Math.max(...ok) + " ms (" + ok.length + "), pressed at x " + at.x.toFixed(2) + ", y " + at.y.toFixed(2) + "." : "",
+      // (every recent hold of the game, so a length that keeps missing is never chosen again)
+      all.length ? "Last holds in this game: " + all.slice(-10).map((t) => t.ms + " ms " + words2[t.result]).join(", ") + "." + (ok.length ? "" : " None has worked yet: choose a clearly different length.") : ""
+    ].filter(Boolean);
+    return parts;
   }
 };
 
@@ -8192,7 +8428,8 @@ var MSTATE_LABEL = { not_started: "Not started", in_progress: "In progress", goa
 var RANK = { not_started: 0, in_progress: 1, expired: 1, goal_reached: 2, provider_confirmed: 3, pending_credit: 4, credited: 5, paid_out: 6 };
 var REACHED = /* @__PURE__ */ new Set(["goal_reached", "provider_confirmed", "pending_credit", "credited", "paid_out"]);
 var PAID = /\b(?:purchase|buy|spend|deposit|subscribe|subscription|pay|in-app|iap|starter pack|bundle|cashback)\b/i;
-var clip2 = (v, n) => redact(String(v ?? "").replace(/\s+/g, " ").trim()).slice(0, n);
+var plainText = (v) => String(v ?? "").replace(/[\p{Co}​-‍⁠︎️﻿]/gu, "").replace(/\s+/g, " ").trim();
+var clip2 = (v, n) => redact(plainText(v)).slice(0, n);
 var MAX_MILESTONES = 200;
 var NUM = "(\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?|\\d+(?:\\.\\d+)?)(\\s?[kKmM](?![a-zA-Z]))?";
 var CUR = "(us\\$|\\$|\u20AC|\xA3|usd|eur|gbp|\u{1FA99}|\u{1F4B0}|\u{1F48E})";
@@ -8255,7 +8492,7 @@ var STATUS_LABEL = /^(?:current|your|my|best|highest|today'?s?|level reward|rewa
 var MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 var DATED = /\b(expires?|ends?|until|valid until|deadline|closes?|started|activated|installed|joined)\b(?:\s+on)?\s*:?\s*(?:(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?|(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?)/i;
 var CAMPAIGN = /\b(?:offer|campaign)\s*(?:id|#|no\.?)\s*[:#]?\s*([A-Za-z0-9-]{3,40})\b|^id\s*[:#]\s*([A-Za-z0-9-]{3,40})$/i;
-var REQ = /\b(level|lvl|section|stage|chapter|world|wave|floor|round|day|rank|tier|area|zone|mission|quest|match)\s*#?\s*(\d[\d,]*)/gi;
+var REQ = /\b(level|lvl|section|stage|chapter|world|kingdom|island|village|city|realm|wave|floor|round|day|rank|tier|area|zone|mission|quest|match)\s*#?\s*(\d[\d,]*)/gi;
 var OBJECTIVE = /^(?:reach|complete|finish|install|open|play|win|collect|get|unlock|score|beat|clear|pass|log in|login|sign up|register|purchase|buy|spend|deposit|make)\b/i;
 var GENRES = "(?:puzzle|strategy|casual|rpg|role[- ]playing|action|adventure|arcade|simulation|word|trivia|card|board|racing|sport|casino|match[- ]3|merge|idle|shooter|tower defense|gaming|game)s?";
 var GENRE_LINE = new RegExp("^(?:genre:\\s*)?(" + GENRES + ")(?:\\s*[,/\xB7&|]\\s*(?:" + GENRES + "))*(?:\\s+games?)?$", "i");
@@ -8341,7 +8578,7 @@ function unitless(lines) {
   return out;
 }
 function parseLines(rawLines, sourcePkg, sourceName, now) {
-  const lines = unitless(rawLines);
+  const lines = unitless(rawLines.map(plainText).filter(Boolean));
   const milestones = [];
   let campaignAt = -1, total = null, head = null, firstMilestone = lines.length, campaignId = null, genre = null;
   let deadline = { kind: "unknown", expiresAt: null, durationDays: null, startedAt: null, source: "" };
@@ -10665,7 +10902,7 @@ var TRIGGER2 = { autopilot: "Autopilot", ready: "Run Ready", auto: "Automatic St
 var PHONE = /* @__PURE__ */ new Set(["locked", "disconnected", "unauthorized", "offline", "timeout"]);
 var RECOVER = /* @__PURE__ */ new Set(["phone", "sleep", "lease", "closed"]);
 var SCAN = 8 * DAY2;
-var KEEP = 90 * DAY2;
+var KEEP2 = 90 * DAY2;
 var causeOf = (why) => /owner took control/i.test(why) ? "human" : /emergency/i.test(why) ? "emergency" : /autopilot (?:was )?turned off/i.test(why) ? "off" : /paused by you/i.test(why) ? "task" : /asleep/i.test(why) ? "sleep" : /disconnect|not connected|cable/i.test(why) ? "phone" : /closed/i.test(why) ? "closed" : "lease";
 var isFinal = (o) => ENDED.has(o.status) || (o.status === "BLOCKED" || o.status === "WAITING_FOR_USER") && o.endedAt !== null;
 var sentence = (s2) => {
@@ -10802,8 +11039,8 @@ var DailyQueue = class {
     }
   }
   prune() {
-    this.w("DELETE FROM queue_occurrences WHERE at<?", [this.now() - KEEP], false);
-    this.w("DELETE FROM queue_sessions WHERE started_at<?", [this.now() - KEEP]);
+    this.w("DELETE FROM queue_occurrences WHERE at<?", [this.now() - KEEP2], false);
+    this.w("DELETE FROM queue_sessions WHERE started_at<?", [this.now() - KEEP2]);
   }
   // ---------------------------------------------------------------- what can be scheduled, and its readiness
   // A game's automation: its task (a challenge approved to run), else a Sandbox sequence that opens it. A game listed only
@@ -12007,7 +12244,7 @@ function localPlaybook(old, r) {
     controls: old?.controls || []
   };
 }
-var playbookGuide = (name, p) => !p || !(p.rules.length + p.works.length + p.avoid.length + p.controls.length) ? "" : ("PLAYBOOK for " + name + " (what Falcor learned in " + p.sessions + " session" + (p.sessions === 1 ? "" : "s") + " of play; the screen decides): " + [p.rules.length ? "Rules: " + p.rules.join(" / ") : "", p.controls.length ? "Controls: " + p.controls.join(" / ") : "", p.works.length ? "Works: " + p.works.join(" / ") : "", p.avoid.length ? "Avoid: " + p.avoid.join(" / ") : ""].filter(Boolean).join(" | ")).slice(0, 1600);
+var playbookGuide = (name, p) => !p || !(p.rules.length + p.works.length + p.avoid.length + p.controls.length + (p.owner?.length || 0)) ? "" : ("PLAYBOOK for " + name + " (what Falcor learned in " + p.sessions + " session" + (p.sessions === 1 ? "" : "s") + " of play; the screen decides): " + [p.owner?.length ? "The owner says (follow it): " + p.owner.join(" / ") : "", p.rules.length ? "Rules: " + p.rules.join(" / ") : "", p.controls.length ? "Controls: " + p.controls.join(" / ") : "", p.works.length ? "Works: " + p.works.join(" / ") : "", p.avoid.length ? "Avoid: " + p.avoid.join(" / ") : ""].filter(Boolean).join(" | ")).slice(0, 1600);
 var quotedLabels = (items) => items.filter((w) => /\bnever (?:press|tap)\b/i.test(w)).flatMap((w) => [...w.matchAll(/["\u201c\u2018]([^"\u201c\u201d\u2018\u2019]{2,40})["\u201d\u2019]/g)].map((m) => m[1].trim().toLowerCase())).slice(0, 10);
 var MIN2 = 6e4;
 var MAX_DRY = 3;
@@ -12134,8 +12371,19 @@ var GameAutopilot = class {
       by = "local";
     }
     for (const h of r.stats?.harmful || []) if (!quotedLabels(next.avoid).includes(h.toLowerCase())) next.avoid = ['Never press "' + h + '": it took the level down (progress lost).', ...next.avoid].slice(0, 8);
-    this.store.set("playbook:" + pkg, JSON.stringify({ ...next, sessions: (old?.sessions || 0) + 1, updatedAt: this.e.now(), by }));
+    const owner = this.playbook(pkg)?.owner || old?.owner || [];
+    this.store.set("playbook:" + pkg, JSON.stringify({ ...next, ...owner.length ? { owner } : {}, sessions: (old?.sessions || 0) + 1, updatedAt: this.e.now(), by }));
     this.e.notify();
+  }
+  // The owner's own words about the game, kept in its playbook for every move (and every later session) to follow.
+  tell(pkg, text2) {
+    const t = String(text2 ?? "").replace(/\s+/g, " ").trim().slice(0, 300);
+    if (!t) throw new Error("Say what Falcor should know about the game.");
+    const old = this.playbook(pkg) || { rules: [], works: [], avoid: [], controls: [], sessions: 0, updatedAt: 0, by: "local" };
+    const owner = [...(old.owner || []).filter((x) => x.toLowerCase() !== t.toLowerCase()), t].slice(-12);
+    this.store.set("playbook:" + pkg, JSON.stringify({ ...old, owner, updatedAt: this.e.now() }));
+    this.e.notify();
+    return { owner };
   }
   // What the owner can aim at on a game's page: the next level, the next offer milestone that is a level, an existing
   // task for the game, or a level they type.
@@ -12346,14 +12594,17 @@ var GameAutopilot = class {
     const cur = await this.store.getMission(m.id);
     if (cur && cur.state === "NEEDS_ATTENTION") await this.e.taskAction(m.id, "resume").catch(() => null);
     const tz = this.e.queue.tz(), at = Math.ceil(step.at / MIN2) * MIN2;
+    const until = c.planId ? this.e.plans.horizon(pkg) : 0;
+    const rule = c.planId && until > at ? { kind: "daily", time: hhmm(at, tz) } : { kind: "once", date: dayKey(at, tz), time: hhmm(at, tz) };
     const plan = {
       target: { type: "mission", id: m.id },
       kind: "game",
-      name: c.name + " \xB7 Game Autopilot",
+      name: c.name + (c.planId ? " \xB7 Smart Playbook" : " \xB7 Game Autopilot"),
       pkg,
       deviceId: c.deviceId,
-      rule: { kind: "once", date: dayKey(at, tz), time: hhmm(at, tz) },
+      rule,
       tz,
+      ...rule.kind === "daily" ? { startDate: dayKey(at, tz), endDate: dayKey(until, tz) } : { startDate: null, endDate: null },
       autoStart: true,
       maxAttempts: 1,
       retry: "never",
@@ -12417,10 +12668,12 @@ var GameAutopilot = class {
 
 // src/plans.ts
 var NOTE = "Runs automatically at scheduled times even when Phone Autopilot is off. Requires Falcor Hub running and your phone connected.";
+var HORIZON_DAYS = 90;
+var DAY3 = 864e5;
 var STRATS = { quick: "Quick Rewards: the nearest milestone first, then stop", balanced: "Balanced: every level milestone that fits before the deadline", max: "Maximum Rewards: every level milestone, also past the estimate" };
 var levelIn2 = (t) => {
   const r = requirementOf(t);
-  return r && ["level", "stage", "section", "chapter", "world", "round", "wave", "floor"].includes(r.kind) ? r.value : null;
+  return r && ["level", "stage", "section", "chapter", "world", "kingdom", "island", "village", "city", "realm", "round", "wave", "floor"].includes(r.kind) ? r.value : null;
 };
 var GamePlans = class {
   constructor(e) {
@@ -12464,7 +12717,7 @@ var GamePlans = class {
           msId: m.id,
           offerId: o.id,
           source: o.source.name,
-          text: m.text,
+          text: plainText(m.text),
           level: n,
           amount: m.amount,
           unit: m.unit || "points",
@@ -12538,13 +12791,26 @@ var GamePlans = class {
       return true;
     }).map((s2) => ({ id: s2, label: STRATS[s2] }));
   }
+  // The last day a playbook's sessions are scheduled: the offer's deadline, at most HORIZON_DAYS from now.
+  horizon(pkg) {
+    const p = this.stored(pkg), at = p?.deadline.at ?? this.ladder(pkg, null).deadline.at, cap = this.e.now() + HORIZON_DAYS * DAY3;
+    return at !== null && at < cap ? at : cap;
+  }
+  // What the milestones left are worth, per unit (never added across units).
+  potential(p) {
+    const by = /* @__PURE__ */ new Map();
+    for (const s2 of p.steps) if (s2.state === "todo" && s2.amount !== null) by.set(s2.unit, Math.round(((by.get(s2.unit) || 0) + s2.amount) * 100) / 100);
+    return [...by].map(([unit2, amount]) => ({ unit: unit2, amount }));
+  }
   // What a game's page shows: the stored plan (refreshed against the offer while still a draft) or a fresh draft.
   view(pkg, level) {
     const s2 = this.stored(pkg), c = this.e.autopilot.get(pkg);
     let p = s2 && s2.status !== "draft" ? s2 : this.draft(pkg, s2?.strategy || "balanced", level);
     if ((p.status === "active" || p.status === "paused") && c && c.planId === p.id) p = { ...p, status: c.paused ? "paused" : c.active ? "active" : "ended", ended: c.active || c.paused ? p.ended : c.ended };
     const next = p.steps.find((x) => x.state === "todo") || null;
-    return { plan: p, next, strategies: this.strategies(pkg, level), runnable: !!next, note: NOTE, nextAt: c && c.planId === p.id ? c.nextAt : null, nextWhy: c && c.planId === p.id ? c.nextWhy : "" };
+    const own = !!c && c.planId === p.id, until = this.horizon(pkg), from = own && c.nextAt ? c.nextAt : this.e.now();
+    const calendar = { from, until, days: Math.max(0, Math.ceil((until - from) / DAY3)), horizonDays: HORIZON_DAYS, byDeadline: p.deadline.at !== null && p.deadline.at <= until };
+    return { plan: p, next, strategies: this.strategies(pkg, level), runnable: !!next && next.level !== null, note: NOTE, nextAt: own ? c.nextAt : null, nextWhy: own ? c.nextWhy : "", potential: this.potential(p), calendar };
   }
   // One call for the window and the phone app: view, generate (a draft with a strategy), run (approve and start), pause,
   // resume, stop.
@@ -12621,6 +12887,19 @@ var GamePlans = class {
   next(pkg, planId, target) {
     const p = this.stored(pkg);
     if (!p || p.id !== planId) return null;
+    const fresh = this.ladder(pkg, target);
+    for (const f of fresh.steps) {
+      const have = p.steps.find((x) => x.msId === f.msId);
+      if (!have && f.state === "todo" && f.level !== null) {
+        p.steps.push(f);
+        this.log(p, "Added from the offer: " + f.text + ".");
+      } else if (have && have.state === "todo" && f.state === "reached") {
+        have.state = "reached";
+        have.reachedAt = this.e.now();
+      }
+    }
+    p.steps.sort((a, b) => (a.level ?? 1e9) - (b.level ?? 1e9));
+    if (fresh.deadline.at !== null) p.deadline = fresh.deadline;
     for (const s2 of p.steps) if (s2.state === "todo" && s2.level !== null && target !== null && s2.level <= target) {
       s2.state = "reached";
       s2.reachedAt = this.e.now();
@@ -13168,6 +13447,7 @@ var HubEngine = class _HubEngine {
       recipes: this.o.recipes,
       avoid: this.o.avoid,
       vision: this.o.vision,
+      holds: new HoldMemory({ load: (pkg) => this.kv("holds:" + pkg, []), save: (pkg, t) => this.setKv("holds:" + pkg, t) }),
       ads: { allowed: (pkg) => this.adsOn(pkg), present: () => !!this.o.present?.() },
       held: (id) => !!this.queue?.held(id),
       reserved: (id) => !!this.queue?.reserved(id),
@@ -14373,7 +14653,7 @@ var HubEngine = class _HubEngine {
       }
       for (const m of missions) await this.taskAction(m.id, "remove").catch(() => null);
       this.coachWait.delete(key2);
-      for (const k of ["training:", "coach:", "skills:", "plan:"]) this.o.store.set(k + key2, "null");
+      for (const k of ["training:", "coach:", "skills:", "plan:", "holds:"]) this.o.store.set(k + key2, "null");
       this.o.forgetApp?.(key2);
     }
     for (const o of offers) this.removeOffer(o.id);
@@ -15153,6 +15433,7 @@ function inputText(text2) {
   if (!/^[\x20-\x7e]{1,500}$/.test(text2)) throw new ActionError("The phone's text input takes plain ASCII text (1 to 500 characters).");
   return q(text2.replace(/%/g, "%%").replace(/ /g, "%s"));
 }
+var POWER_MARK = "__falcor_power__";
 var APK_PATH = /^(?!.*\.\.)\/data\/app\/[\w.~=+\-/]{1,300}\/base\.apk$/;
 var ADB = {
   version: () => ["version"],
@@ -15161,6 +15442,8 @@ var ADB = {
   getprop: (s2, prop) => ["-s", s2, "shell", "getprop " + prop],
   window: (s2) => ["-s", s2, "shell", "dumpsys window"],
   power: (s2) => ["-s", s2, "shell", "dumpsys power"],
+  // Both in one round trip, only the lines Falcor reads (the full window dump is large and slow to send).
+  state: (s2) => ["-s", s2, "shell", "dumpsys window | grep -E 'mCurrentFocus|mFocusedApp|mResumedActivity|otation|ockscreen|eyguard'; echo " + POWER_MARK + "; dumpsys power | grep -E 'mWakefulness|Display Power'"],
   battery: (s2) => ["-s", s2, "shell", "dumpsys battery"],
   wmSize: (s2) => ["-s", s2, "shell", "wm size"],
   uiDump: (s2) => ["-s", s2, "exec-out", "uiautomator dump /dev/tty"],
@@ -15252,6 +15535,11 @@ async function listDevices(exec) {
   const r = await exec([...ADB.devices()], { timeoutMs: 1e4 });
   return parseDevices(String(r.stdout));
 }
+var INFO_MS = 500;
+var SURFACE_MS = 1e4;
+function pictureOnly(nodes, w, h) {
+  return !nodes || !nodes.length || drawnOnly({ nodes, width: w, height: h });
+}
 var AdbDriver = class {
   deviceId;
   serial;
@@ -15286,43 +15574,83 @@ var AdbDriver = class {
     }
     return { model: this.model, androidVersion: this.androidVersion };
   }
-  async info() {
+  // A look and the gate's check right before a press share one reading of the phone's state when they come within
+  // INFO_MS of each other (callers at the same moment share the same request).
+  infoAt = 0;
+  infoP = null;
+  info() {
+    if (this.infoP && this.now() - this.infoAt < INFO_MS) return this.infoP;
+    this.infoAt = this.now();
+    const p = this.readInfo();
+    this.infoP = p;
+    p.catch(() => {
+      if (this.infoP === p) this.infoP = null;
+    });
+    return p;
+  }
+  async readInfo() {
     const base = { id: this.deviceId, label: this.label, model: this.model, serialHint: this.serial.slice(-4), androidVersion: this.androidVersion };
     if (this.state === "unauthorized") return { ...base, connected: true, authorized: false, locked: false, rotation: 0, foreground: "" };
     if (this.state !== "device") return { ...base, connected: false, authorized: false, locked: false, rotation: 0, foreground: "" };
     await this.describe();
-    const [win2, power] = await Promise.all([this.sh(ADB.window(this.serial)), this.sh(ADB.power(this.serial))]);
+    let [win2, power] = (await this.sh(ADB.state(this.serial))).split(POWER_MARK);
+    if (power === void 0 || !/mWakefulness|Display Power/.test(power)) [win2, power] = await Promise.all([this.sh(ADB.window(this.serial)), this.sh(ADB.power(this.serial))]);
     return { ...base, model: this.model, androidVersion: this.androidVersion, connected: true, authorized: true, locked: lockedFrom(win2, power), rotation: rotationOf(win2), foreground: foregroundOf(win2) };
   }
-  async observe(opts = {}) {
-    const info = await this.info();
-    if (!info.connected) throw new DeviceError("The phone is not connected.", "DISCONNECTED");
-    if (!info.authorized) throw new DeviceError("USB debugging is not authorized.", "UNAUTHORIZED");
+  // A game drawn as one picture (Unity, GL) gives uiautomator nothing but its surface, and only after waiting for a
+  // stillness that never comes: for SURFACE_MS after such a dump, looks at that app reuse it and read only the picture.
+  surface = null;
+  drawn = null;
+  lastSurface = null;
+  async dump(picture) {
     let xml = "";
-    for (let i = 0; i < 3 && !/<hierarchy[\s>]/.test(xml); i++) {
+    for (let i = 0; i < (picture ? 1 : 3) && !/<hierarchy[\s>]/.test(xml); i++) {
       if (i) await new Promise((r) => setTimeout(r, 350));
       try {
-        xml = await this.sh(i === 1 ? ADB.uiDumpFile(this.serial) : ADB.uiDump(this.serial), 2e4);
+        xml = await this.sh(i === 1 ? ADB.uiDumpFile(this.serial) : ADB.uiDump(this.serial), picture ? 6e3 : 2e4);
       } catch (e) {
         if (e instanceof DeviceError && e.code !== "OFFLINE") throw e;
       }
     }
     const start = xml.indexOf("<?xml") >= 0 ? xml.indexOf("<?xml") : xml.indexOf("<hierarchy"), end = xml.lastIndexOf("</hierarchy>");
-    const nodes = start >= 0 && end > start ? parseUiXml(xml.slice(start, end + "</hierarchy>".length)) : null;
+    return start >= 0 && end > start ? parseUiXml(xml.slice(start, end + "</hierarchy>".length)) : null;
+  }
+  async capture() {
+    try {
+      const png = (await this.exec([...ADB.screencap(this.serial)], { binary: true, timeoutMs: 2e4 })).stdout;
+      return png.length > 1e3 && png.subarray(1, 4).toString() === "PNG" ? png : null;
+    } catch {
+      return null;
+    }
+  }
+  // The phone's state, its controls and its picture are read at the same time (one waits for the slowest, not all three).
+  async observe(opts = {}) {
+    const sf = this.surface && this.now() < this.surface.until ? this.surface : null;
+    if (!sf) this.surface = null;
+    const infoP = this.info(), pngP = opts.frame ? this.capture() : Promise.resolve(null);
+    const known = this.drawn && this.surface === null && this.lastSurface?.pkg === this.drawn.pkg ? this.lastSurface : null;
+    const dumpP = sf ? null : this.dump(!!known);
+    dumpP?.catch(() => null);
+    pngP.catch(() => null);
+    const info = await infoP;
+    if (!info.connected) throw new DeviceError("The phone is not connected.", "DISCONNECTED");
+    if (!info.authorized) throw new DeviceError("USB debugging is not authorized.", "UNAUTHORIZED");
+    const nodes = dumpP ? await dumpP : sf && sf.pkg === info.foreground && sf.rotation === info.rotation ? sf.nodes : await this.dump(false);
+    if (dumpP || !sf || sf.pkg !== info.foreground || sf.rotation !== info.rotation) {
+      const pic = !!info.foreground && pictureOnly(nodes, this.lastW, this.lastH), seen = this.drawn;
+      this.drawn = pic ? seen && seen.pkg === info.foreground ? seen : { pkg: info.foreground, at: this.now() } : null;
+      const again = pic && this.lastSurface?.pkg === info.foreground ? Math.min(6e4, this.lastSurface.span * 2) : SURFACE_MS;
+      this.surface = pic && seen && seen.pkg === info.foreground && (this.now() - seen.at >= 2e3 || this.lastSurface?.pkg === info.foreground) ? { pkg: info.foreground, rotation: info.rotation, until: this.now() + again, nodes } : null;
+      if (this.surface) this.lastSurface = { pkg: info.foreground, span: again };
+      else if (!pic || this.lastSurface?.pkg !== info.foreground) this.lastSurface = null;
+    }
     let dims = nodes ? uiBounds(nodes) : null;
     if (!dims) {
       this.size ||= sizeFrom(await this.sh(ADB.wmSize(this.serial)));
       dims = this.size && (info.rotation % 2 ? { w: this.size.h, h: this.size.w } : this.size);
     }
-    let frame = null;
-    if (opts.frame) {
-      try {
-        const png = (await this.exec([...ADB.screencap(this.serial)], { binary: true, timeoutMs: 2e4 })).stdout;
-        if (png.length > 1e3 && png.subarray(1, 4).toString() === "PNG") frame = { mime: "image/png", data: png.toString("base64"), width: dims?.w || 0, height: dims?.h || 0 };
-      } catch {
-        frame = null;
-      }
-    }
+    const png = await pngP;
+    const frame = png ? { mime: "image/png", data: png.toString("base64"), width: dims?.w || 0, height: dims?.h || 0 } : null;
     const o = makeObservation({ id: this.deviceId + ":o" + ++this.seq + ":" + this.now().toString(36), deviceId: this.deviceId, at: this.now(), package: info.foreground, activity: "", rotation: info.rotation & 3, width: dims?.w || 1080, height: dims?.h || 2340, locked: info.locked, nodes, frame });
     this.lastW = o.width;
     this.lastH = o.height;
@@ -15700,14 +16028,16 @@ var SimDevice = class {
           }
           this.focused = null;
           if (this.foreground === LAUNCHER) {
-            const app3 = [...this.apps.values()].find((a2) => "icon_" + a2.pkg.split(".").pop() === id);
-            if (app3) {
-              this.foreground = app3.pkg;
-              app3.launched?.(this);
+            const app4 = [...this.apps.values()].find((a2) => "icon_" + a2.pkg.split(".").pop() === id);
+            if (app4) {
+              this.foreground = app4.pkg;
+              app4.launched?.(this);
             }
             return ack(true);
           }
-          this.apps.get(this.foreground)?.press(id, this);
+          const app3 = this.apps.get(this.foreground);
+          if (a.kind === "long_press" && app3?.held) app3.held(id, a.ms, this);
+          else app3?.press(id, this);
           return ack(true);
         }
       }
@@ -16325,6 +16655,8 @@ var RemoteServer = class _RemoteServer {
       if (body.op === "start") e.say("Teach Falcor started from " + who.name + ".", "YOU");
       return { status: 200, json: r };
     }
+    const gtell = /^\/api\/games\/([\w.]{1,200})\/tell$/.exec(path2);
+    if (method === "POST" && gtell) return { status: 200, json: e.autopilot.tell(gtell[1], body.text) };
     const ga = /^\/api\/games\/([\w.]{1,200})\/autopilot$/.exec(path2);
     if (method === "POST" && ga) {
       const r = await e.autopilot.op(ga[1], { op: body.op, objective: body.objective, target: body.target, offerId: body.offerId, missionId: body.missionId, deviceId: body.deviceId, rulesAllow: body.rulesAllow === true, choice: body.choice });
@@ -16902,11 +17234,11 @@ Rules:
 - "level" is the player's current level only when the screen labels it so ("Level 3", "Lv 3", "Stage 3") and it is not a lock or an unlock requirement ("Lv 17" by a padlock). A number beside balls, ammo, moves, lives, coins, gems, score, stars or a timer is never the level. Unsure: null.
 - Say in "evidence" what you aim at, in at most 25 words (think before answering, not in the JSON); never aim at a price, a shop, a store offer or a purchase.
 - A game drawn as one picture (no nodes: read the picture): a tutorial that says drag, rotate, swipe or slide (often with arrows or a hand) wants a "drag" between two points across the place it shows, never a tap; when taps did nothing ("didNothing"), try the gesture the screen asks for, or another place.
-- "hold" presses one place for "ms" (150..8000) and lets go: for a game where something grows, charges or aims while you hold ("hold to build the bridge", a power bar). Pick ms from the distance or the bar in the picture, and from what earlier holds did ("recent": too short, too long, how much they got): adjust the time in proportion.
+- "hold" presses one place for "ms" (150..8000) and lets go: for a game where something grows, charges or aims while you hold ("hold to build the bridge", a power bar); a tap never does. Pick ms from the distance or the bar in the picture, and from what earlier holds did ("recent": too short, too long, how much they got): adjust the time in proportion; farther is longer. Such holds are usually short (200\u2013600 ms): a bridge too long is a miss just like one too short, so never pad the time; always give "ms". "lastHold": your last hold's result if the picture shows it ("short", "long", "good", "perfect"), else null.
 - "then": up to 8 more moves you can already see on this same screen, in order (the next tiles of a board, a tutorial's next taps, a hold followed by a tap): each is played only after the one before it worked. Points, holds, drags and waits only; leave it out when the next move depends on what this one shows.
 - If unsure, "handoff". Never claim the task is done ("done" is treated as a handoff).
 Return JSON only:
-{"method":"selector"|"point"|"hold"|"drag"|"path"|"key"|"wait"|"handoff"|"done","package":"<as given>","observationId":"<as given>","selector":{"text"|"desc"|"resourceId":"..."},"point":{"x":0..1,"y":0..1},"from":<place>,"to":<place>,"points":[<place>,...],"key":"BACK"|"HOME"|"ENTER","ms":1000,"expectedEffect":"what should change","confidence":0..1,"evidence":"which node or words","level":null,"then":[{"method":"point","point":{"x":0..1,"y":0..1}}]}`;
+{"method":"selector"|"point"|"hold"|"drag"|"path"|"key"|"wait"|"handoff"|"done","package":"<as given>","observationId":"<as given>","selector":{"text"|"desc"|"resourceId":"..."},"point":{"x":0..1,"y":0..1},"from":<place>,"to":<place>,"points":[<place>,...],"key":"BACK"|"HOME"|"ENTER","ms":400,"expectedEffect":"what should change","confidence":0..1,"evidence":"which node or words","level":null,"lastHold":null,"then":[{"method":"point","point":{"x":0..1,"y":0..1}}]}`;
 var text = (v, max) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 function cleanPlanInput(input) {
   const o = input.observation, [w, h] = o.size || [0, 0];
@@ -19106,180 +19438,180 @@ function mergeModels(c, listed) {
 }
 
 // ../README.md
-var README_default = `# Falcor.Hub
-
-Plug an Android phone into your Windows computer, see its screen live, take control, and let Falcor run the games, daily check-ins and signup quests you approve. Falcor.Hub Remote, on your everyday phone, starts and stops it, shows the stats, chats with Falcor, approves tasks with your own taps, and has Stop.
-
-Nothing here talks to a website. The phone is driven over USB from your computer. Falcor's AI is whichever service you connect (Google Gemini, OpenAI, Anthropic Claude, Moonshot Kimi, OpenRouter, xAI, DeepSeek, Groq, Together AI, Fireworks AI, a custom OpenAI-compatible API or Ollama on this computer), each called with your own key. The Remote reaches the computer only on your home Wi-Fi.
-
-| Folder | What it is |
-| --- | --- |
-| \`desktop/\` | **Falcor.Hub** for Windows (Electron). It has the live mirror, Take Control, Autopilot, tasks, stats, the AI Control Center and the Remote pairing. |
-| \`remote/\` | **Falcor.Hub Remote**, the Android app (Capacitor) for your everyday phone, not the one plugged in. |
-
-## Install
-
-1. **Falcor.Hub.** Run \`Falcor.Hub-Setup-0.2.0-x64.exe\`. It is not code-signed yet, so Windows may warn: choose **More info \u2192 Run anyway**. It includes Android platform-tools (adb) and scrcpy.
-2. **The phone that runs the games.**
-   - Turn on **USB debugging**: Settings \u2192 About phone \u2192 Software information \u2192 tap Build number 7 times, then Developer options \u2192 USB debugging.
-   - Plug it in with a data cable and tap **Allow** (tick *Always allow from this computer*).
-   - On Samsung, turn **Auto Blocker** off: Settings \u2192 Security and privacy.
-   - The Phone tab ticks off each step.
-3. **AI.** Settings \u2192 AI \u2192 Providers \u2192 Add provider \u2192 pick it (for example Google Gemini) \u2192 paste its key \u2192 Save and test. Then Intelligent Routing \u2192 pick a model under Primary Gaming AI \u2192 Use for Gaming.
-4. **Your everyday phone.**
-   - Install \`Falcor.Hub-Remote-0.2.0.apk\`.
-   - In Falcor.Hub: Settings \u2192 Phone app \u2192 **Pair a phone**, then scan the QR code with the Remote (or type the address and code).
-   - Press **Let my phone through Windows Firewall** once and choose Yes when Windows asks.
-
-## Using it
-
-- **Phone tab.**
-  - Live mirror of the phone (about 1\u20133 pictures a second; **Full-speed window** opens scrcpy for 30 fps).
-  - **Windows you arrange.** Every panel on the Phone tab is a window, the phone's screen too: drag its title to move it (it snaps to the edges and to the other windows; hold Alt to move it freely), drag an edge or a corner to resize it, double-click its title to maximize it, \xD7 to hide it. **Windows** (by the tabs) shows and hides them, with five more: **Needs you** (approvals and anything waiting on you), **Apps** (open any app on the phone), **Creations** (run or stop a sequence), **Today** (how the day went, what is next, Kimi spending) and **Connection** (the cable, the mirror, the tools, paired phones). **Layout** arranges them (Classic, Focus, Grid) and **Reset** brings back the usual five; the lock keeps them where they are. Your arrangement is kept, with its own for games played sideways.
-  - **Capture Game**: when a game's offer page is open on the phone, the button under the mirror turns blue ("Ready to capture"). One press opens Games and reads the whole offer into the review. An offer you already saved shows **Refresh offer** instead. Falcor only looks at the screen's words while the Phone tab is open and the phone is free; nothing is saved until you press Save.
-  - **Take Control**: click to tap, drag to swipe, hold to long-press, wheel to scroll, type in the box. Back / Home / Apps buttons.
-  - **Start / Stop Autopilot.**
-  - **Today's Queue**: every game, task and Sandbox sequence you scheduled, in one list per phone, in the order they will run (time, priority, what each one waits for), with its status (Scheduled, Ready, Running, Paused, Waiting for you, Completed, Failed, Skipped, Missed, Cancelled, Interrupted). TOMORROW, UPCOMING and HISTORY show the days ahead and what happened.
-    - The queue runs what you schedule: each activity starts by itself at its time, one at a time per phone, then the queue waits for the next. There is no Start button: **Pause queue** (in the Device window) holds everything until **Resume queue**. **Play now** / **Run now** runs one activity on its own.
-    - **Current activity** shows what runs, for how long, and Pause, Skip and Stop. Each row's menu: View details, Run now, Edit schedule, Change priority, Skip today, Remove from queue (today's only), Disable schedule, View history.
-    - One controller per phone: Play now while the queue runs asks **Pause queue and run game**, **Add to queue** or **Cancel**. Taking control, Emergency Stop, a pulled cable or a locked phone stops the activity safely; it is recorded as interrupted and comes back only when that is safe.
-  - **Schedules** (the same editor from the queue's **+**, a game, a task or a sequence): once, daily, weekdays, weekly or custom days; a time, an earliest and latest start, a duration, the time zone, a priority (1\u20135), attempts and retries, what it waits for (no loops), and what to do when it was missed (skip, run when the phone is available, or ask first; skip is the default). A schedule adds the activity to the Daily Queue; it starts by itself at its time (while this computer is on, Falcor.Hub is open and the phone is plugged in and unlocked).
-- **Sandbox tab (key 2): build your own routines from blocks.**
-  - It opens on **Create** (what the Sandbox is; start Blank, from the Example or a preset, or Import a .json) or **My sequences** (search, sort, folders, and Run, Edit, Schedule, Duplicate and Delete for each). **Edit** opens the editor as its own page; **\u2039 My sequences** goes back.
-  - The mirror sits in the middle; the **block library** is on the left (Touch and gesture, App and device, Time and flow, Screen aware, presets and your own presets; greyed blocks say why the phone link cannot do them), the **step's settings** on the right, the **timeline** at the bottom (Flow or Tree; drag to reorder, Ctrl+G to group, Ctrl+Z / Ctrl+Y, copy and paste).
-  - **Pick target**: click the mirror to set a tap's point (the button under it becomes its anchor, so a moved button is still found). **Pick gesture**: drag to draw a swipe (a curve becomes a path). Picking never touches the phone. Pins show every point; drag a pin to move it.
-  - **Teach** records what you do on the mirror and adds it to the open sequence as blocks (open the app, each tap, swipe, key and text, your pauses if you want them, and a last check of the screen).
-  - **Test step**, **Preview** and **Start** play it on the phone through the same safety gate as Autopilot: never a purchase, a payment, an ad or a private screen. **Pause**, **Stop** and **Stop after group** are always in the header; a sign-in, payment or code screen pauses it for you.
-  - Every save is a version (History restores one); a run plays the version it started with. Unsaved changes are kept as a draft.
-  - **Save sequence**, **Save as task**, **Run now**, **Add to queue** (today, when the phone is free) and **Set schedule** (the Daily Queue's editor). On your phone, a schedule still runs by itself only with **Run it while I am away** ticked.
-  - Export and import a sequence as a .json file. **?** shows the shortcuts and a five-step walkthrough.
-- **Games tab: your game library.** Every game with a challenge you accepted, an offer from an earning app, or a guide, as a card: its picture (the app's own icon from the phone, else the artwork read from its offer page, else a pixel letter), name, earning app, what it can pay, what was credited or paid out, goals reached as blocks, status (Active, Completed, Expired) and time left. Filter by All, Active, Completed or Expired; sort by recently updated, deadline, advertised reward or progress.
-  - **Capture game**: open the game's offer page in your earning app on the phone and press it. Falcor reads the screen (the game, its picture, the total, the deadline, each milestone and its reward), then the next one after you scroll (or press **Scroll for me**: one swipe, under your control), until a screen shows nothing new. Overlaps are read once and the order is kept, so a 60-milestone offer comes out as 60 milestones. Check it, fix anything, **Save**; nothing is kept before that.
-  - Amounts are read as the page writes them ($1.50, 1.50 USD, \u20AC2, 2 \u20AC, 500 pts, 1.5K): a bonus on its own line belongs to the milestone above it and is counted once; a crossed-out amount followed by a new one keeps the new one and asks you to check; a milestone that needs a purchase is marked as yours to decide, never a sure reward; one without a reward stays unknown; when the advertised total and the milestones' sum differ, the game page says so. Each unit stays separate.
-  - A deadline is either a date ("Expires in 7 days") or a time after you start ("Complete within 14 days"): the second counts down only once you say when you started (**I started it today**).
-  - **Auto-capture game details** (the blue button): with the offer page open on the phone, Falcor scrolls to its top, reads down to the bottom with a progress bar, then opens the review. While it reads, Falcor (with your Kimi key) researches the game online: how to play and its controls, tips, tricks and hints, a guide and its screenshots, how long the goals take and what to avoid. The game's card and page show a progress bar with each step, then READY TO PLAY. It costs about 1.5\xA2 a game. Autopilot reads these notes before every move, and what each session learns is added to the game's playbook, so it plays better each time. There is no app to pick: the offer links to the game by itself once you install it on the phone. Falcor AI reads these tips every time it plans a move in that game, and a button the web warns about by name (\u201Cnever press Begin again\u201D) is never pressed. A slow search is kept when it arrives; the tips follow the game's name if you correct it before saving.
-  - Click a game: its **profile** shows the platform, status, the most it can pay, verified earnings and time left, with **Open game**, **Run available activity** (Play now), **Schedule**, **Edit offer** and **Refresh offer**. The **reward ladder** lists every milestone with its reward and stage: Not started, In progress, Goal reached, Provider confirmed, Pending credit, Credited, Paid out or Expired, and who said so (observed on the page, you, or Falcor seeing the game's level). A goal reached is not money: only credited and paid out are earnings; pending is the earning app saying it is on its way. Set a stage from its menu, on the computer or the phone.
-  - **Game Autopilot** (on the profile, and the same on your phone): pick a goal (the next level, the next offer milestone that is a level, a level you type, or one of the game's tasks) and press **Start Autopilot**. A new task for it shows its rules and needs your tick first. It plays through the Daily Queue (the same "one controller" question), also with Autopilot off, then comes back by itself with one return in the queue for that game (about 30 minutes after progress, else 1, 2, 4 hours, or when the game's own timer ends) until the goal is verified, you press **Pause** or **Stop Autopilot**, the offer ends, or three sessions in a row make no measured progress. The panel shows the goal, the verified level, what it is doing now, inputs the phone accepted in the last session and the next return; after every session Falcor keeps a short review (what worked, what failed, what to try next), which the next session's planning reads and Falcor chat can tell you about. Emergency Stop pauses every game on Game Autopilot.
-  - A plan Falcor AI takes long to make is never acted on blind: the screen is looked at again just before the tap, and if it moved, Falcor plans again. A counter ("Balls 23") or a locked feature ("\u{1F512} Lv 17") is never taken for the level, and anything that could cost money is refused.
-  - **Refresh offer** reads the offer page again and lists what changed (new milestones, changed amounts, a new deadline) before you save; milestones keep their stage and your corrections stay yours. The same game from two earning apps is two offers on one card.
-  - The profile also has the total earnings per unit (collected: the game showed it claimed or credited), every challenge with its status and level progress, the reward tracker, recent activity, the game's reward tiers from what Falcor learned, and what Falcor knows. Coins, gems or points a game pays while Falcor plays are counted from its own balance on screen before and after the run.
-  - When the page is drawn as a picture without words and your Kimi model reads pictures, Falcor reads a small copy of it and marks every milestone for you to check.
-- **A newly captured game learns from you first: five minutes of play, nothing to press.** After you save a new game's offer, its page shows a short setup checklist. Open the game on the phone (on the phone itself or on the mirror) and play it normally; Falcor records by itself while it is in front: how you get in (the splash, **Play as Guest** or whatever you chose, the tutorial, the menus) and five minutes of actual gameplay in all, over as many sittings as you like.
-  - Loading, sign-in choices and menus are recorded but do not count; a break (nothing changing for 90 seconds), another app or a locked phone pauses the count. No level or reward is needed.
-  - At five minutes it finishes by itself (play on if you like): Falcor learns the way in and the game on this computer, then Falcor AI reads the recording's timeline and small pictures (it does not watch the video itself; without a key or over the limit it says so and you do not have to play again). The game's automation (Start Autopilot, Run Playbook, Run available activity, Schedule) unlocks by itself, on the computer and the phone app, and stays locked until then, the buttons and Falcor.Hub alike.
-  - Played on the phone itself, Falcor sees only the screens: the presses it learns there are inferred from what changed and checked live on the first run, never recorded as touches. The video from the mirror (when it is open) is kept on this computer as the phone sent it (H.264 files, never uploaded), never a sign-in or privacy-paused screen.
-  - The first automatic run goes in the way you did (as a guest if you were one); it never signs in, creates an account or accepts terms: those come to you. Games you had before this, or ones Falcor already learned or ran, are not locked.
-- **Teach Falcor on a game's page** (both apps), whenever Falcor plays it too slowly or gets confused: one press, then play it your way. It records only that game (another app in front is not recorded); that game's own run gives you the phone first, anything else is never taken over. Leave the game or press **Finish & Learn**: what you showed becomes steps Falcor presses on the next run (a new skill version), or it says "No actionable change detected". A lesson that makes the next two runs worse than before is rolled back by itself. Each lesson can be deleted (what it taught stays).
-- **New games are learned by themselves.** When you create a game or daily task (in Tasks, in chat or from your phone) for an app Falcor has not learned yet, Falcor opens it on the phone and starts **Teach Falcor**: play it on the mirror while it records the name, the challenge, the screens and their text, and your taps.
-  - When you leave the game (Home, or another app), recording stops by itself and Falcor writes the guide (Falcor AI with your Kimi key; on this computer without AI when there is no key or the monthly limit is reached). The game then shows in Games with its icon and guide.
-  - If nothing was played (nobody touched it, or 5 minutes pass without a touch), nothing is kept. Signups are not taught: they are Falcor's to do.
-- **Creations tab (key 4): your custom automations, built in Sandbox.** Every saved sequence is a card: its steps, version, phone, next schedule and last result, with **Run now** (through the Daily Queue: it asks before taking the phone from something else), **Schedule**, **History** and **Edit in Sandbox**. Search, and filter by Favorites, Scheduled or Needs attention. An empty sequence says Needs setup and cannot run. **Other automations** holds the tasks below. The phone app's fifth tab is the same.
-- **Activity tab (key 6).** What ran, when, on which phone, for how long and how it ended (Completed, Needs attention, Failed, Stopped, Interrupted), newest first and grouped by day, with filters, Load more and each run's steps while they are kept. Previews and tests show only when you tick them. Completed is not money: rewards stay in Games.
-- **Other automations (in Creations; once the Tasks tab).**
-  - Create a task: a daily check-in, a game to a level, a free signup or a reward balance check, on an app installed on the phone.
-  - **Approve it.** A signup also needs the $0 confirmation and your consent.
-  - Autopilot then runs it when it is due, or press **Run now**. **Schedule** puts it in the Daily Queue at a time; a scheduled task runs at its queue time.
-- **Stats tab.** Today's runs and verified results, rewards per unit (never added across units), and recent runs.
-- **On your phone (Remote):** **Sandbox** (**Create**: blank, the example or a preset; **My sequences**: your sequences with Edit, Duplicate, Delete, with a big Start / Stop and their schedule switches; a full-screen editor: tap the screenshot to place a step, Blocks and Step drawers, the steps along the bottom, Run / Pause / Stop at your thumb), Home (the phone's state, today's stats, a live screen thumbnail you can open full screen, activity, and Start/Stop Autopilot at the bottom), **Games** (the same library cards, filters and game profiles: the reward ladder with its stage menus, earnings and activity; **Open game** opens the game on the plugged-in phone and gives control straight back; **Run available activity** asks the same one-controller question), **Falcor** (the same chat, like a mobile chat app: the message box stays at the bottom, past chats slide out from the side and can be deleted, and it opens on a new chat) and **Tasks** (Run now, Pause, Resume and the approval gate). Stop and the notification bell are always in the header.
-- **Stop** is always in the header (Ctrl+Shift+X). It stops every phone and turns Autopilot off; a red bar shows until you press Clear. It also works from the Remote.
-- **Teach Falcor** (in the Sandbox; the Phone tab's Teach opens it there).
-  - Open the app on the phone, press **Teach Falcor**, name it and say what you will show. Or press it on the phone's home screen and then open the app: Falcor learns how you open it too.
-  - Play it on the mirror. The mirror is live video inside the window; every touch goes through Falcor and is recorded, with where it landed and the screen it led to once that screen has finished loading.
-  - Show the task from its start (how you get there), do it once, and mark the moment that matters. Peeking at a shop and going Back is fine: Falcor leaves detours out.
-  - The red Recording bar has the time, **Mark this** (with a note), Pause and Stop. The Remote shows it and can stop it.
-  - When you press Stop, Falcor works out on the computer, for free and at once, what you taught: how to get to the task, the button that pays out and the words that prove it, when the next reward comes, the level and coins before and after, the moves you repeat while playing, scrolls, and buttons to stay away from (they led to prices or an ad). Autopilot uses it from then on: it presses those steps without asking and never presses the buttons to avoid. You see it in the window, in the app's guide ("What training taught") and as a note in Falcor chat.
-  - After Stop, Falcor also shows what the guide will cost. Choose **Write guide**, **Text only (cheaper)** or **Save without AI** (free).
-  - Falcor keeps one small picture (about 480 px) of each distinct screen and drops ads, loading screens and near-duplicates. It never records password, card, ID or code screens.
-- **Custom tasks: teach a routine once, Falcor repeats it.** In the Teach Falcor form, tick **Save it as a custom task**, then choose:
-  - how many **rounds** to repeat it (1\u201350);
-  - whether it **runs** once or every day;
-  - optional words that end it early ("No energy left");
-  - whether to go back to the phone's **home screen** when done (on by default).
-
-  Do the task once on the mirror and press Stop. The phone goes back to its home screen, and the task lands in Tasks as *Needs review* with its steps in plain words (tap "Bounties" \u2192 tap "Accept" \u2192 tap "Gather" \xD73 \u2192 tap "Turn in") and the words that showed it was done ("Bounty complete! +20 gold").
-  - Detours, buttons to avoid, the way out at the end and any password are left out, and Falcor says what it left out.
-  - Once you approve it, Autopilot presses the same buttons in order, round after round. It finds each button by what it says, so a moved button is still found.
-  - It closes a pop-up the app shows in the way with the pop-up's own Not now or Close, never Rate us or Buy. It finds its place again when the app skips a screen.
-  - After the last round it goes Home. If the end you showed does not appear, the task comes back to you.
-  - Edit a custom task's rounds, stop words, Home and repeat with its pencil button. Changing how it repeats sends it back to review. The Remote lists its steps too.
-- **Falcor tab: chat with Falcor** (also on your phone, the same conversation). Ctrl+K opens it from anywhere.
-  - It opens on a new chat with Falcor's greeting; a chat is kept only once you send something. Past chats are on the left, grouped by day, with search.
-  - Ask about your games, tasks, what Falcor learned, stats, rewards, Autopilot, or how Falcor.Hub works.
-  - Tell it what to do: start or stop Autopilot, run, pause or resume a task, create or edit a task, fix a guide, start a teaching session.
-  - Anything that creates, edits or removes something shows a card; nothing changes until you tap **Confirm**. Approving a task shows the same ticks as the Tasks tab; only your taps approve it.
-  - Say **stop** at any time: everything stops at once, even with no internet.
-- **How Falcor works out what to do on a screen**, cheapest first:
-  - the task's own logic: claim buttons ("Claim", "Claim Day 3", "Collect 50 coins"), signup forms, balances, and the screens every game has (loading, Play, Next, Continue, Retry, free Collect, Skip ad, upgrades paid with the game's own coins);
-  - your **Teach recipe** for that app (the buttons you pressed, followed by what they say, never a money button);
-  - a move it already verified on that very screen (also from earlier runs: a game's move found once is pressed again without asking);
-  - then Falcor AI (Kimi), with your guide, told which presses already did nothing there. A wrong answer is sent back once with the reason; Falcor looks again before giving up.
-  - **Games with no built-in player** are checked against the level on screen ("Level 3", "LV. 3", "Stage 3"; never "Unlock at Level 10"), within a 150-move AI budget per run. For games drawn without text (most Unity games), Falcor AI gets a small picture and reads the level from it; the target counts only when two pictures in a row agree. Without a Kimi key, such a game goes back to you.
-  - **Prices and ads in a game** ("Buy now", "$0.99", "Double coins (watch ad)") are played around: Falcor's own taps can never land on a price, a purchase, an ad, an install or a bet, whatever proposed them. A payment screen (a card, a deposit, a paid plan) still stops the run and comes back to you. Popups are closed with their own \xD7, and ad screens are skipped or waited out.
-- **Rewarded ads** are on for every game. When a game offers a reward for an ad ("Double coins (watch ad)", "Free spin: watch ad"), Falcor plays it, waits out its countdown, closes it once the reward is granted and carries on. It never taps inside the ad and never buys anything; at most 10 ads per run.
-  - Only while you are there to watch: Falcor.Hub in front, the computer used in the last 5 minutes, or the phone app open. Otherwise the offer is passed by and the activity says why.
-  - Ad networks and some games may treat ads started this way as invalid; that risk is yours for that game.
-- **Edit a task** with its pencil button in Tasks: what it does, the target level, the daily reset hour, the reward note and a signup's details. Changing what it does sends it back to Needs review.
-- **Knowledge (guides).** Open a guide from its game, its task (the book button), the chat, or **Settings \u2192 Knowledge**; **Back** returns where you were.
-  - Every app Falcor learned, with its guide: summary, objectives, reward tiers, screens, step-by-step recipes and watch-outs. Each part says **seen** or **AI**.
-  - Press **Edit** to correct the guide, or delete pictures you don't want kept. Rename, Export or Delete each app.
-  - Ask Falcor about a guide from the Falcor tab (the guide's chat button focuses on it). A task it drafts lands in Tasks as *Needs review*; nothing runs until you approve it.
-  - Teaching the same app again updates its guide and lists what changed. Autopilot uses the guide when it runs a task on that app.
-  - **What you show is applied straight away**, also a game's first-time intro that Falcor records by itself: on each screen, the button you pressed there becomes a step Autopilot presses on that screen without asking (for any task on that app, for 6 months, as long as the screen looks the same). The Games page shows how many steps Falcor knows for each game.
-  - The guide's **watch-outs** are obeyed: a button it says never to press ("Never press Begin again", "Don't tap Reset") is never pressed by Autopilot, whatever suggested it. Add one with Edit, or answer one of Falcor's questions.
-- **AI Control Center** (Settings \u2192 AI): four sections.
-  - **Providers:** a card per connection (Connected only after a real test, Not configured, Test failed, Unavailable), with its number of models and last test. Add provider: choose it, paste the key (sealed on this computer, sent only to that provider; Ollama needs none), Save and test, and its models are found. Manage: replace or remove the key, rename, test, refresh models, a monthly budget, or add a model id by hand. Several connections of one provider can live side by side.
-  - **Model Library:** every model of your connections with its exact id, provider and what it can do (Vision \xB7 Tools \xB7 JSON \xB7 Local \xB7 Fast). A capability with ? is unknown until you press Test model (three tiny requests). Prices only when the provider published them; speed only from Falcor's own measurements, else Not tested. Search and filters.
-  - **Intelligent Routing:** Simple is the default: Primary Gaming AI (pick a model, read what will change, Use for Gaming: Autopilot planning, screenshot reading, guides, learning, and offer reading and research where the model can) and Falcor Chat AI. Advanced Routing chooses each operation's model and an optional fallback that takes over when the first is down, too slow, busy or out of quota (said in the activity log). Restore defaults goes back to what you had before; keys stay. Recommendations come only from verified capabilities and measurements.
-  - **Usage and Limits:** spending by provider, model and day; the global monthly limit and each provider's budget stop new requests before they are sent. A model without a verified price shows Unknown, never another provider's price.
-  - An existing Kimi setup carries on unchanged: its key, models, routing and spending are kept, and every operation stays on it until you pick another model. Games keep everything they learned whatever model plays. The header shows API with a light; the Games page and the phone app show the gaming model.
-- **Kimi's own models** (when Kimi is connected): the routing you had before still applies to operations you have not reassigned. Automatic routing gives each AI job its own Kimi model (research, offer pictures, Autopilot planning, guides, game learning, chat; kimi-k2.6 is recommended for all of them). Off, every job uses the single model above it, as before. One key for all; Test sends one request in that job's own shape. Spending is counted at each model's own price, and web searches ($0.002 each) are counted too.
-
-**What Falcor never does:**
-- payments, cards, deposits or paid trials;
-- codes sent to you;
-- CAPTCHAs and ID checks;
-- typing a secret anywhere but its own field;
-- buying anything, or tapping inside an ad ("Install now", "Learn more");
-- playing an ad nobody watches (see **Rewarded ads**);
-- messages to people.
-
-Those steps come back to you. The live mirror shows the screen supplied by Android, including password, ID and card forms. Teach recording still pauses on sensitive screens and excludes their pictures and entered secrets. Paired Remote viewers can also see the live screen. Android protected capture restrictions still apply.
-
-
-## Updates
-
-You install once. After that:
-- **Falcor.Hub updates itself.** It checks [Falcor-Hub-Releases](https://github.com/thekidgilly/Falcor-Hub-Releases) at start and every 10 minutes, downloads a new update pack, checks every file's SHA-256, and puts **Restart to update** in the notification bell (never while a task runs). "What's new" goes to the bell after the restart. The bell, in the top banner on the computer and the phone, holds update notices and other alerts. If a new pack fails to start twice, Falcor.Hub goes back to the previous version by itself.
-- **The Remote's screens come from Falcor.Hub** (\`/app/\` on port 5175), so they update with it. The APK only needs reinstalling when its shell changes (rare).
-- A new installer is needed only when Electron, sql.js, adb or scrcpy change; the pack then says so (\`minInstall\`).
-
-Publishing an update (from \`desktop/\`, with the releases repo cloned next to this one):
-
-\`\`\`
-# bump "version" in desktop/package.json (and remote/package.json if its screens changed)
-npm test && npm run pack -- --notes "What changed, in a line or two"
-cd ../../falcor-hub-releases && git add -A && git commit -m "Falcor.Hub 0.2.1" && git push
-\`\`\`
-
-## Develop
-
-Requires Node 22. Each folder is its own npm project.
-
-\`\`\`
-cd desktop && npm install
-npm run simulated            # the window with Falcor's simulated phone (no real phone needed)
-npm test                     # engine and phone-app API on the simulated phone, and ten owned test games played end to end
-node test/games-bench.mjs    # the games scorecard: success, AI calls, tokens, cost, taps and time per game
-xvfb-run -a node test/window.mjs   # the real window, driven end to end (Linux)
-npm run dist:win             # Windows installer in desktop/release/ (downloads and checks adb + scrcpy)
-
-cd remote && npm install
-npm test                     # the Remote's connection code against desktop/dist (build desktop first)
-npm run build && npx cap add android && node scripts/prepare-android.mjs && cd android && ./gradlew assembleRelease
-\`\`\`
-
-Release APKs are signed when \`FALCOR_KEYSTORE\`, \`FALCOR_KEYSTORE_PASSWORD\` and \`FALCOR_KEY_ALIAS\` are set. Every update must use the same key.
-
+var README_default = `# Falcor.Hub\r
+\r
+Plug an Android phone into your Windows computer, see its screen live, take control, and let Falcor run the games, daily check-ins and signup quests you approve. Falcor.Hub Remote, on your everyday phone, starts and stops it, shows the stats, chats with Falcor, approves tasks with your own taps, and has Stop.\r
+\r
+Nothing here talks to a website. The phone is driven over USB from your computer. Falcor's AI is whichever service you connect (Google Gemini, OpenAI, Anthropic Claude, Moonshot Kimi, OpenRouter, xAI, DeepSeek, Groq, Together AI, Fireworks AI, a custom OpenAI-compatible API or Ollama on this computer), each called with your own key. The Remote reaches the computer only on your home Wi-Fi.\r
+\r
+| Folder | What it is |\r
+| --- | --- |\r
+| \`desktop/\` | **Falcor.Hub** for Windows (Electron). It has the live mirror, Take Control, Autopilot, tasks, stats, the AI Control Center and the Remote pairing. |\r
+| \`remote/\` | **Falcor.Hub Remote**, the Android app (Capacitor) for your everyday phone, not the one plugged in. |\r
+\r
+## Install\r
+\r
+1. **Falcor.Hub.** Run \`Falcor.Hub-Setup-0.2.0-x64.exe\`. It is not code-signed yet, so Windows may warn: choose **More info \u2192 Run anyway**. It includes Android platform-tools (adb) and scrcpy.\r
+2. **The phone that runs the games.**\r
+   - Turn on **USB debugging**: Settings \u2192 About phone \u2192 Software information \u2192 tap Build number 7 times, then Developer options \u2192 USB debugging.\r
+   - Plug it in with a data cable and tap **Allow** (tick *Always allow from this computer*).\r
+   - On Samsung, turn **Auto Blocker** off: Settings \u2192 Security and privacy.\r
+   - The Phone tab ticks off each step.\r
+3. **AI.** Settings \u2192 AI \u2192 Providers \u2192 Add provider \u2192 pick it (for example Google Gemini) \u2192 paste its key \u2192 Save and test. Then Intelligent Routing \u2192 pick a model under Primary Gaming AI \u2192 Use for Gaming.\r
+4. **Your everyday phone.**\r
+   - Install \`Falcor.Hub-Remote-0.2.0.apk\`.\r
+   - In Falcor.Hub: Settings \u2192 Phone app \u2192 **Pair a phone**, then scan the QR code with the Remote (or type the address and code).\r
+   - Press **Let my phone through Windows Firewall** once and choose Yes when Windows asks.\r
+\r
+## Using it\r
+\r
+- **Phone tab.**\r
+  - Live mirror of the phone (about 1\u20133 pictures a second; **Full-speed window** opens scrcpy for 30 fps).\r
+  - **Windows you arrange.** Every panel on the Phone tab is a window, the phone's screen too: drag its title to move it (it snaps to the edges and to the other windows; hold Alt to move it freely), drag an edge or a corner to resize it, double-click its title to maximize it, \xD7 to hide it. **Windows** (by the tabs) shows and hides them, with five more: **Needs you** (approvals and anything waiting on you), **Apps** (open any app on the phone), **Creations** (run or stop a sequence), **Today** (how the day went, what is next, Kimi spending) and **Connection** (the cable, the mirror, the tools, paired phones). **Layout** arranges them (Classic, Focus, Grid) and **Reset** brings back the usual five; the lock keeps them where they are. Your arrangement is kept, with its own for games played sideways.\r
+  - **Capture Game**: when a game's offer page is open on the phone, the button under the mirror turns blue ("Ready to capture"). One press opens Games and reads the whole offer into the review. An offer you already saved shows **Refresh offer** instead. Falcor only looks at the screen's words while the Phone tab is open and the phone is free; nothing is saved until you press Save.\r
+  - **Take Control**: click to tap, drag to swipe, hold to long-press, wheel to scroll, type in the box. Back / Home / Apps buttons.\r
+  - **Start / Stop Autopilot.**\r
+  - **Today's Queue**: every game, task and Sandbox sequence you scheduled, in one list per phone, in the order they will run (time, priority, what each one waits for), with its status (Scheduled, Ready, Running, Paused, Waiting for you, Completed, Failed, Skipped, Missed, Cancelled, Interrupted). TOMORROW, UPCOMING and HISTORY show the days ahead and what happened.\r
+    - The queue runs what you schedule: each activity starts by itself at its time, one at a time per phone, then the queue waits for the next. There is no Start button: **Pause queue** (in the Device window) holds everything until **Resume queue**. **Play now** / **Run now** runs one activity on its own.\r
+    - **Current activity** shows what runs, for how long, and Pause, Skip and Stop. Each row's menu: View details, Run now, Edit schedule, Change priority, Skip today, Remove from queue (today's only), Disable schedule, View history.\r
+    - One controller per phone: Play now while the queue runs asks **Pause queue and run game**, **Add to queue** or **Cancel**. Taking control, Emergency Stop, a pulled cable or a locked phone stops the activity safely; it is recorded as interrupted and comes back only when that is safe.\r
+  - **Schedules** (the same editor from the queue's **+**, a game, a task or a sequence): once, daily, weekdays, weekly or custom days; a time, an earliest and latest start, a duration, the time zone, a priority (1\u20135), attempts and retries, what it waits for (no loops), and what to do when it was missed (skip, run when the phone is available, or ask first; skip is the default). A schedule adds the activity to the Daily Queue; it starts by itself at its time (while this computer is on, Falcor.Hub is open and the phone is plugged in and unlocked).\r
+- **Sandbox tab (key 2): build your own routines from blocks.**\r
+  - It opens on **Create** (what the Sandbox is; start Blank, from the Example or a preset, or Import a .json) or **My sequences** (search, sort, folders, and Run, Edit, Schedule, Duplicate and Delete for each). **Edit** opens the editor as its own page; **\u2039 My sequences** goes back.\r
+  - The mirror sits in the middle; the **block library** is on the left (Touch and gesture, App and device, Time and flow, Screen aware, presets and your own presets; greyed blocks say why the phone link cannot do them), the **step's settings** on the right, the **timeline** at the bottom (Flow or Tree; drag to reorder, Ctrl+G to group, Ctrl+Z / Ctrl+Y, copy and paste).\r
+  - **Pick target**: click the mirror to set a tap's point (the button under it becomes its anchor, so a moved button is still found). **Pick gesture**: drag to draw a swipe (a curve becomes a path). Picking never touches the phone. Pins show every point; drag a pin to move it.\r
+  - **Teach** records what you do on the mirror and adds it to the open sequence as blocks (open the app, each tap, swipe, key and text, your pauses if you want them, and a last check of the screen).\r
+  - **Test step**, **Preview** and **Start** play it on the phone through the same safety gate as Autopilot: never a purchase, a payment, an ad or a private screen. **Pause**, **Stop** and **Stop after group** are always in the header; a sign-in, payment or code screen pauses it for you.\r
+  - Every save is a version (History restores one); a run plays the version it started with. Unsaved changes are kept as a draft.\r
+  - **Save sequence**, **Save as task**, **Run now**, **Add to queue** (today, when the phone is free) and **Set schedule** (the Daily Queue's editor). On your phone, a schedule still runs by itself only with **Run it while I am away** ticked.\r
+  - Export and import a sequence as a .json file. **?** shows the shortcuts and a five-step walkthrough.\r
+- **Games tab: your game library.** Every game with a challenge you accepted, an offer from an earning app, or a guide, as a card: its picture (the app's own icon from the phone, else the artwork read from its offer page, else a pixel letter), name, earning app, what it can pay, what was credited or paid out, goals reached as blocks, status (Active, Completed, Expired) and time left. Filter by All, Active, Completed or Expired; sort by recently updated, deadline, advertised reward or progress.\r
+  - **Capture game**: open the game's offer page in your earning app on the phone and press it. Falcor reads the screen (the game, its picture, the total, the deadline, each milestone and its reward), then the next one after you scroll (or press **Scroll for me**: one swipe, under your control), until a screen shows nothing new. Overlaps are read once and the order is kept, so a 60-milestone offer comes out as 60 milestones. Check it, fix anything, **Save**; nothing is kept before that.\r
+  - Amounts are read as the page writes them ($1.50, 1.50 USD, \u20AC2, 2 \u20AC, 500 pts, 1.5K): a bonus on its own line belongs to the milestone above it and is counted once; a crossed-out amount followed by a new one keeps the new one and asks you to check; a milestone that needs a purchase is marked as yours to decide, never a sure reward; one without a reward stays unknown; when the advertised total and the milestones' sum differ, the game page says so. Each unit stays separate.\r
+  - A deadline is either a date ("Expires in 7 days") or a time after you start ("Complete within 14 days"): the second counts down only once you say when you started (**I started it today**).\r
+  - **Auto-capture game details** (the blue button): with the offer page open on the phone, Falcor scrolls to its top, reads down to the bottom with a progress bar, then opens the review. While it reads, Falcor (with your Kimi key) researches the game online: how to play and its controls, tips, tricks and hints, a guide and its screenshots, how long the goals take and what to avoid. The game's card and page show a progress bar with each step, then READY TO PLAY. It costs about 1.5\xA2 a game. Autopilot reads these notes before every move, and what each session learns is added to the game's playbook, so it plays better each time. There is no app to pick: the offer links to the game by itself once you install it on the phone. Falcor AI reads these tips every time it plans a move in that game, and a button the web warns about by name (\u201Cnever press Begin again\u201D) is never pressed. A slow search is kept when it arrives; the tips follow the game's name if you correct it before saving.\r
+  - Click a game: its **profile** shows the platform, status, the most it can pay, verified earnings and time left, with **Open game**, **Run available activity** (Play now), **Schedule**, **Edit offer** and **Refresh offer**. The **reward ladder** lists every milestone with its reward and stage: Not started, In progress, Goal reached, Provider confirmed, Pending credit, Credited, Paid out or Expired, and who said so (observed on the page, you, or Falcor seeing the game's level). A goal reached is not money: only credited and paid out are earnings; pending is the earning app saying it is on its way. Set a stage from its menu, on the computer or the phone.\r
+  - **Game Autopilot** (on the profile, and the same on your phone): pick a goal (the next level, the next offer milestone that is a level, a level you type, or one of the game's tasks) and press **Start Autopilot**. A new task for it shows its rules and needs your tick first. It plays through the Daily Queue (the same "one controller" question), also with Autopilot off, then comes back by itself with one return in the queue for that game (about 30 minutes after progress, else 1, 2, 4 hours, or when the game's own timer ends) until the goal is verified, you press **Pause** or **Stop Autopilot**, the offer ends, or three sessions in a row make no measured progress. The panel shows the goal, the verified level, what it is doing now, inputs the phone accepted in the last session and the next return; after every session Falcor keeps a short review (what worked, what failed, what to try next), which the next session's planning reads and Falcor chat can tell you about. Emergency Stop pauses every game on Game Autopilot.\r
+  - A plan Falcor AI takes long to make is never acted on blind: the screen is looked at again just before the tap, and if it moved, Falcor plans again. A counter ("Balls 23") or a locked feature ("\u{1F512} Lv 17") is never taken for the level, and anything that could cost money is refused.\r
+  - **Refresh offer** reads the offer page again and lists what changed (new milestones, changed amounts, a new deadline) before you save; milestones keep their stage and your corrections stay yours. The same game from two earning apps is two offers on one card.\r
+  - The profile also has the total earnings per unit (collected: the game showed it claimed or credited), every challenge with its status and level progress, the reward tracker, recent activity, the game's reward tiers from what Falcor learned, and what Falcor knows. Coins, gems or points a game pays while Falcor plays are counted from its own balance on screen before and after the run.\r
+  - When the page is drawn as a picture without words and your Kimi model reads pictures, Falcor reads a small copy of it and marks every milestone for you to check.\r
+- **A newly captured game learns from you first: five minutes of play, nothing to press.** After you save a new game's offer, its page shows a short setup checklist. Open the game on the phone (on the phone itself or on the mirror) and play it normally; Falcor records by itself while it is in front: how you get in (the splash, **Play as Guest** or whatever you chose, the tutorial, the menus) and five minutes of actual gameplay in all, over as many sittings as you like.\r
+  - Loading, sign-in choices and menus are recorded but do not count; a break (nothing changing for 90 seconds), another app or a locked phone pauses the count. No level or reward is needed.\r
+  - At five minutes it finishes by itself (play on if you like): Falcor learns the way in and the game on this computer, then Falcor AI reads the recording's timeline and small pictures (it does not watch the video itself; without a key or over the limit it says so and you do not have to play again). The game's automation (Start Autopilot, Run Playbook, Run available activity, Schedule) unlocks by itself, on the computer and the phone app, and stays locked until then, the buttons and Falcor.Hub alike.\r
+  - Played on the phone itself, Falcor sees only the screens: the presses it learns there are inferred from what changed and checked live on the first run, never recorded as touches. The video from the mirror (when it is open) is kept on this computer as the phone sent it (H.264 files, never uploaded), never a sign-in or privacy-paused screen.\r
+  - The first automatic run goes in the way you did (as a guest if you were one); it never signs in, creates an account or accepts terms: those come to you. Games you had before this, or ones Falcor already learned or ran, are not locked.\r
+- **Teach Falcor on a game's page** (both apps), whenever Falcor plays it too slowly or gets confused: one press, then play it your way. It records only that game (another app in front is not recorded); that game's own run gives you the phone first, anything else is never taken over. Leave the game or press **Finish & Learn**: what you showed becomes steps Falcor presses on the next run (a new skill version), or it says "No actionable change detected". A lesson that makes the next two runs worse than before is rolled back by itself. Each lesson can be deleted (what it taught stays).\r
+- **New games are learned by themselves.** When you create a game or daily task (in Tasks, in chat or from your phone) for an app Falcor has not learned yet, Falcor opens it on the phone and starts **Teach Falcor**: play it on the mirror while it records the name, the challenge, the screens and their text, and your taps.\r
+  - When you leave the game (Home, or another app), recording stops by itself and Falcor writes the guide (Falcor AI with your Kimi key; on this computer without AI when there is no key or the monthly limit is reached). The game then shows in Games with its icon and guide.\r
+  - If nothing was played (nobody touched it, or 5 minutes pass without a touch), nothing is kept. Signups are not taught: they are Falcor's to do.\r
+- **Creations tab (key 4): your custom automations, built in Sandbox.** Every saved sequence is a card: its steps, version, phone, next schedule and last result, with **Run now** (through the Daily Queue: it asks before taking the phone from something else), **Schedule**, **History** and **Edit in Sandbox**. Search, and filter by Favorites, Scheduled or Needs attention. An empty sequence says Needs setup and cannot run. **Other automations** holds the tasks below. The phone app's fifth tab is the same.\r
+- **Activity tab (key 6).** What ran, when, on which phone, for how long and how it ended (Completed, Needs attention, Failed, Stopped, Interrupted), newest first and grouped by day, with filters, Load more and each run's steps while they are kept. Previews and tests show only when you tick them. Completed is not money: rewards stay in Games.\r
+- **Other automations (in Creations; once the Tasks tab).**\r
+  - Create a task: a daily check-in, a game to a level, a free signup or a reward balance check, on an app installed on the phone.\r
+  - **Approve it.** A signup also needs the $0 confirmation and your consent.\r
+  - Autopilot then runs it when it is due, or press **Run now**. **Schedule** puts it in the Daily Queue at a time; a scheduled task runs at its queue time.\r
+- **Stats tab.** Today's runs and verified results, rewards per unit (never added across units), and recent runs.\r
+- **On your phone (Remote):** **Sandbox** (**Create**: blank, the example or a preset; **My sequences**: your sequences with Edit, Duplicate, Delete, with a big Start / Stop and their schedule switches; a full-screen editor: tap the screenshot to place a step, Blocks and Step drawers, the steps along the bottom, Run / Pause / Stop at your thumb), Home (the phone's state, today's stats, a live screen thumbnail you can open full screen, activity, and Start/Stop Autopilot at the bottom), **Games** (the same library cards, filters and game profiles: the reward ladder with its stage menus, earnings and activity; **Open game** opens the game on the plugged-in phone and gives control straight back; **Run available activity** asks the same one-controller question), **Falcor** (the same chat, like a mobile chat app: the message box stays at the bottom, past chats slide out from the side and can be deleted, and it opens on a new chat) and **Tasks** (Run now, Pause, Resume and the approval gate). Stop and the notification bell are always in the header.\r
+- **Stop** is always in the header (Ctrl+Shift+X). It stops every phone and turns Autopilot off; a red bar shows until you press Clear. It also works from the Remote.\r
+- **Teach Falcor** (in the Sandbox; the Phone tab's Teach opens it there).\r
+  - Open the app on the phone, press **Teach Falcor**, name it and say what you will show. Or press it on the phone's home screen and then open the app: Falcor learns how you open it too.\r
+  - Play it on the mirror. The mirror is live video inside the window; every touch goes through Falcor and is recorded, with where it landed and the screen it led to once that screen has finished loading.\r
+  - Show the task from its start (how you get there), do it once, and mark the moment that matters. Peeking at a shop and going Back is fine: Falcor leaves detours out.\r
+  - The red Recording bar has the time, **Mark this** (with a note), Pause and Stop. The Remote shows it and can stop it.\r
+  - When you press Stop, Falcor works out on the computer, for free and at once, what you taught: how to get to the task, the button that pays out and the words that prove it, when the next reward comes, the level and coins before and after, the moves you repeat while playing, scrolls, and buttons to stay away from (they led to prices or an ad). Autopilot uses it from then on: it presses those steps without asking and never presses the buttons to avoid. You see it in the window, in the app's guide ("What training taught") and as a note in Falcor chat.\r
+  - After Stop, Falcor also shows what the guide will cost. Choose **Write guide**, **Text only (cheaper)** or **Save without AI** (free).\r
+  - Falcor keeps one small picture (about 480 px) of each distinct screen and drops ads, loading screens and near-duplicates. It never records password, card, ID or code screens.\r
+- **Custom tasks: teach a routine once, Falcor repeats it.** In the Teach Falcor form, tick **Save it as a custom task**, then choose:\r
+  - how many **rounds** to repeat it (1\u201350);\r
+  - whether it **runs** once or every day;\r
+  - optional words that end it early ("No energy left");\r
+  - whether to go back to the phone's **home screen** when done (on by default).\r
+\r
+  Do the task once on the mirror and press Stop. The phone goes back to its home screen, and the task lands in Tasks as *Needs review* with its steps in plain words (tap "Bounties" \u2192 tap "Accept" \u2192 tap "Gather" \xD73 \u2192 tap "Turn in") and the words that showed it was done ("Bounty complete! +20 gold").\r
+  - Detours, buttons to avoid, the way out at the end and any password are left out, and Falcor says what it left out.\r
+  - Once you approve it, Autopilot presses the same buttons in order, round after round. It finds each button by what it says, so a moved button is still found.\r
+  - It closes a pop-up the app shows in the way with the pop-up's own Not now or Close, never Rate us or Buy. It finds its place again when the app skips a screen.\r
+  - After the last round it goes Home. If the end you showed does not appear, the task comes back to you.\r
+  - Edit a custom task's rounds, stop words, Home and repeat with its pencil button. Changing how it repeats sends it back to review. The Remote lists its steps too.\r
+- **Falcor tab: chat with Falcor** (also on your phone, the same conversation). Ctrl+K opens it from anywhere.\r
+  - It opens on a new chat with Falcor's greeting; a chat is kept only once you send something. Past chats are on the left, grouped by day, with search.\r
+  - Ask about your games, tasks, what Falcor learned, stats, rewards, Autopilot, or how Falcor.Hub works.\r
+  - Tell it what to do: start or stop Autopilot, run, pause or resume a task, create or edit a task, fix a guide, start a teaching session.\r
+  - Anything that creates, edits or removes something shows a card; nothing changes until you tap **Confirm**. Approving a task shows the same ticks as the Tasks tab; only your taps approve it.\r
+  - Say **stop** at any time: everything stops at once, even with no internet.\r
+- **How Falcor works out what to do on a screen**, cheapest first:\r
+  - the task's own logic: claim buttons ("Claim", "Claim Day 3", "Collect 50 coins"), signup forms, balances, and the screens every game has (loading, Play, Next, Continue, Retry, free Collect, Skip ad, upgrades paid with the game's own coins);\r
+  - your **Teach recipe** for that app (the buttons you pressed, followed by what they say, never a money button);\r
+  - a move it already verified on that very screen (also from earlier runs: a game's move found once is pressed again without asking);\r
+  - then Falcor AI (Kimi), with your guide, told which presses already did nothing there. A wrong answer is sent back once with the reason; Falcor looks again before giving up.\r
+  - **Games with no built-in player** are checked against the level on screen ("Level 3", "LV. 3", "Stage 3"; never "Unlock at Level 10"), within a 150-move AI budget per run. For games drawn without text (most Unity games), Falcor AI gets a small picture and reads the level from it; the target counts only when two pictures in a row agree. Without a Kimi key, such a game goes back to you.\r
+  - **Prices and ads in a game** ("Buy now", "$0.99", "Double coins (watch ad)") are played around: Falcor's own taps can never land on a price, a purchase, an ad, an install or a bet, whatever proposed them. A payment screen (a card, a deposit, a paid plan) still stops the run and comes back to you. Popups are closed with their own \xD7, and ad screens are skipped or waited out.\r
+- **Rewarded ads** are on for every game. When a game offers a reward for an ad ("Double coins (watch ad)", "Free spin: watch ad"), Falcor plays it, waits out its countdown, closes it once the reward is granted and carries on. It never taps inside the ad and never buys anything; at most 10 ads per run.\r
+  - Only while you are there to watch: Falcor.Hub in front, the computer used in the last 5 minutes, or the phone app open. Otherwise the offer is passed by and the activity says why.\r
+  - Ad networks and some games may treat ads started this way as invalid; that risk is yours for that game.\r
+- **Edit a task** with its pencil button in Tasks: what it does, the target level, the daily reset hour, the reward note and a signup's details. Changing what it does sends it back to Needs review.\r
+- **Knowledge (guides).** Open a guide from its game, its task (the book button), the chat, or **Settings \u2192 Knowledge**; **Back** returns where you were.\r
+  - Every app Falcor learned, with its guide: summary, objectives, reward tiers, screens, step-by-step recipes and watch-outs. Each part says **seen** or **AI**.\r
+  - Press **Edit** to correct the guide, or delete pictures you don't want kept. Rename, Export or Delete each app.\r
+  - Ask Falcor about a guide from the Falcor tab (the guide's chat button focuses on it). A task it drafts lands in Tasks as *Needs review*; nothing runs until you approve it.\r
+  - Teaching the same app again updates its guide and lists what changed. Autopilot uses the guide when it runs a task on that app.\r
+  - **What you show is applied straight away**, also a game's first-time intro that Falcor records by itself: on each screen, the button you pressed there becomes a step Autopilot presses on that screen without asking (for any task on that app, for 6 months, as long as the screen looks the same). The Games page shows how many steps Falcor knows for each game.\r
+  - The guide's **watch-outs** are obeyed: a button it says never to press ("Never press Begin again", "Don't tap Reset") is never pressed by Autopilot, whatever suggested it. Add one with Edit, or answer one of Falcor's questions.\r
+- **AI Control Center** (Settings \u2192 AI): four sections.\r
+  - **Providers:** a card per connection (Connected only after a real test, Not configured, Test failed, Unavailable), with its number of models and last test. Add provider: choose it, paste the key (sealed on this computer, sent only to that provider; Ollama needs none), Save and test, and its models are found. Manage: replace or remove the key, rename, test, refresh models, a monthly budget, or add a model id by hand. Several connections of one provider can live side by side.\r
+  - **Model Library:** every model of your connections with its exact id, provider and what it can do (Vision \xB7 Tools \xB7 JSON \xB7 Local \xB7 Fast). A capability with ? is unknown until you press Test model (three tiny requests). Prices only when the provider published them; speed only from Falcor's own measurements, else Not tested. Search and filters.\r
+  - **Intelligent Routing:** Simple is the default: Primary Gaming AI (pick a model, read what will change, Use for Gaming: Autopilot planning, screenshot reading, guides, learning, and offer reading and research where the model can) and Falcor Chat AI. Advanced Routing chooses each operation's model and an optional fallback that takes over when the first is down, too slow, busy or out of quota (said in the activity log). Restore defaults goes back to what you had before; keys stay. Recommendations come only from verified capabilities and measurements.\r
+  - **Usage and Limits:** spending by provider, model and day; the global monthly limit and each provider's budget stop new requests before they are sent. A model without a verified price shows Unknown, never another provider's price.\r
+  - An existing Kimi setup carries on unchanged: its key, models, routing and spending are kept, and every operation stays on it until you pick another model. Games keep everything they learned whatever model plays. The header shows API with a light; the Games page and the phone app show the gaming model.\r
+- **Kimi's own models** (when Kimi is connected): the routing you had before still applies to operations you have not reassigned. Automatic routing gives each AI job its own Kimi model (research, offer pictures, Autopilot planning, guides, game learning, chat; kimi-k2.6 is recommended for all of them). Off, every job uses the single model above it, as before. One key for all; Test sends one request in that job's own shape. Spending is counted at each model's own price, and web searches ($0.002 each) are counted too.\r
+\r
+**What Falcor never does:**\r
+- payments, cards, deposits or paid trials;\r
+- codes sent to you;\r
+- CAPTCHAs and ID checks;\r
+- typing a secret anywhere but its own field;\r
+- buying anything, or tapping inside an ad ("Install now", "Learn more");\r
+- playing an ad nobody watches (see **Rewarded ads**);\r
+- messages to people.\r
+\r
+Those steps come back to you. The live mirror shows the screen supplied by Android, including password, ID and card forms. Teach recording still pauses on sensitive screens and excludes their pictures and entered secrets. Paired Remote viewers can also see the live screen. Android protected capture restrictions still apply.\r
+\r
+\r
+## Updates\r
+\r
+You install once. After that:\r
+- **Falcor.Hub updates itself.** It checks [Falcor-Hub-Releases](https://github.com/thekidgilly/Falcor-Hub-Releases) at start and every 10 minutes, downloads a new update pack, checks every file's SHA-256, and puts **Restart to update** in the notification bell (never while a task runs). "What's new" goes to the bell after the restart. The bell, in the top banner on the computer and the phone, holds update notices and other alerts. If a new pack fails to start twice, Falcor.Hub goes back to the previous version by itself.\r
+- **The Remote's screens come from Falcor.Hub** (\`/app/\` on port 5175), so they update with it. The APK only needs reinstalling when its shell changes (rare).\r
+- A new installer is needed only when Electron, sql.js, adb or scrcpy change; the pack then says so (\`minInstall\`).\r
+\r
+Publishing an update (from \`desktop/\`, with the releases repo cloned next to this one):\r
+\r
+\`\`\`\r
+# bump "version" in desktop/package.json (and remote/package.json if its screens changed)\r
+npm test && npm run pack -- --notes "What changed, in a line or two"\r
+cd ../../falcor-hub-releases && git add -A && git commit -m "Falcor.Hub 0.2.1" && git push\r
+\`\`\`\r
+\r
+## Develop\r
+\r
+Requires Node 22. Each folder is its own npm project.\r
+\r
+\`\`\`\r
+cd desktop && npm install\r
+npm run simulated            # the window with Falcor's simulated phone (no real phone needed)\r
+npm test                     # engine and phone-app API on the simulated phone, and ten owned test games played end to end\r
+node test/games-bench.mjs    # the games scorecard: success, AI calls, tokens, cost, taps and time per game\r
+xvfb-run -a node test/window.mjs   # the real window, driven end to end (Linux)\r
+npm run dist:win             # Windows installer in desktop/release/ (downloads and checks adb + scrcpy)\r
+\r
+cd remote && npm install\r
+npm test                     # the Remote's connection code against desktop/dist (build desktop first)\r
+npm run build && npx cap add android && node scripts/prepare-android.mjs && cd android && ./gradlew assembleRelease\r
+\`\`\`\r
+\r
+Release APKs are signed when \`FALCOR_KEYSTORE\`, \`FALCOR_KEYSTORE_PASSWORD\` and \`FALCOR_KEY_ALIAS\` are set. Every update must use the same key.\r
+\r
 `;
 
 // src/app.ts
@@ -19799,7 +20131,7 @@ async function startVideo(o) {
 
 // src/main.ts
 var where = globalThis.falcorHub || { appRoot: (0, import_node_path8.join)(__dirname, ".."), packRoot: (0, import_node_path8.join)(__dirname, ".."), packVersion: null, installVersion: import_electron2.app.getVersion(), packsDir: (0, import_node_path8.join)(import_electron2.app.getPath("userData"), "packs") };
-var VERSION = "0.21.1";
+var VERSION = "0.21.7";
 var simulated = process.argv.includes("--simulated");
 if (!import_electron2.app.requestSingleInstanceLock()) import_electron2.app.quit();
 var dataDir = () => (0, import_node_path8.join)(import_electron2.app.getPath("userData"), simulated ? "simulated" : "live");
