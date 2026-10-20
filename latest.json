@@ -1,12 +1,12 @@
 {
-  "version": "0.21.0",
-  "notes": "AI Control Center: use any AI provider. Settings → AI now has Providers, Model Library, Intelligent Routing and Usage and Limits. Connect Google Gemini, OpenAI, Anthropic Claude, Moonshot Kimi, OpenRouter, xAI, DeepSeek, Groq, Together AI, Fireworks AI, a custom OpenAI-compatible API or Ollama; each key is sealed and sent only to its own provider. Pick a Primary Gaming AI (Use for Gaming) and a Falcor Chat AI, or choose a model and fallback per operation. Your Kimi setup keeps working unchanged, and games keep everything they learned whichever model plays.",
-  "publishedAt": "2026-10-20T00:16:24.877Z",
+  "version": "0.21.1",
+  "notes": "Picture-drawn games (like Animals & Coins): Falcor AI can hold for a set time (bridges, power bars); a game canvas that has a name is treated as the game's surface, so taps are no longer all refused after one; small picture changes count; AI waits end when the screen is ready; Falcor AI can plan several visible moves in one answer (each checked first), so tutorials and raids need fewer AI calls; the opening route is learned in the game's playbook.",
+  "publishedAt": "2026-10-20T04:51:21.881Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "3223cf9ae3b70665d7e8ba53dcb080a338ebffa8361226d56c7049d6e96be438",
-      "size": 1066221
+      "sha256": "d35b2b897e913c3e3e9b255a5875330b37018d0b971ab0609d98a15d4d62ecba",
+      "size": 1070749
     },
     {
       "path": "dist/preload.js",
