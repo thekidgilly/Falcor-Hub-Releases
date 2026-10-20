@@ -43,7 +43,7 @@
     }
     const off = c.needsSetup ? 'Add blocks in Sandbox first' : c.device.state === 'none' || c.device.state === 'offline' ? c.device.why : '';
     return '<button class="small primary" data-cr="run"' + (off ? ' disabled title="' + esc(off) + '"' : '') + '>' + icon('play') + 'Run now</button>'
-      + '<button class="small" data-cr="schedule">' + icon('calendar') + 'Schedule</button><button class="small" data-cr="history">History</button><button class="small ghost" data-cr="edit">' + icon('edit') + 'Edit in Sandbox</button>';
+      + '<button class="small" data-cr="schedule">' + icon('calendar') + 'Schedule</button><button class="small" data-cr="history">History</button><button class="small ghost" data-cr="edit">' + icon('edit') + 'Edit in Sandbox</button><button class="small ghost danger" data-cr="delete" title="Delete this creation (its schedules are turned off)">' + icon('trash') + 'Delete</button>';
   }
   function drawCreations() {
     const box = $('crlist'); if (!box) return;
@@ -95,6 +95,7 @@
       if (act === 'edit') { go('sandbox'); if (window.sbOpen) await window.sbOpen(c.seqId); }
       if (act === 'history') history(c, b);
       if (act === 'fav') await call('sandbox', {op: 'meta', id: c.seqId, favorite: !c.favorite});
+      if (act === 'delete' && confirm('Delete "' + c.title + '"? Its schedules are turned off.')) { await call('sandbox', {op: 'remove', id: c.seqId}); toast('Deleted "' + c.title + '".'); }
       if (c.live && (act === 'pause' || act === 'resume' || act === 'stop')) await call('sandbox', {op: act, runId: c.live.runId});
     } catch (err) { toast(errText(err), 'warn'); }
     finally { b.disabled = false; void loadCreations(true); }
@@ -176,7 +177,7 @@
     else drawRows(box, AC.rows, AC.outcome !== 'all' || AC.from || AC.to ? 'Nothing matches these filters.' : 'Nothing has run yet. Run a creation, or start Autopilot on the Phone tab.');
     $('actmore').hidden = !AC.next;
     const sp = S.spend || {teach: 0, chat: 0, autopilot: 0}, total = sp.teach + sp.chat + sp.autopilot;
-    text($('actusage'), 'Kimi this month (estimated): ' + money(total) + (S.limit !== null && S.limit !== undefined ? ' of ' + money(S.limit) : '') + ' · the bill from Moonshot is exact');
+    text($('actusage'), 'AI this month (estimated): ' + money(total) + (S.limit !== null && S.limit !== undefined ? ' of ' + money(S.limit) : '') + ' · the bill from Moonshot is exact');
   }
   window.renderActivity = function () {
     drawActivity();

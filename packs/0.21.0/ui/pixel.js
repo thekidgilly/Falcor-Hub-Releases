@@ -344,6 +344,7 @@
     const plat = (g.platforms || []).length ? 'via ' + g.platforms.join(' · ') : (g.tasks || []).length ? g.tasks.length + ' challenge' + (g.tasks.length === 1 ? '' : 's') : 'no offers yet';
     return '<span class="gicon">' + icon + '</span><span class="gc"><span class="gtop"><b class="nm">' + esc(g.name) + '</b><span class="pill ' + st[1] + '">' + st[0] + '</span></span>'
       + '<span class="m">' + esc(plat) + '</span>'
+      + (g.prep ? '<span class="gprep ' + g.prep.phase + '">' + (g.prep.phase === 'running' ? 'RESEARCHING · ' + Math.round(g.prep.percent) + '%<span class="bar"><i data-style="width:' + Math.max(2, Math.round(g.prep.percent)) + '%"></i></span>' : g.prep.phase === 'failed' ? 'READY TO PLAY · no online tips' : '✓ READY TO PLAY') + '</span>' : '')
       + '<span class="gnums"><span><em>POTENTIAL</em><b>' + (pot.length ? esc(pot.join(' + ')) : '—') + '</b></span><span><em>VERIFIED</em><b class="' + (earned.length ? 'green' : 'muted') + '">' + (earned.length ? esc(earned.join(' + ')) : '0') + '</b></span></span>'
       + (goals.of ? '<span class="lad" title="' + goals.reached + ' of ' + goals.of + ' goals reached">' + Array.from({length: n}, (_, i) => '<i class="' + (i < on ? 'on' : '') + '"></i>').join('') + '</span>' : '<span class="lad none"></span>')
       + '<span class="gfoot"><span>' + (goals.of ? goals.reached + ' of ' + goals.of + ' goals' : esc(earnLine(g) || '')) + '</span><span class="' + (g.deadline && g.deadline.at && g.deadline.at - Date.now() < 86_400_000 ? 'sand' : 'muted') + '">' + esc(g.deadline ? g.deadline.text : '') + '</span></span></span>';
@@ -447,10 +448,49 @@
   document.addEventListener('visibilitychange', () => document.documentElement.classList.toggle('idle-off', document.hidden));
 
   // What the web said about a game (looked up during Auto-capture): a summary, tips, things to avoid and the sources.
+  // A captured game's online research: a bar with its steps while it runs, then Ready to play.
+  const PREP = [['instructions', 'How to play and its controls'], ['tips', 'Tips, tricks and hints'], ['guide', 'A guide and its screenshots'], ['notes', 'Falcor\'s notes for this game']];
+  // A newly captured game's setup checklist (training.ts on the computer) and Teach Falcor's lessons, the same on both
+  // apps; only real states are shown. Empty when there is nothing to show.
+  const trainHtml = g => {
+    const t = g.training, lessons = g.lessons || [];
+    if (!t && !lessons.length && !(g.coach && g.coach.state !== 'idle')) return '';
+    const row = (ok, label, extra) => '<li class="' + (ok === true ? 'green' : ok === 'part' ? 'sand' : 'muted') + '"><span>' + (ok === true ? '[✓]' : ok === 'part' ? '[~]' : '[ ]') + '</span> ' + label + (extra ? ' <em>' + extra + '</em>' : '') + '</li>';
+    const L = [];
+    if (t) {
+      const done = t.status === 'done', wait = !g.installed;
+      L.push('<div class="top"><p class="eyebrow">// SET UP ' + esc(g.name.toUpperCase()) + '</p>' + (t.recording ? '<span class="pill red rec">● RECORDING</span>' : done ? '<span class="pill green">TRAINED</span>' : t.status === 'analyzing' ? '<span class="pill sand">ANALYZING</span>' : '<span class="pill muted">' + (wait ? 'WAITING FOR GAME ON PHONE' : 'PLAY TO TEACH') + '</span>') + '</div>');
+      L.push('<ul class="checklist">' + row(!!(g.earning && g.earning.length), 'Game captured and offer reviewed')
+        + row(g.research ? true : g.prep && g.prep.phase === 'running' ? 'part' : false, g.research ? 'Game guide and research ready' : g.prep && g.prep.phase === 'running' ? 'Researching the game online…' : 'Research not available (offline): Falcor learns from you instead')
+        + row(t.entry.state === 'learned' ? true : t.entry.state === 'partial' ? 'part' : false, t.entry.state === 'learned' ? 'Game opening learned' + (t.entry.guest ? ' (as a guest, as you did)' : '') : t.entry.state === 'partial' ? 'Game opening partly seen: Falcor checks the rest on its first run' : 'Game opening and guest entry: captured automatically as you open the game')
+        + row(t.creditedMs >= t.needMs ? true : t.creditedMs > 0 ? 'part' : false, 'Play five minutes to teach Falcor', esc(t.progress) + ' · gameplay only')
+        + row(done ? true : t.status === 'analyzing' ? 'part' : false, done ? 'Falcor learned how to enter and play' : t.status === 'analyzing' ? 'Analyzing your play…' : 'Falcor learns how to enter and play', t.ai && done ? esc(t.ai.note) : '')
+        + row(done && g.smart && g.smart.runnable ? true : false, 'Recommended Playbook ready', done && g.smart && g.smart.runnable ? 'review and press Start Autopilot' : '') + '</ul>');
+      if (!done) L.push('<div class="bar"><i data-style="width:' + t.percent + '%"></i></div><p class="small muted">' + (wait ? 'Waiting for the game on the phone: install it, then open it and play.' : 'Open the game and play normally for five minutes. Falcor automatically learns how you enter and play — no extra steps. Loading, sign-in choices and menus are recorded but do not count.') + '</p>');
+      else L.push('<p class="small muted">Trained ' + esc(new Date(t.completedAt).toLocaleString()) + ' · ' + (t.footage.segments ? esc(t.footage.seconds) + ' s of video in ' + t.footage.segments + ' file' + (t.footage.segments === 1 ? '' : 's') : 'no video (screens and ' + t.footage.frames + ' pictures)') + (t.local ? ' · ' + esc(t.local.summary) : '') + '</p>');
+    }
+    const co = g.coach || {state: 'idle'};
+    if (co.state === 'recording') L.push('<p class="small"><span class="pill red rec">● TEACHING</span> Recording your play · ' + esc(Math.round(co.elapsedMs / 1000)) + ' s. Leave the game or press Finish & Learn when you are done.</p>');
+    else if (co.state === 'waiting') L.push('<p class="small sand">Teach Falcor: open ' + esc(g.name) + ' on the phone; recording starts when it is in front.</p>');
+    if (lessons.length || g.skill) L.push('<p class="eyebrow">// TEACH FALCOR LESSONS' + (g.skill ? ' · SKILL VERSION ' + esc(g.skill.version) + ' (' + esc(g.skill.state) + ')' : '') + '</p><ul class="lessons">' + lessons.map(x => '<li><span>' + esc(new Date(x.at).toLocaleString()) + ' · ' + esc(Math.round(x.ms / 60000) || '<1') + ' min · ' + esc({learned: 'Learned', no_change: 'No actionable change detected', analyzing: 'Analyzing', recording: 'Recording', error: 'Error', waiting: 'Waiting'}[x.status] || x.status) + '</span><span class="muted">' + esc(x.note) + (x.input === 'phone' ? ' Played on the phone itself: presses were inferred from the screens, not recorded as touches.' : '') + '</span><button class="small" data-dellesson="' + esc(x.id) + '" title="Delete this lesson and its footage (what it taught stays)">Delete</button></li>').join('') + '</ul>'
+      + (g.revisions || []).filter(x => x.state === 'rolled_back').slice(0, 2).map(x => '<p class="small sand">Skill version ' + esc(x.v) + ' rolled back: ' + esc(x.reason) + '</p>').join(''));
+    return L.join('');
+  };
+  const prepHtml = p => {
+    if (!p) return '';
+    if (p.phase === 'done') return '<div class="prep done"><b class="green">' + icon('check') + 'READY TO PLAY</b><span class="muted small">' + esc(p.line) + '</span></div>';
+    const at = PREP.findIndex(x => x[0] === (p.stage === 'more' ? 'tips' : p.stage));
+    return '<div class="prep ' + (p.phase === 'failed' ? 'failed' : 'running') + '"><b>' + (p.phase === 'failed' ? 'RESEARCH FAILED · READY TO PLAY WITHOUT IT' : 'RESEARCHING ONLINE · ' + Math.round(p.percent) + '%') + '</b>'
+      + '<span class="bar"><i data-style="width:' + Math.max(2, Math.min(100, Math.round(p.percent))) + '%"></i></span>'
+      + '<ul class="steps">' + PREP.map((x, i) => '<li class="' + (p.phase === 'failed' ? '' : i < at ? 'ok' : i === at ? 'now' : '') + '">' + (i < at && p.phase !== 'failed' ? '✓ ' : i === at && p.phase !== 'failed' ? '… ' : '· ') + esc(x[1]) + '</li>').join('') + '</ul>'
+      + '<span class="muted small">' + esc(p.line) + '</span><span class="muted small">A light search: a few web lookups and one AI request (about 1.5¢).</span></div>';
+  };
   const researchHtml = r => !r ? '' : '<div class="research">' + (r.summary ? '<p>' + esc(r.summary) + '</p>' : '')
+    + (r.instructions && r.instructions.length ? '<p class="eyebrow">// HOW TO PLAY</p><ul class="tips">' + r.instructions.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>' : '')
     + (r.levels ? '<p class="small"><b>How long:</b> ' + esc(r.levels) + '</p>' : '')
     + (r.tips && r.tips.length ? '<p class="eyebrow">// TIPS</p><ul class="tips">' + r.tips.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>' : '')
     + (r.watchOuts && r.watchOuts.length ? '<p class="eyebrow">// WATCH OUT</p><ul class="tips warn">' + r.watchOuts.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>' : '')
+    + (r.screenshots && r.screenshots.length ? '<p class="muted small">Screenshots found: ' + r.screenshots.map((u, i) => '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + (i + 1) + '</a>').join(' · ') + '</p>' : '')
     + '<p class="muted small">Looked up ' + new Date(r.at).toLocaleDateString() + (r.sources && r.sources.length ? ' · ' + r.sources.map(u => { let h = u; try { h = new URL(u).hostname.replace(/^www\./, ''); } catch { /* keep */ } return esc(h); }).join(' · ') : '') + '</p></div>';
   const editFeedback = (() => {
     const modes = ['Off', 'Haptic', 'Sound', 'Both']; let context, last = 0;
@@ -461,5 +501,5 @@
       if (m === 'Sound' || m === 'Both') { try { context ||= new AudioContext(); if (context.state === 'suspended') void context.resume(); const o = context.createOscillator(), g = context.createGain(); o.frequency.value = 700; g.gain.setValueAtTime(.025, context.currentTime); g.gain.exponentialRampToValueAtTime(.001, context.currentTime + .025); o.connect(g); g.connect(context.destination); o.start(); o.stop(context.currentTime + .03); } catch {} }
     }; return {mode, cycle, pulse};
   })();
-  window.Pixel = {editFeedback, MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced, monogram, num, unitIcon, earnLine, offersHtml, rewardsHtml, historyHtml, tiersHtml, progressHtml, motion, money, cardHtml, library, earnTiles, ladderHtml, activityHtml, MSTATE, noticesHtml, ago, setDragon, dragonSrc, avatarHtml, introHtml, INTRO, normIcon, researchHtml};
+  window.Pixel = {editFeedback, MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced, monogram, num, unitIcon, earnLine, offersHtml, prepHtml, rewardsHtml, historyHtml, tiersHtml, progressHtml, motion, money, cardHtml, library, earnTiles, ladderHtml, activityHtml, MSTATE, noticesHtml, ago, setDragon, dragonSrc, avatarHtml, introHtml, INTRO, normIcon, researchHtml, trainHtml};
 })();

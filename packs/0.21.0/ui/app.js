@@ -89,8 +89,11 @@ function render() {
   // Header: the living logo's eye, the system strip, Stop and the emergency bar.
   cls($('logo'), 'live', auto && !waiting); cls($('logo'), 'wait', waiting > 0);
   setLed('led-phone', d ? d.connected && d.authorized ? 'on' : 'warn' : 'bad'); text($('sys-phone'), d ? d.connected && d.authorized ? d.label : d.connected ? 'Allow USB debugging' : 'Not connected' : 'No phone');
-  setLed('led-auto', auto ? 'on' : ''); text($('sys-auto'), 'Autopilot ' + (auto ? 'on' : 'off'));
-  setLed('led-kimi', S.kimi.configured ? (S.kimi.test && !S.kimi.test.ok ? 'bad' : 'on') : 'warn'); text($('sys-kimi'), S.kimi.configured ? 'Kimi' : 'Kimi not set');
+  // The queue is what runs: paused, or running what is scheduled (busy while something runs).
+  const qd = d && S.queue && S.queue.devices ? S.queue.devices[d.id] : null, qPaused = !!(qd && qd.paused), qBusy = !!(qd && qd.current);
+  setLed('led-auto', em ? 'bad' : qPaused ? 'warn' : qBusy || auto ? 'on' : ''); text($('sys-auto'), em ? 'Queue stopped' : qPaused ? 'Queue paused' : qBusy ? 'Queue running' : 'Queue ready');
+  // The header shows the model that plays games now (any provider), or that none is set.
+  const ga = S.ai && S.ai.active && S.ai.active.gaming; setLed('led-kimi', !ga ? 'warn' : ga.status === 'connected' ? 'on' : ga.status === 'failed' ? 'bad' : 'warn'); text($('sys-kimi'), 'API'); $('sys-kimi').parentElement.title = ga ? 'Gaming AI: ' + ga.model + ' · ' + ga.provider + (ga.status === 'connected' ? '' : ' (' + ga.status.replace('_', ' ') + ')') : 'No AI model set: Settings → AI';
   setLed('led-remote', S.remote.phones.some(p => Date.now() - p.lastSeenAt < 90_000) ? 'on' : ''); text($('sys-remote'), 'Remote' + (S.remote.phones.length ? ' · ' + S.remote.phones.length : ''));
   if (em && !wasEmergency) { document.body.classList.remove('glitch'); void document.body.offsetWidth; document.body.classList.add('glitch'); $('ebar').classList.add('stepin'); }
   wasEmergency = em; $('ebar').hidden = !em;
@@ -100,9 +103,11 @@ function render() {
   renderStatusbar(d);
   renderTeach();
   // A Teach session Falcor started for a new task: show the mirror so the owner can play.
-  const learning = S.teaching && S.teaching.auto ? S.teaching.id : null, was = autoSeen;
+  const learning = S.teaching && S.teaching.auto && (!S.teaching.kind || S.teaching.kind === 'teach') ? S.teaching.id : null, was = autoSeen;
   autoSeen = learning;
   if (learning && learning !== was) { toast('Falcor opened ' + S.teaching.name + ' and is recording. Play it on the mirror; when you leave the game, Falcor studies it and adds it to Games.'); if (tab !== 'sandbox') { go('sandbox'); if (window.sbMode) sbMode('teach'); return; } }
+  if (S.teaching && S.teaching.kind === 'training' && trainSeen !== S.teaching.id) toast('Training ' + S.teaching.name + ': recording while you play. ' + clock(S.teaching.leftMs || 0) + ' of gameplay left; nothing to press.');
+  trainSeen = S.teaching && S.teaching.kind === 'training' ? S.teaching.id : null;
   if (!learning && was) toast('Teaching ended. If you played, Falcor is studying it; the game shows in Games with its guide.');
   // Success moments: a task that just became verified bursts.
   for (const t of S.tasks) { const was = prevStates.get(t.id); if (was && was !== t.state && /VERIFIED|RECEIVED/.test(t.state)) setTimeout(() => P.burst(document.querySelector('.task[data-key="' + t.id + '"]') || $('tiles') || $('logo')), 50); prevStates.set(t.id, t.state); }
@@ -124,7 +129,8 @@ function renderStatusbar(d) {
     '<span><i class="led ' + (S.adb ? 'on' : 'bad') + '"></i>adb ' + (S.adb ? 'ready' : 'missing') + '</span>',
     '<span><i class="led ' + (S.scrcpy ? 'on' : '') + '"></i>scrcpy ' + (S.scrcpy ? 'ready' : 'missing') + '</span>',
     '<span id="fps">' + esc(fpsText) + '</span>',
-    '<span>' + icon('ai') + esc(S.kimi.model) + (S.kimi.lastReplyAt ? ' · last reply ' + time(S.kimi.lastReplyAt) : '') + '</span>',
+    // The model that plays games now and its provider (the one that actually handles gameplay requests).
+    '<span title="Gaming AI">' + icon('ai') + (S.ai && S.ai.active.gaming ? esc(S.ai.active.gaming.model) + ' · ' + esc(S.ai.active.gaming.provider) : 'no gaming AI') + (S.kimi.lastReplyAt ? ' · last reply ' + time(S.kimi.lastReplyAt) : '') + '</span>',
     '<span>' + icon('wifi') + S.remote.phones.length + ' paired</span>',
     d && d.battery !== null && d.battery !== undefined ? '<span>battery ' + d.battery + '%</span>' : '',
     '<span class="right">v' + esc(S.version) + (S.simulated ? ' · simulated phone' : '') + ' · ' + esc(upd) + '</span>',
@@ -192,11 +198,6 @@ function renderPhone(d) {
   htmlOnce($('d-app'), d.foreground ? esc(d.foregroundName || d.foreground) + '<small>' + esc(d.foreground) + '</small>' : '—');
   $('d-batt').hidden = $('d-batt-l').hidden = d.battery === null || d.battery === undefined; text($('d-batt'), d.battery != null ? d.battery + '%' : '');
   text($('d-control'), d.control ? (d.control.kind === 'human' ? 'You' : 'Falcor') : 'Falcor idle');
-  text($('autolabel'), d.autopilot ? 'Stop Autopilot' : 'Start Autopilot');
-  $('autopilot').className = (d.autopilot ? 'danger' : 'primary') + ' big';
-  $('autopilot').firstElementChild.className = 'led' + (d.autopilot ? ' active' : '');
-  $('autopilot').disabled = !!d.emergency;
-  text($('autonote'), d.autopilot ? 'On for ' + dur(Date.now() - (d.autopilotSince || Date.now())) + ': today\'s queue runs at its times.' : 'Runs today\'s queue at its times, and approved tasks when due.');
   for (const p of [$('devicepanel'), $('mission')]) cls(p, 'shine', !!d.autopilot);
   $('take').hidden = controlling; $('release').hidden = !controlling || !!S.teaching;
   $('teach').disabled = !!S.teaching || !!d.emergency || d.running;
@@ -222,7 +223,6 @@ function renderLog() {
   if (stick) box.scrollTop = box.scrollHeight;
 }
 $('devpick').onchange = e => { deviceId = e.target.value; render(); };
-$('autopilot').onclick = async () => { const d = dev(); if (d) { const r = await call('autopilot', {deviceId: d.id, on: !d.autopilot}); toast(r ? 'Autopilot on.' : 'Autopilot off.'); } };
 $('take').onclick = async () => { await call('take', {deviceId}); toast('You have control. Click to tap, drag to swipe, scroll with the wheel, type with the keyboard.'); $('mirrorbox').focus(); };
 $('release').onclick = () => call('release', {deviceId});
 $('viewer').onclick = () => call('viewer', {deviceId}).then(() => toast('scrcpy window open. You have control while it is open.'));
@@ -381,20 +381,21 @@ $('mirrorbox').addEventListener('keydown', e => {
 });
 
 // ------------------------------------------------------------------ Teach Falcor
-let teachSeen = null, after = null;
+let teachSeen = null, after = null, trainSeen = null;
 function renderTeach() {
   const t = S.teaching;
   $('rec').hidden = !t;
   if (t) {
-    teachSeen = {at: Date.now(), ms: t.elapsedMs, state: t.state};
+    teachSeen = {at: Date.now(), ms: t.elapsedMs, state: t.state, left: t.kind === 'training' ? t.leftMs : null};
     cls($('rec'), 'paused', t.state === 'paused');
-    text($('rectitle'), (t.state === 'paused' ? 'PAUSED · ' : 'TEACHING · ') + t.name);
-    text($('recinfo'), t.screens + ' screens · ' + t.touches + ' touches · ' + t.marks + ' marks');
+    text($('rectitle'), (t.state === 'paused' ? 'PAUSED · ' : t.kind === 'training' ? 'TRAINING · ' : 'TEACHING · ') + t.name);
+    // Training: the five minutes of gameplay still to play (credited time, not the clock), then the screens seen.
+    text($('recinfo'), (t.kind === 'training' && t.leftMs !== null ? clock(t.leftMs) + ' of play left · ' : '') + t.screens + ' screens · ' + t.touches + ' touches · ' + t.marks + ' marks');
     $('recpause').innerHTML = icon(t.state === 'paused' ? 'play' : 'pause'); $('recpause').title = t.state === 'paused' ? 'Resume' : 'Pause';
     tickRec();
   } else teachSeen = null;
 }
-function tickRec() { if (!teachSeen) return; text($('rectime'), clock(teachSeen.ms + (teachSeen.state === 'recording' ? Date.now() - teachSeen.at : 0))); }
+function tickRec() { if (!teachSeen) return; if (teachSeen.left !== null && teachSeen.left !== undefined) { text($('rectime'), clock(teachSeen.left) + ' left'); return; } text($('rectime'), clock(teachSeen.ms + (teachSeen.state === 'recording' ? Date.now() - teachSeen.at : 0))); }
 setInterval(tickRec, 500);
 // Teach lives in the Sandbox (it is the Sandbox's recording mode): the Phone tab's Teach opens it there.
 $('teach').onclick = () => { go('sandbox'); openTeach(); };
@@ -436,7 +437,7 @@ async function showAfter(pkg, id, name, screens, learned) {
   const est = await call('teachEstimate', {pkg, id}).catch(() => null);
   if (!est) return;
   const spent = est.spend.teach + est.spend.chat + est.spend.autopilot;
-  text($('afterest'), !est.configured ? 'Add your Kimi key in Settings to have Falcor AI write it, or save it without AI (free).'
+  text($('afterest'), !est.configured ? 'Connect an AI provider in Settings → AI to have Falcor AI write it, or save it without AI (free).'
     : 'About ' + est.tokens.toLocaleString() + ' tokens, about ' + money(est.cost) + (est.images ? ' (' + est.images + ' small pictures of screens without text)' : '') + '. Text only: about ' + money(est.textCost) + '.');
   meter($('aftermeter'), est.limit ? (spent + est.cost) / est.limit : 0, est.limit ? 'This month ' + money(spent) + ' + ' + money(est.cost) + ' of ' + money(est.limit) : '');
   $('aftermeter').hidden = !est.limit;
@@ -508,11 +509,17 @@ function renderGame(g) {
   const st = gameState(g), d = dev();
   htmlOnce($('gpicon'), iconHtml(g));
   text($('gpname'), g.name);
+  htmlOnce($('gpprep'), P.prepHtml(g.prep));
   $('gpweb').hidden = !g.research; htmlOnce($('gpwebbody'), P.researchHtml(g.research));
   htmlOnce($('gpmeta'), (g.pkg.startsWith('offer:') ? 'Offer only' : '<code>' + esc(g.pkg) + '</code>') + ' · <span class="' + st.mood + '">' + esc(st.label) + '</span>' + (g.level !== null && g.level !== undefined ? ' · level ' + esc(g.level) : '') + (g.lastPlayed ? ' · last played ' + new Date(g.lastPlayed).toLocaleString() : '') + (g.installed ? '' : ' · <span class="sand">' + (g.pkg.startsWith('offer:') ? 'not installed on the phone yet: it links by itself once it is' : 'not on the phone') + '</span>'));
   $('gpopen').disabled = !d || !g.installed || !!d.running || !!d.emergency;
   $('gpopen').title = !d ? 'Plug in the phone' : !g.installed ? 'Not installed on the phone' : d.running ? 'A task is running' : d.emergency ? 'Emergency Stop is on' : 'Open it on the phone and take control';
-  $('gpteach').disabled = $('gpopen').disabled || !!S.teaching;
+  // Teach Falcor on this game: one press, then play; Finish & Learn while it records (or just leave the game).
+  const co = g.coach || {state: 'idle'}, mine = co.state === 'recording' || co.state === 'waiting';
+  $('gpteach').disabled = !mine && (!d || !g.installed || !!d.emergency || !!S.teaching || !!(g.training && g.training.status !== 'done'));
+  $('gpteach').title = mine ? 'Stop recording and learn from it now (leaving the game does the same)' : g.training && g.training.status !== 'done' ? 'Falcor is learning this game from your first five minutes: just play it' : 'Play it your way: Falcor records and learns from you (no time to fill, nothing else to press)';
+  $('gpteach').innerHTML = icon(mine ? 'check' : 'rec') + (co.state === 'recording' ? 'Finish & Learn' : co.state === 'waiting' ? 'Cancel Teach' : 'Teach Falcor');
+  renderTrain(g);
   // Play now / Schedule run the game's own automation (its task, or a sequence that opens it); without one it needs setup.
   const au = g.automation || {ready: false, setup: false, why: '', target: null, name: ''};
   $('gpplay').disabled = !d || !au.ready || !!d.emergency; $('gpplay').title = au.ready ? 'Falcor plays it now: ' + au.name + ' (the queue does not start)' : au.why;
@@ -567,6 +574,8 @@ function renderAutopilot(g, d) {
   const c = g.campaign, on = !!c && c.active && !c.paused, goals = g.apGoals || [];
   const sig = (g.smart && g.smart.runnable ? 'plan|' : '') + goals.map(x => x.objective + ':' + x.label).join('|'), sel = $('gpgoal');
   renderPlan(g);
+  // The model that plays (any provider), and the one that last actually answered a move.
+  const ai = S.ai && S.ai.active; text($('gpai'), ai && ai.gaming ? '· ' + ai.gaming.model + ' · ' + ai.gaming.provider + (ai.lastPlan && ai.lastPlan.model !== ai.gaming.model ? ' (last move by ' + ai.lastPlan.model + ')' : '') : '· no gaming AI set');
   if (sel.dataset.sig !== sig) {
     const keep = sel.value;
     sel.innerHTML = (g.smart && g.smart.runnable ? '<option value="plan">Smart Playbook (recommended)</option>' : '') + goals.map((x, i) => '<option value="' + i + '">' + esc(x.label) + '</option>').join('') + '<option value="level">Level…</option>';
@@ -575,12 +584,12 @@ function renderAutopilot(g, d) {
   $('gplevelbox').hidden = sel.value !== 'level'; $('gpgoalbox').hidden = on;
   $('gpapstart').hidden = on; $('gpappause').hidden = $('gpapstop').hidden = !on;
   if (c && c.paused) $('gpapstop').hidden = false;
-  $('gpapstart').disabled = !d || !!d.emergency || !g.installed;
-  $('gpapstart').title = !d ? 'Plug in the phone' : d.emergency ? 'Emergency Stop is on' : !g.installed ? 'Not installed on the phone' : 'Falcor plays this game toward the goal now, then comes back by itself until it is verified';
+  $('gpapstart').disabled = !d || !!d.emergency || !g.installed || !!g.locked;
+  $('gpapstart').title = !d ? 'Plug in the phone' : d.emergency ? 'Emergency Stop is on' : !g.installed ? 'Not installed on the phone' : g.locked ? g.locked : 'Falcor plays this game toward the goal now, then comes back by itself until it is verified';
   $('gpapstart').innerHTML = icon('play') + (c && c.paused ? 'Carry on' : 'Start Autopilot');
   const r = g.review, L = [];
   const state = !c ? ['OFF', 'muted'] : c.running ? ['PLAYING', 'green'] : on ? ['ON', 'green'] : c.paused ? ['PAUSED', 'sand'] : ['OFF', 'muted'];
-  L.push('<div class="gpapstate"><span class="pill ' + state[1] + '">' + state[0] + '</span>' + (c ? '<span><em>Goal</em>' + esc(c.goal) + '</span>' : '<span class="muted">Pick a goal and press Start Autopilot. It runs on its own, also with Autopilot off, and never buys anything.</span>')
+  L.push('<div class="gpapstate"><span class="pill ' + state[1] + '">' + state[0] + '</span>' + (c ? '<span><em>Goal</em>' + esc(c.goal) + '</span>' : '<span class="muted">Pick a goal and press Start Autopilot. Falcor plays it now (or in its turn in the queue), comes back by itself, and never buys anything.</span>')
     + (g.level !== null && g.level !== undefined ? '<span><em>Verified level</em>' + esc(g.level) + '</span>' : '')
     + (c && c.running && c.step ? '<span><em>Now</em>' + esc(c.step) + '</span>' : '')
     + (c && c.last ? '<span><em>Last session</em>' + esc(c.last.accepted) + ' input' + (c.last.accepted === 1 ? '' : 's') + ' accepted · ' + esc(String(c.last.outcome).toLowerCase().replace(/_/g, ' ')) + '</span>' : '')
@@ -613,7 +622,7 @@ async function planRun(g, d, extra = {}) {
   if (r && r.needsApproval) { const ok = await apApprove({...r.needsApproval, run: true}); if (!ok) return; extra = {...extra, rulesAllow: true}; r = await call('gamePlaybook', {pkg: g.pkg, op: 'run', deviceId: d.id, strategy, ...extra}); }
   if (r && r.conflict) { const choice = await qAsk(r.conflict); if (!choice) return; r = await call('gamePlaybook', {pkg: g.pkg, op: 'run', deviceId: d.id, strategy, ...extra, choice}); }
   if (r && r.already) toast(g.name + ': the playbook is already running.', 'warn');
-  else if (r && (r.started || r.queued)) toast('Smart Playbook on for ' + g.name + '. It comes back by itself until every milestone is verified.');
+  else if (r && (r.started || r.queued)) { toast('Smart Playbook on for ' + g.name + '. It comes back by itself until every milestone is verified.'); go('phone'); }
 }
 async function apStart(extra = {}) {
   const g = S.games.find(x => x.pkg === gamePkg), d = dev(); if (!g || !d) return;
@@ -630,12 +639,14 @@ async function apStart(extra = {}) {
   if (r && r.already) toast(g.name + ' is already running.', 'warn');
   else if (r && r.queued) toast('Game Autopilot on: ' + g.name + ' runs after what is running now.');
   else if (r && r.started) toast('Game Autopilot on: Falcor is playing ' + g.name + '.');
+  // Started or lined up: the Phone tab, to watch it play (the mirror, the current activity and the queue).
+  if (r && (r.started || r.queued)) go('phone');
 }
 // A new task for the goal: the owner reads the rules and ticks them (the same approval as Tasks); nothing runs before.
 function apApprove(n) {
   return new Promise(resolve => {
     let done = false; const end = v => { if (done) return; done = true; qSheet.close(); resolve(v); };
-    qSheet.open(qSheet.head(n.run ? 'RUN SMART PLAYBOOK' : 'APPROVE GAME AUTOPILOT', n.name) + '<p class="small">Goal: <b>' + esc(n.goal) + '</b>. ' + (n.existing ? 'Its task waits for your approval.' : 'A task for it is made when you approve.') + '</p><ul class="small">' + n.rules.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>'
+    qSheet.open(qSheet.head(n.run ? 'RUN SMART PLAYBOOK' : 'APPROVE GAME AUTOPILOT', n.name) + '<p class="small">Goal: <b>' + esc(n.goal) + '</b>. ' + (n.existing ? 'Its task waits for your approval.' : 'A task for it is made when you approve.') + '</p><ul class="small">' + n.rules.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' + (n.run ? '<p class="small">Runs automatically at scheduled times even when Phone Autopilot is off. Requires Falcor Hub running and your phone connected.</p>' : '')
       + '<label class="small"><input type="checkbox" id="aprules"> I approve these rules</label><div class="row"><button class="primary" id="apgo" disabled>' + icon('check') + (n.run ? 'Run Playbook' : 'Approve and start') + '</button><button data-close>Cancel</button></div>', b => {
       b.querySelector('#aprules').onchange = e => { b.querySelector('#apgo').disabled = !e.target.checked; };
       b.querySelector('#apgo').onclick = () => end(true);
@@ -836,9 +847,28 @@ $('gameback').onclick = () => { gamePkg = null; renderGames(); };
 $('gpopen').onclick = async () => { await call('openApp', {deviceId, pkg: gamePkg}); go('phone'); toast('Opened. You have control: play it on the mirror, or press Release when you are done.'); };
 $('gpteach').onclick = async () => {
   const g = S.games.find(x => x.pkg === gamePkg); if (!g) return;
-  await call('openApp', {deviceId, pkg: g.pkg});
-  for (let i = 0; i < 10; i++) { const t = await call('teachTarget', {deviceId}); if (t.pkg === g.pkg) break; await new Promise(r => setTimeout(r, 500)); }
-  await call('teachStart', {deviceId, name: g.name, intent: ''}); go('phone'); toast('Recording. Play it on the mirror; press Stop when you are done.');
+  if (g.coach && g.coach.state !== 'idle') { const r = await call('gameTeach', {pkg: g.pkg, op: 'finish'}); Object.assign(g, r); renderGame(g); toast(g.coach && g.coach.state === 'idle' ? 'Teach Falcor: learning from what you showed.' : 'Teach Falcor cancelled.'); return; }
+  const r = await call('gameTeach', {pkg: g.pkg, op: 'start', deviceId}); Object.assign(g, r);
+  if (r.note) { toast(r.note, 'warn'); return; }
+  // The game opens on the phone; recording starts by itself once it is in front. The owner keeps playing their way.
+  renderGame(g); toast('Teach Falcor: play ' + g.name + ' your way, on the phone or the mirror. Leave the game or press Finish & Learn when you are done.');
+};
+// A newly captured game's setup checklist (training.ts): what is done, the five minutes of gameplay, the way in, and
+// what Falcor learned; then Teach Falcor's lessons on this game. Only real states are shown.
+function renderTrain(g) {
+  const box = $('gptrain'), html = g.pkg.startsWith('offer:') ? '' : P.trainHtml(g);
+  box.hidden = !html; if (html) { htmlOnce(box, html); P.fix(box); }
+}
+$('gptrain').onclick = async e => {
+  const b = e.target.closest('[data-dellesson]'); if (!b) return;
+  const r = await call('gameTeach', {pkg: gamePkg, op: 'delete', id: b.dataset.dellesson}); const g = S.games.find(x => x.pkg === gamePkg); if (g) { Object.assign(g, r); renderGame(g); }
+};
+// Remove game: its playbook and Autopilot stop, its tasks, schedules, offers and what Falcor learned are forgotten;
+// the app on the phone stays installed.
+$('gpremove').onclick = async () => {
+  const g = S.games.find(x => x.pkg === gamePkg); if (!g) return;
+  if (!confirm('Remove ' + g.name + ' from Games?\n\nIts Autopilot and playbook stop, and its tasks, schedules, offers and what Falcor learned about it are deleted. The app stays on your phone.')) return;
+  try { await call('removeGame', {pkg: g.pkg}); gamePkg = null; S = await call('status'); renderGames(); toast(g.name + ' removed.'); } catch (e) { toast(e.message || String(e), 'warn'); }
 };
 $('gptask').onclick = () => { openDrawer(); draft.app = gamePkg; draft.step = 2; drawStep(); };
 const gameAuto = () => (S.games.find(x => x.pkg === gamePkg) || {}).automation || {};
@@ -1008,7 +1038,7 @@ $('dnext').onclick = async () => {
 // It opens on a new chat with Falcor's greeting; the chat is kept only once something is sent (the first message makes
 // it, with the focus chosen before). Notices are in the bell, never here.
 const chat = {id: null, rev: 0, msgs: new Map(), focus: null, poll: null, ctx: true, greeted: null, threads: [], q: ''};
-const QUICK = ['What\'s running?', 'What needs me?', 'Start Autopilot', 'What did you learn today?', 'How does the Daily Queue work?', 'Create a daily check-in task'];
+const QUICK = ['What\'s running?', 'What needs me?', 'What did you learn today?', 'How does the Daily Queue work?', 'Create a daily check-in task'];
 function chatReset() { chat.rev = 0; chat.shown = 0; chat.msgs.clear(); $('msglist').innerHTML = ''; delete $('msglist').dataset.ready; }
 // A new chat, not kept until the first message. focus: an app to talk about (from a game's or a guide's page).
 function chatFresh(focus = null) {
@@ -1275,13 +1305,7 @@ function setSub(name) { sub = name; document.querySelectorAll('#submenu button')
 document.querySelectorAll('#submenu button').forEach(b => b.onclick = () => setSub(b.dataset.sub));
 let prevPhones = null;
 function renderSettings() {
-  const k = S.kimi, t = k.test;
-  $('kimistate').firstElementChild.className = 'led ' + (!k.configured ? 'warn' : t && !t.ok ? 'bad' : 'on');
-  text($('kimistate').lastElementChild, !k.configured ? 'No key' : t && !t.ok ? 'Error' : 'Connected');
-  const known = ['kimi-k3', 'kimi-k2.6', 'kimi-k2.7-code'];
-  if (document.activeElement !== $('kimimodel') && document.activeElement !== $('kimicustom')) { $('kimimodel').value = known.includes(k.model) ? k.model : 'custom'; $('kimicustomwrap').hidden = known.includes(k.model); if (!known.includes(k.model)) $('kimicustom').value = k.model; }
-  text($('kimiping'), t ? (t.ok ? 'Answered in ' + t.ms + ' ms · ' + time(t.at) : 'Failed: ' + t.error) : '');
-  renderRouting();
+  if (window.renderAi) window.renderAi();
   if (document.activeElement !== $('limit')) $('limit').value = S.limit ?? '';
   const spent = S.spend.teach + S.spend.chat + S.spend.autopilot;
   meter($('limitmeter'), S.limit ? spent / S.limit : 0, ''); $('limitmeter').title = money(spent) + (S.limit !== null ? ' of ' + money(S.limit) : ' this month, no limit');
@@ -1297,40 +1321,6 @@ function renderSettings() {
   htmlOnce($('history'), '<div class="history">' + ((S.notesHistory || []).map(h => '<div><b>' + esc(h.version) + '</b><p class="muted small">' + esc(h.notes || 'Improvements and fixes.') + '</p></div>').join('') || '<p class="muted small">Notes from each update show here.</p>') + '</div>');
   text($('about'), 'Version ' + S.version + (S.simulated ? ' · simulated phone' : '') + ' · adb ' + (S.adb ? 'ready' : 'missing') + ' · scrcpy ' + (S.scrcpy ? 'ready' : 'missing'));
 }
-// Intelligent model routing: one row per AI operation. A row the owner changed and has not saved keeps their choice
-// while status refreshes; Test sends one request in that operation's own shape (pictures, tools or JSON).
-const routeDirty = new Set();
-const capsText = m => [m.vision ? 'pictures' : 'text only', m.tools ? 'tools' : '', m.json ? 'JSON' : '', m.thinking === 'mandatory' ? 'always thinks' : m.thinking === 'effort' ? 'reasoning effort' : m.thinking === 'optional' ? 'thinking on/off' : 'legacy request', m.priced ? '' : 'price unverified'].filter(Boolean).join(' · ');
-function renderRouting() {
-  const r = S.routing; if (!r) return;
-  if (document.activeElement !== $('routeauto')) $('routeauto').checked = r.mode === 'auto';
-  const tests = S.routeTests || {};
-  const rows = [...r.ops, ...r.soon.map((x, i) => ({id: 'soon' + i, label: x.label, model: x.model, soon: true}))];
-  keyed($('routes'), rows, x => x.id, x => P.el(x.soon ? '<li class="muted"><span class="grow"></span><span class="small"></span><span class="pill small">Coming soon</span></li>' : '<li><span class="grow"></span><select></select><button type="button" class="small">Test</button><span class="muted small"></span></li>'), (li, x) => {
-    li.firstElementChild.textContent = x.label;
-    if (x.soon) { li.children[1].textContent = x.model; return; }
-    const sel = li.children[1], fitsOp = m => (!x.needs.vision || m.vision) && (!x.needs.tools || m.tools) && (!x.needs.json || m.json);
-    const opts = r.registry.filter(fitsOp).map(m => [m.id, m.id + (r.defaults[x.id] === m.id ? ' (recommended)' : '')]);
-    if (!opts.some(o => o[0] === r.models[x.id])) opts.push([r.models[x.id], r.models[x.id] + ' (custom)']);
-    const html = opts.map(([v, l]) => '<option value="' + esc(v) + '">' + esc(l) + '</option>').join('');
-    if (sel.dataset.h !== html) { sel.dataset.h = html; sel.innerHTML = html; }
-    if (!routeDirty.has(x.id) && document.activeElement !== sel) sel.value = r.models[x.id];
-    sel.disabled = r.mode !== 'auto'; sel.onchange = () => { routeDirty.add(x.id); text($('routemsg'), 'Not saved yet.'); };
-    sel.dataset.op = x.id; li.children[2].dataset.routetest = x.id;
-    const t = tests[x.id];
-    text(li.children[3], r.mode !== 'auto' ? 'uses ' + r.legacy : t ? (t.ok ? '✓ ' + t.model + ' · ' + t.ms + ' ms' : '✗ ' + t.error) : '');
-  });
-  const pick = r.registry.find(m => m.id === r.legacy);
-  text($('routecaps'), r.registry.map(m => m.id + ': ' + capsText(m)).join(' — ') + (pick ? '' : ' — ' + r.legacy + ': custom model, text only, never sent pictures; in automatic routing only for tasks that need no pictures or tools.'));
-}
-$('routeauto').onchange = async () => { try { await call('setRouting', {mode: $('routeauto').checked ? 'auto' : 'single'}); toast($('routeauto').checked ? 'Automatic routing on.' : 'Single model mode: every task uses ' + S.routing.legacy + '.'); } catch (e) { $('routeauto').checked = !$('routeauto').checked; throw e; } };
-$('routeform').onsubmit = async e => { e.preventDefault(); const models = {}; $('routes').querySelectorAll('select[data-op]').forEach(s => { models[s.dataset.op] = s.value; }); await call('setRouting', {models}); routeDirty.clear(); text($('routemsg'), ''); toast('Model routing saved.'); };
-$('routereset').onclick = async () => { await call('setRouting', {reset: true}); routeDirty.clear(); text($('routemsg'), ''); toast('Models reset to the recommended defaults.'); };
-$('routes').addEventListener('click', async e => { const b = e.target.closest('[data-routetest]'); if (!b) return; b.classList.add('busy'); try { const r = await call('testKimi', {op: b.dataset.routetest}); toast(r.model + ' answered for ' + r.label + ' in ' + r.ms + ' ms.'); } finally { b.classList.remove('busy'); } });
-$('kimimodel').onchange = () => { $('kimicustomwrap').hidden = $('kimimodel').value !== 'custom'; };
-$('kimiform').onsubmit = async e => { e.preventDefault(); const model = $('kimimodel').value === 'custom' ? $('kimicustom').value : $('kimimodel').value; await call('saveKimi', {key: $('kimikey').value, model}); $('kimikey').value = ''; toast('Kimi settings saved.'); };
-$('kimitest').onclick = async () => { $('kimitest').classList.add('busy'); try { const r = await call('testKimi'); toast('Kimi answered "' + r.reply + '" in ' + r.ms + ' ms.'); } finally { $('kimitest').classList.remove('busy'); } };
-$('kimiremove').onclick = async () => { await call('removeKimi'); toast('Kimi key removed.'); };
 $('limitform').onsubmit = async e => { e.preventDefault(); await call('setLimit', {limit: $('limit').value === '' ? null : Number($('limit').value)}); toast('Monthly limit saved.'); };
 let pairTimer = null;
 $('pair').onclick = async () => {
