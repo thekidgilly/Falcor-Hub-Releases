@@ -1,12 +1,12 @@
 {
-  "version": "0.21.1",
-  "notes": "Picture-drawn games (like Animals & Coins): Falcor AI can hold for a set time (bridges, power bars); a game canvas that has a name is treated as the game's surface, so taps are no longer all refused after one; small picture changes count; AI waits end when the screen is ready; Falcor AI can plan several visible moves in one answer (each checked first), so tutorials and raids need fewer AI calls; the opening route is learned in the game's playbook.",
-  "publishedAt": "2026-10-20T04:51:21.881Z",
+  "version": "0.21.2",
+  "notes": "Smart Playbook: one glowing panel with a single Start Playbook Autopilot button (no choices), a daily schedule up to the offer's deadline or 90 days out, and milestones from a refreshed offer join the plan. Faster phone control: the phone is read in parallel, picture games skip the slow screen-text dump, Falcor looks while the AI thinks, and moves that worked on a picture scene are reused. Closing purchase pop-ups is allowed (buying never is); Pause queue sits in Today's Queue. Phone app: header fixed, playbook panel styled.",
+  "publishedAt": "2026-10-20T13:39:36.796Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "d35b2b897e913c3e3e9b255a5875330b37018d0b971ab0609d98a15d4d62ecba",
-      "size": 1070749
+      "sha256": "493a6afb6434fa74a011f013cd9410858062c267d3188c94265ba74558cb6936",
+      "size": 1079547
     },
     {
       "path": "dist/preload.js",
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-CYu6AmKR.js",
-      "sha256": "b4bb3dbd2ebd66c9cbf6321e7f80db3fba295a700cc4d06ef5eb1ee2042b85da",
-      "size": 169687
+      "path": "remote-ui/assets/index-BR21GwA6.css",
+      "sha256": "7b8f6cd9d07ccf1ed74937ba723ef5a92a4f1dd8b487206f1bfa98543004b434",
+      "size": 56554
     },
     {
-      "path": "remote-ui/assets/index-I43jXfmx.css",
-      "sha256": "a391c9f81cda22d7f8b0322cc03965229f5ab501e6e3406600e9617f4a5ef74a",
-      "size": 53178
+      "path": "remote-ui/assets/index-DRhsYPUl.js",
+      "sha256": "95d65f303e29cd6dfa015ed90d06b9a208c7f3ca8265ad7e6c4b3f58f878ebe8",
+      "size": 171442
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "fa2f01a4296fbc1806897c293b39a19878fb33bb7156d3053e016279b6fd5d1a",
+      "sha256": "3447fc5b97b533ae7da1e32495e421dda7549abe6cdeef90d08a3fb14ff9f171",
       "size": 3854
     },
     {
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "3ef70962f8a1b7b8cc93a8b1e5f532f7e161d7bd16176b42328f8308e669f98a",
-      "size": 137624
+      "sha256": "0fee80bfdcd49eaba24012939a8bbd8ea8271037b89641ccfa258b75b24e4c49",
+      "size": 136777
     },
     {
       "path": "ui/app.png",
@@ -95,13 +95,13 @@
     },
     {
       "path": "ui/creations.js",
-      "sha256": "2df0723e1c0d5266765078677e3438601bf3f325a1b5777bae2a3105d6581376",
-      "size": 18108
+      "sha256": "b15ef2294eba1478ca95607ed65012894cabbee99e28926ea52d7385983699dd",
+      "size": 18106
     },
     {
       "path": "ui/desk.js",
-      "sha256": "aefa979fd337e75e58c7c4e9afcd43299a0d55a265896d457bcba770a5595235",
-      "size": 44631
+      "sha256": "dfce4aa77999c3efbd666655f4c8b866f16da54c3b358e16385d911730ffeab5",
+      "size": 44629
     },
     {
       "path": "ui/dragon.png",
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "6f462fd4d35ee7801d196590cacb2f4a1bbceec0c9eafb05ee82545684e580eb",
-      "size": 54476
+      "sha256": "ff6f2344c29f5a7ccab0e2c52866ab0511d2670c8ccfde95daa69957cf119a7f",
+      "size": 54441
     },
     {
       "path": "ui/motion.css",
@@ -140,13 +140,13 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "b20e4dd163a9a895a717b5a3059d4bc7b347d1e56c9dfc5e8bac0a0b90a836a3",
-      "size": 59816
+      "sha256": "9b8d98620d4a02cfa0444057f20c4cecda043cc1ffd390cc6123f9689892bfb6",
+      "size": 63856
     },
     {
       "path": "ui/queue.js",
-      "sha256": "f8c0478c704c433d7d9da43cb4923d613c5dbd37292cfbd85e5b53f7b6053602",
-      "size": 49256
+      "sha256": "c2d92c85cb32cd4b306403b318229cce47fd488b6acf7656c2ff7b8df9f80010",
+      "size": 49258
     },
     {
       "path": "ui/sandbox.js",
@@ -155,8 +155,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "b6af1eec7ccc58ef99dfe091ec51cbf392d4701ddfe053e3f98b2f9b51a8348c",
-      "size": 90423
+      "sha256": "4d7fd2a43da1e88d154bc9621355b153a8c16d2d001c8195d5533f1f3d7c7f18",
+      "size": 94209
     },
     {
       "path": "ui/tokens.css",
