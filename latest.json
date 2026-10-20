@@ -1,12 +1,12 @@
 {
-  "version": "0.21.2",
-  "notes": "Smart Playbook: one glowing panel with a single Start Playbook Autopilot button (no choices), a daily schedule up to the offer's deadline or 90 days out, and milestones from a refreshed offer join the plan. Faster phone control: the phone is read in parallel, picture games skip the slow screen-text dump, Falcor looks while the AI thinks, and moves that worked on a picture scene are reused. Closing purchase pop-ups is allowed (buying never is); Pause queue sits in Today's Queue. Phone app: header fixed, playbook panel styled.",
-  "publishedAt": "2026-10-20T13:39:36.796Z",
+  "version": "0.21.3",
+  "notes": "Simpler game page: Open game, Teach Falcor and More; one Autopilot panel (the Smart Playbook leads, its Start sets up the game's daily sessions); Kingdom, Island and World goals join the playbook; long milestone paths folded; earnings in one panel; duplicate tiles removed. Phone app: the same simplification.",
+  "publishedAt": "2026-10-20T16:21:52.617Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "493a6afb6434fa74a011f013cd9410858062c267d3188c94265ba74558cb6936",
-      "size": 1079547
+      "sha256": "e4d5732666e5061d1de0c9ff3620896bed1b7b9eab206d698e8bb11113ced55e",
+      "size": 1079630
     },
     {
       "path": "dist/preload.js",
@@ -34,9 +34,9 @@
       "size": 56554
     },
     {
-      "path": "remote-ui/assets/index-DRhsYPUl.js",
-      "sha256": "95d65f303e29cd6dfa015ed90d06b9a208c7f3ca8265ad7e6c4b3f58f878ebe8",
-      "size": 171442
+      "path": "remote-ui/assets/index-RfrVsckK.js",
+      "sha256": "342c1678f777425e304e052d3ac84901d163ad63afd13b786e6168ba9ccf0d27",
+      "size": 171511
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "3447fc5b97b533ae7da1e32495e421dda7549abe6cdeef90d08a3fb14ff9f171",
+      "sha256": "862c6399c99db3b2eac804dec8cc4b3c9a92c36a16b5e47d9dcbe64c39907fa7",
       "size": 3854
     },
     {
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "0fee80bfdcd49eaba24012939a8bbd8ea8271037b89641ccfa258b75b24e4c49",
-      "size": 136777
+      "sha256": "c0663f65ff016b16c302f16f2e31757254145a851986170b76ccc49800ab6c31",
+      "size": 136772
     },
     {
       "path": "ui/app.png",
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "ff6f2344c29f5a7ccab0e2c52866ab0511d2670c8ccfde95daa69957cf119a7f",
-      "size": 54441
+      "sha256": "3f5acee6a6d02e908eaa35d67a794f2573167d72350f46b227e5e570951c6b18",
+      "size": 54714
     },
     {
       "path": "ui/motion.css",
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "9b8d98620d4a02cfa0444057f20c4cecda043cc1ffd390cc6123f9689892bfb6",
-      "size": 63856
+      "sha256": "971126170a8f4a0a3ea137f68977fc2ec2eea0126a3a374b032aabab5ac0a3cd",
+      "size": 64551
     },
     {
       "path": "ui/queue.js",
@@ -155,8 +155,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "4d7fd2a43da1e88d154bc9621355b153a8c16d2d001c8195d5533f1f3d7c7f18",
-      "size": 94209
+      "sha256": "a997871e8293c88e2373f2aa6d0ed804bc95f77484bec13ca1cebaa7a1a5a027",
+      "size": 95100
     },
     {
       "path": "ui/tokens.css",
