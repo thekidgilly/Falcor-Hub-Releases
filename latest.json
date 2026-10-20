@@ -1,12 +1,12 @@
 {
-  "version": "0.21.9",
-  "notes": "Smarter, faster game play: Falcor judges holds even when the game is always animating, never replays a hold on a menu, waits for moving screens before asking Falcor AI, closes pop-ups and ads only with their X or skip arrows (never their offer), and can always play rewarded ads for a game you allow. Your tips for a game are always followed first.",
-  "publishedAt": "2026-10-20T20:11:06.631Z",
+  "version": "0.21.11",
+  "notes": "New games are ready to play right away: no five-minute recording first (teach a game whenever you like with Teach Falcor). Fixed: opening Falcor.Hub while it was already running could make the next start fall back to an older version.",
+  "publishedAt": "2026-10-20T23:55:45.137Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "885ddf9aed15b276678567be464bc0b721dc34569396b90c327f16e67d265873",
-      "size": 1101391
+      "sha256": "d00f2334e615f6adbab88c20ae5c2198eedaafe02069fb4c1b9449c6127bfbc9",
+      "size": 1089122
     },
     {
       "path": "dist/preload.js",
@@ -34,9 +34,9 @@
       "size": 56554
     },
     {
-      "path": "remote-ui/assets/index-RfrVsckK.js",
-      "sha256": "342c1678f777425e304e052d3ac84901d163ad63afd13b786e6168ba9ccf0d27",
-      "size": 171511
+      "path": "remote-ui/assets/index-D-xdHivW.js",
+      "sha256": "928117aa28bb3f77f5dba4e43c648dc369c6ae1b2482281e60c1aa926f4e1712",
+      "size": 168895
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "862c6399c99db3b2eac804dec8cc4b3c9a92c36a16b5e47d9dcbe64c39907fa7",
+      "sha256": "ea39fd34d46eda2e659649ac350629e8eae15b4211936eada09dfd3e2b16ce30",
       "size": 3854
     },
     {
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "c7e087f065fb017ca2eaef5638ac7e0d969d39adf090893f957cdbfc08f120f7",
-      "size": 136606
+      "sha256": "b0216cbccc3b64159a13566a270b043e35ccfa062f49ff8253c7c10efba138f8",
+      "size": 135554
     },
     {
       "path": "ui/app.png",
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "971126170a8f4a0a3ea137f68977fc2ec2eea0126a3a374b032aabab5ac0a3cd",
-      "size": 64551
+      "sha256": "8f9faa7cb2993dccb3569322a2cb9a7bac099cb10c929358b7c2da2cdeb95bff",
+      "size": 61570
     },
     {
       "path": "ui/queue.js",

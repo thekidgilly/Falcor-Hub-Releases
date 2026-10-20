@@ -106,8 +106,6 @@ function render() {
   const learning = S.teaching && S.teaching.auto && (!S.teaching.kind || S.teaching.kind === 'teach') ? S.teaching.id : null, was = autoSeen;
   autoSeen = learning;
   if (learning && learning !== was) { toast('Falcor opened ' + S.teaching.name + ' and is recording. Play it on the mirror; when you leave the game, Falcor studies it and adds it to Games.'); if (tab !== 'sandbox') { go('sandbox'); if (window.sbMode) sbMode('teach'); return; } }
-  if (S.teaching && S.teaching.kind === 'training' && trainSeen !== S.teaching.id) toast('Training ' + S.teaching.name + ': recording while you play. ' + clock(S.teaching.leftMs || 0) + ' of gameplay left; nothing to press.');
-  trainSeen = S.teaching && S.teaching.kind === 'training' ? S.teaching.id : null;
   if (!learning && was) toast('Teaching ended. If you played, Falcor is studying it; the game shows in Games with its guide.');
   // Success moments: a task that just became verified bursts.
   for (const t of S.tasks) { const was = prevStates.get(t.id); if (was && was !== t.state && /VERIFIED|RECEIVED/.test(t.state)) setTimeout(() => P.burst(document.querySelector('.task[data-key="' + t.id + '"]') || $('tiles') || $('logo')), 50); prevStates.set(t.id, t.state); }
@@ -381,21 +379,20 @@ $('mirrorbox').addEventListener('keydown', e => {
 });
 
 // ------------------------------------------------------------------ Teach Falcor
-let teachSeen = null, after = null, trainSeen = null;
+let teachSeen = null, after = null;
 function renderTeach() {
   const t = S.teaching;
   $('rec').hidden = !t;
   if (t) {
-    teachSeen = {at: Date.now(), ms: t.elapsedMs, state: t.state, left: t.kind === 'training' ? t.leftMs : null};
+    teachSeen = {at: Date.now(), ms: t.elapsedMs, state: t.state, left: null};
     cls($('rec'), 'paused', t.state === 'paused');
-    text($('rectitle'), (t.state === 'paused' ? 'PAUSED · ' : t.kind === 'training' ? 'TRAINING · ' : 'TEACHING · ') + t.name);
-    // Training: the five minutes of gameplay still to play (credited time, not the clock), then the screens seen.
-    text($('recinfo'), (t.kind === 'training' && t.leftMs !== null ? clock(t.leftMs) + ' of play left · ' : '') + t.screens + ' screens · ' + t.touches + ' touches · ' + t.marks + ' marks');
+    text($('rectitle'), (t.state === 'paused' ? 'PAUSED · ' : 'TEACHING · ') + t.name);
+    text($('recinfo'), t.screens + ' screens · ' + t.touches + ' touches · ' + t.marks + ' marks');
     $('recpause').innerHTML = icon(t.state === 'paused' ? 'play' : 'pause'); $('recpause').title = t.state === 'paused' ? 'Resume' : 'Pause';
     tickRec();
   } else teachSeen = null;
 }
-function tickRec() { if (!teachSeen) return; if (teachSeen.left !== null && teachSeen.left !== undefined) { text($('rectime'), clock(teachSeen.left) + ' left'); return; } text($('rectime'), clock(teachSeen.ms + (teachSeen.state === 'recording' ? Date.now() - teachSeen.at : 0))); }
+function tickRec() { if (!teachSeen) return; text($('rectime'), clock(teachSeen.ms + (teachSeen.state === 'recording' ? Date.now() - teachSeen.at : 0))); }
 setInterval(tickRec, 500);
 // Teach lives in the Sandbox (it is the Sandbox's recording mode): the Phone tab's Teach opens it there.
 $('teach').onclick = () => { go('sandbox'); openTeach(); };
@@ -517,8 +514,8 @@ function renderGame(g) {
   $('gpopen').title = !d ? 'Plug in the phone' : !g.installed ? 'Not installed on the phone' : d.running ? 'A task is running' : d.emergency ? 'Emergency Stop is on' : 'Open it on the phone and take control';
   // Teach Falcor on this game: one press, then play; Finish & Learn while it records (or just leave the game).
   const co = g.coach || {state: 'idle'}, mine = co.state === 'recording' || co.state === 'waiting';
-  $('gpteach').disabled = !mine && (!d || !g.installed || !!d.emergency || !!S.teaching || !!(g.training && g.training.status !== 'done'));
-  $('gpteach').title = mine ? 'Stop recording and learn from it now (leaving the game does the same)' : g.training && g.training.status !== 'done' ? 'Falcor is learning this game from your first five minutes: just play it' : 'Play it your way: Falcor records and learns from you (no time to fill, nothing else to press)';
+  $('gpteach').disabled = !mine && (!d || !g.installed || !!d.emergency || !!S.teaching);
+  $('gpteach').title = mine ? 'Stop recording and learn from it now (leaving the game does the same)' : 'Play it your way: Falcor records and learns from you (no time to fill, nothing else to press)';
   $('gpteach').innerHTML = icon(mine ? 'check' : 'rec') + (co.state === 'recording' ? 'Finish & Learn' : co.state === 'waiting' ? 'Cancel Teach' : 'Teach Falcor');
   renderTrain(g);
   // Play now / Schedule run the game's own automation (its task, or a sequence that opens it); without one it needs setup.
@@ -651,7 +648,7 @@ async function apStart(extra = {}) {
 function apApprove(n) {
   return new Promise(resolve => {
     let done = false; const end = v => { if (done) return; done = true; qSheet.close(); resolve(v); };
-    qSheet.open(qSheet.head(n.run ? 'RUN SMART PLAYBOOK' : 'APPROVE GAME AUTOPILOT', n.name) + '<p class="small">Goal: <b>' + esc(n.goal) + '</b>. ' + (n.existing ? 'Its task waits for your approval.' : 'A task for it is made when you approve.') + '</p><ul class="small">' + n.rules.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' + (n.run ? '<p class="small">Runs automatically at scheduled times even when Phone Autopilot is off. Requires Falcor Hub running and your phone connected.</p>' : '')
+    qSheet.open(qSheet.head(n.run ? 'RUN SMART PLAYBOOK' : 'APPROVE GAME AUTOPILOT', n.name) + '<p class="small">Goal: <b>' + esc(n.goal) + '</b>. ' + (n.existing ? 'Its task waits for your approval.' : 'A task for it is made when you approve.') + '</p><ul class="small">' + n.rules.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>'
       + '<label class="small"><input type="checkbox" id="aprules"> I approve these rules</label><div class="row"><button class="primary" id="apgo" disabled>' + icon('check') + (n.run ? 'Run Playbook' : 'Approve and start') + '</button><button data-close>Cancel</button></div>', b => {
       b.querySelector('#aprules').onchange = e => { b.querySelector('#apgo').disabled = !e.target.checked; };
       b.querySelector('#apgo').onclick = () => end(true);
@@ -858,8 +855,7 @@ $('gpteach').onclick = async () => {
   // The game opens on the phone; recording starts by itself once it is in front. The owner keeps playing their way.
   renderGame(g); toast('Teach Falcor: play ' + g.name + ' your way, on the phone or the mirror. Leave the game or press Finish & Learn when you are done.');
 };
-// A newly captured game's setup checklist (training.ts): what is done, the five minutes of gameplay, the way in, and
-// what Falcor learned; then Teach Falcor's lessons on this game. Only real states are shown.
+// Teach Falcor's lessons on this game. Only real states are shown.
 function renderTrain(g) {
   const box = $('gptrain'), html = g.pkg.startsWith('offer:') ? '' : P.trainHtml(g);
   box.hidden = !html; if (html) { htmlOnce(box, html); P.fix(box); }
