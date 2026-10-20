@@ -771,3 +771,50 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .planladder li.reached { color: var(--muted); border-left-color: var(--green); } .planladder li.now { border-left-color: var(--accent); background: var(--panel-2); }
 .planladder li.needs_you { border-left-color: var(--sand); } .planladder li em { grid-column: 1 / -1; color: var(--sand); }
 .routes li select { min-width: 190px; } .routes li > .muted.small { min-width: 150px; }
+
+/* A captured game's online research: its bar and steps, then Ready to play (pixel.js#prepHtml, the card's .gprep). */
+.prep { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); margin: 8px 0; } .prep.running { border-color: #5CE59A55; } .prep.failed { border-color: #F5B54466; }
+.prep .bar, .gprep .bar { display: block; height: 6px; background: #ffffff14; } .prep .bar i, .gprep .bar i { display: block; height: 100%; background: #5CE59A; transition: width .4s steps(8); }
+.prep ul.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 12px; color: #8a8a8a; } .prep ul.steps li.ok { color: #5CE59A; } .prep ul.steps li.now { color: #F5B544; }
+.prep.done b .ico { margin-right: 6px; } .gprep { display: grid; gap: 3px; font-size: 11px; letter-spacing: .04em; color: #F5B544; margin-top: 4px; } .gprep.done { color: #5CE59A; } .gprep.failed { color: #8a8a8a; }
+.prep.done b { color: #5CE59A; display: inline-flex; align-items: center; gap: 6px; }
+
+/* A newly captured game's setup checklist and Teach Falcor's lessons (training.ts) */
+.gptrain { display: grid; gap: 6px; } .gptrain .top { display: flex; justify-content: space-between; align-items: center; gap: var(--s2); } .gptrain .top .eyebrow { margin: 0; }
+.gptrain p { margin: 0; } .gptrain em { font-style: normal; color: var(--muted); }
+.gptrain .checklist, .gptrain .lessons { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: var(--t12); }
+.gptrain .checklist li span { font-family: var(--voice); }
+.gptrain .lessons li { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--s2); align-items: center; } .gptrain .lessons li .muted { grid-column: 1; }
+.gptrain .lessons li button { grid-row: 1 / span 2; grid-column: 2; }
+.gptrain .bar { display: block; height: 6px; background: #ffffff14; } .gptrain .bar i { display: block; height: 100%; background: var(--accent); transition: width .4s steps(8); }
+.pill.rec { animation: recblink 1s steps(2) infinite; } @keyframes recblink { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .pill.rec { animation: none; } }
+
+/* Settings → AI Control Center (ai.js): providers, model library, routing, usage */
+.aicc { display: grid; gap: var(--s3); } .aicc section { display: grid; gap: var(--s2); min-width: 0; }
+.aiseg { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); }
+.aiseg button { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 6px 10px; font: var(--t12) var(--voice); color: var(--muted); }
+.aiseg button.on { color: var(--accent); border-bottom-color: var(--accent); }
+.aicards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s2); }
+.aicard { display: grid; gap: 6px; padding: var(--s2) var(--s3); border: 1px solid var(--line); background: #ffffff05; min-width: 0; }
+.aicard.conn { grid-template-columns: auto 1fr auto; align-items: center; } .aicard.conn .grow { display: grid; gap: 2px; min-width: 0; } .aicard.conn .grow > * { overflow: hidden; text-overflow: ellipsis; }
+.aicard .eyebrow { margin: 0; }
+.aiicon { display: inline-grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--line-strong, #ffffff30); font: 14px var(--voice); color: var(--accent); flex: none; }
+.aidrawer { border: 1px solid var(--accent); padding: var(--s3); display: grid; gap: var(--s2); background: #0A0A0A; animation: aipop .18s steps(3); }
+@keyframes aipop { from { opacity: 0; transform: translateY(4px); } }
+.aidrawer .top { display: flex; justify-content: space-between; align-items: center; } .aidrawer .eyebrow { margin: 0; }
+.aikinds { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; }
+.aikinds button { display: flex; gap: 8px; align-items: center; justify-content: flex-start; text-align: left; }
+.aifilters { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; } .aifilters input[type=search] { flex: 1 1 200px; }
+.ailib { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 52vh; overflow: auto; }
+.ailib li { display: flex; gap: var(--s2); align-items: center; padding: 6px 8px; border: 1px solid var(--line); }
+.ailib li .grow { display: grid; gap: 2px; min-width: 0; } .ailib code { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.chip { display: inline-block; font: 10px var(--voice); padding: 0 5px; margin-right: 3px; border: 1px solid currentColor; }
+.chip.yes { color: var(--accent); } .chip.no { color: var(--muted); text-decoration: line-through; } .chip.unk { color: var(--sand); }
+.aipick { display: grid; gap: 4px; } .aipick select { width: 100%; }
+.airec { display: grid; gap: 2px; } .airec .eyebrow { margin: 0 0 2px; }
+.airoutes li { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(140px, 1.2fr) minmax(120px, 1fr) auto; gap: 6px; align-items: center; }
+.airoutes li > .small.muted { grid-column: 1 / -1; } .airoutes .grow { display: grid; min-width: 0; }
+@media (max-width: 1100px) { .airoutes li { grid-template-columns: 1fr 1fr; } }
+.aitable { width: 100%; border-collapse: collapse; font-size: var(--t12); } .aitable th, .aitable td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); } .aitable th { font: var(--t11) var(--voice); color: var(--muted); }
+.gpai { font-size: var(--t12); color: var(--muted); }

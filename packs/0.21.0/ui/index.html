@@ -14,8 +14,8 @@
   <div class="brand"><span class="logo" id="logo"><img src="dragon.png" alt=""><i class="eye"></i></span><div><h1>FALCOR.HUB</h1><p class="eyebrow">Phone control</p></div></div>
   <div class="strip" id="strip">
     <button class="sys" data-go="phone"><span class="led" id="led-phone"></span><span id="sys-phone">Phone</span></button>
-    <button class="sys" data-go="phone"><span class="led" id="led-auto"></span><span id="sys-auto">Autopilot</span></button>
-    <button class="sys" data-go="settings:ai"><span class="led" id="led-kimi"></span><span id="sys-kimi">Kimi</span></button>
+    <button class="sys" data-go="phone"><span class="led" id="led-auto"></span><span id="sys-auto">Queue</span></button>
+    <button class="sys" data-go="settings:ai"><span class="led" id="led-kimi"></span><span id="sys-kimi">API</span></button>
     <button class="sys" data-go="settings:phoneapp"><span class="led" id="led-remote"></span><span id="sys-remote">Remote</span></button>
   </div>
   <button class="bell" id="bell" title="Notifications" aria-haspopup="true" aria-expanded="false"><svg class="ico"><use href="#i-bell"></use></svg><b class="bdg" id="bellcount" hidden></b></button>
@@ -104,8 +104,8 @@
         <div class="winbody"><div class="devpanel" id="devicepanel">
           <div class="top"><h2><svg class="ico"><use href="#i-phone"></use></svg><span id="devname">Phone</span></h2><span class="state" id="devstate"><span class="led"></span><span></span></span></div>
           <dl class="spec" id="devinfo"><dt>Model</dt><dd id="d-model"></dd><dt>Android</dt><dd id="d-android"></dd><dt>App in front</dt><dd id="d-app"></dd><dt id="d-batt-l">Battery</dt><dd id="d-batt"></dd><dt>Control</dt><dd id="d-control"></dd></dl>
-          <button id="autopilot" class="primary big"><span class="led"></span><span id="autolabel">Start Autopilot</span></button>
-          <div class="qmodes"><button class="small" id="runready" title="Run only what is due now, one after another. Autopilot stays off and later times wait."><svg class="ico"><use href="#i-queue"></use></svg>Run Ready<span class="qcount" id="readycount"></span></button><span class="muted small" id="autonote">Autopilot runs today's queue at its times. Take Control pauses it on this phone.</span></div>
+          <button id="qtoggle" class="big"><span class="led"></span><span id="qtogglelabel">Pause queue</span></button>
+          <p class="muted small" id="autonote">What you schedule (games, playbooks, creations) runs here at its time, one after another. Take Control pauses the run on this phone.</p>
           <select id="devpick" hidden></select>
         </div></div>
       </section>
@@ -190,7 +190,7 @@
         <button class="small" id="sbafter" title="Finish the group or loop it is in, then stop" hidden>Stop after group</button>
         <button class="small danger" id="sbstop" title="Stop the run" hidden><svg class="ico"><use href="#i-stop"></use></svg>Stop</button>
         <span class="sep"></span>
-        <button class="small icon" id="sbqueue" title="Add to today's queue (it runs in its turn while Autopilot runs, or with Run Ready)"><svg class="ico"><use href="#i-queue"></use></svg></button>
+        <button class="small icon" id="sbqueue" title="Add to today's queue (it runs in its turn)"><svg class="ico"><use href="#i-queue"></use></svg></button>
         <button class="small icon" id="sbsched" title="Set a schedule (the Daily Queue)"><svg class="ico"><use href="#i-calendar"></use></svg></button>
         <button class="small icon" id="sbprefs" title="Sandbox settings"><svg class="ico"><use href="#i-settings"></use></svg></button>
         <button class="small icon" id="sbhelp" title="Help and shortcuts (?)"><svg class="ico"><use href="#i-help"></use></svg></button>
@@ -315,16 +315,19 @@
           <button id="gpofferedit" title="Correct the offer: names, amounts, deadline, stages"><svg class="ico"><use href="#i-edit"></use></svg>Edit offer</button>
           <button id="gpofferrefresh" title="Open the offer page in the earning app on the phone, then read it again and see what changed"><svg class="ico"><use href="#i-update"></use></svg>Refresh offer</button>
           <button id="gpauto" title="Change what Falcor does in this game"><svg class="ico"><use href="#i-edit"></use></svg>Edit automation</button>
-          <button id="gpteach" title="Open the game and record while you play it"><svg class="ico"><use href="#i-rec"></use></svg>Teach again</button>
+          <button id="gpteach" title="Play it your way: Falcor records and learns from you (no time to fill, nothing else to press)"><svg class="ico"><use href="#i-rec"></use></svg>Teach Falcor</button>
           <button id="gptask"><svg class="ico"><use href="#i-plus"></use></svg>New challenge</button>
           <button class="icon" id="gpguide" title="The guide in Knowledge"><svg class="ico"><use href="#i-book"></use></svg></button>
           <button class="icon" id="gpchat" title="Ask Falcor about this game"><svg class="ico"><use href="#i-chat"></use></svg></button>
+          <button class="icon danger" id="gpremove" title="Remove this game from Games"><svg class="ico"><use href="#i-trash"></use></svg></button>
         </div>
       </div>
+      <div id="gpprep"></div>
       <div class="gpauto" id="gpautoline"></div>
+      <div class="panel gptrain" id="gptrain" hidden></div>
       <div class="panel gpap" id="gpap">
         <div class="gpplan" id="gpplan" hidden></div>
-        <div class="gpaphead"><p class="eyebrow">// GAME AUTOPILOT</p>
+        <div class="gpaphead"><p class="eyebrow">// GAME AUTOPILOT <span class="gpai" id="gpai"></span></p>
           <div class="row"><span class="row" id="gpgoalbox"><select id="gpgoal" title="What Falcor plays toward"></select><span id="gplevelbox" hidden><input id="gplevel" type="number" min="1" max="100000" placeholder="level" title="The level to reach"></span></span>
             <button class="primary" id="gpapstart" title="Falcor plays this game toward the goal now, then comes back by itself until it is verified"><svg class="ico"><use href="#i-play"></use></svg>Start Autopilot</button>
             <button id="gpappause" title="Stop for now; nothing comes back by itself until you start it again" hidden><svg class="ico"><use href="#i-pause"></use></svg>Pause</button>
@@ -468,26 +471,43 @@
         <button data-sub="about"><svg class="ico"><use href="#i-phone"></use></svg>About</button>
       </nav>
       <div>
-        <div class="panel" data-sub="ai">
-          <p class="eyebrow">// AI · KIMI</p>
-          <div class="top"><h2>Kimi, Falcor's AI</h2><span class="state" id="kimistate"><span class="led"></span><span></span></span></div>
-          <p class="muted small">Falcor asks Kimi for a step on a screen it does not know, to write guides and to chat. Your key is sealed on this computer and only ever sent to Kimi.</p>
-          <form class="grid" id="kimiform">
-            <label class="wide">API key<input id="kimikey" type="password" placeholder="sk-… (leave empty to keep the saved key)" autocomplete="off"></label>
-            <label>Single model<select id="kimimodel"><option value="kimi-k3">kimi-k3</option><option value="kimi-k2.6">kimi-k2.6</option><option value="kimi-k2.7-code">kimi-k2.7-code</option><option value="custom">Custom…</option></select></label>
-            <label id="kimicustomwrap" hidden>Custom model<input id="kimicustom" maxlength="80"></label>
-            <div class="wide row"><button class="primary">Save</button><button type="button" id="kimitest">Test connection</button><button type="button" class="danger" id="kimiremove">Remove key</button><span class="muted small" id="kimiping"></span></div>
-          </form>
-          <p class="eyebrow" data-gap>// INTELLIGENT MODEL ROUTING</p>
-          <label class="row small"><input type="checkbox" id="routeauto"> Automatic routing: each task uses its own model. Off: every task uses the model above.</label>
-          <form id="routeform"><ul class="rows routes" id="routes"></ul>
-            <div class="row"><button class="primary" id="routesave">Save routing</button><button type="button" id="routereset">Reset to defaults</button><span class="muted small" id="routemsg"></span></div>
-          </form>
-          <p class="muted small" id="routecaps"></p>
-          <p class="eyebrow" data-gap>// SPENDING</p>
-          <div class="meter" id="limitmeter"></div>
-          <form class="row" id="limitform"><label class="small muted">Monthly limit ($)</label><input id="limit" type="number" min="0" step="0.5" placeholder="no limit"><button>Save limit</button></form>
-          <p class="muted small">At the limit, Falcor asks before sending more for teaching or chat, and Autopilot hands new screens to you.</p>
+        <div class="panel aicc" data-sub="ai">
+          <p class="eyebrow">// AI CONTROL CENTER</p>
+          <div class="top"><h2>Falcor's AI</h2><span class="state" id="aistate"><span class="led"></span><span></span></span></div>
+          <p class="muted small">Connect the AI services you use, pick which model plays your games and which one chats. Keys are sealed on this computer and each one only ever goes to its own provider.</p>
+          <nav class="aiseg" id="aiseg" role="tablist"><button data-ai="providers" class="on" role="tab">Providers</button><button data-ai="library" role="tab">Model Library</button><button data-ai="routing" role="tab">Intelligent Routing</button><button data-ai="usage" role="tab">Usage and Limits</button></nav>
+          <section data-aip="providers">
+            <div class="aicards" id="aicards"></div>
+            <div class="row"><button class="primary" id="aiadd"><svg class="ico"><use href="#i-plus"></use></svg>Add provider</button></div>
+            <div class="aidrawer" id="aidrawer" hidden></div>
+          </section>
+          <section data-aip="library" hidden>
+            <div class="aifilters"><input id="libq" type="search" placeholder="Search models"><select id="libprov"><option value="">All providers</option></select>
+              <label class="small"><input type="checkbox" data-cap="vision"> Vision</label><label class="small"><input type="checkbox" data-cap="tools"> Tools</label><label class="small"><input type="checkbox" data-cap="json"> JSON</label><label class="small"><input type="checkbox" data-cap="local"> Local</label>
+              <label class="small"><input type="checkbox" id="libavail" checked> Hide unavailable</label><label class="small"><input type="checkbox" id="libchat" checked> Chat models only</label></div>
+            <ul class="ailib" id="ailib"></ul>
+            <p class="muted small" id="libnote"></p>
+          </section>
+          <section data-aip="routing" hidden>
+            <div class="airec" id="airec"></div>
+            <div id="aisimple">
+              <div class="aicard big"><p class="eyebrow">// PRIMARY GAMING AI</p><div class="aipick"><input id="gamq" type="search" placeholder="Search compatible models"><select id="gamsel" size="5"></select></div><div class="small" id="gaminfo"></div>
+                <p class="small muted" id="gamsummary"></p><div class="row"><button class="primary" id="gamuse"><svg class="ico"><use href="#i-check"></use></svg>Use for Gaming</button></div></div>
+              <div class="aicard"><p class="eyebrow">// FALCOR CHAT AI</p><div class="aipick"><select id="chatsel"></select></div><div class="row"><button id="chatuse">Use for Falcor Chat</button></div></div>
+            </div>
+            <label class="row small"><input type="checkbox" id="aiadv"> Advanced Routing: choose the model (and an optional fallback) for each operation</label>
+            <div id="aiadvbox" hidden>
+              <ul class="rows airoutes" id="airoutes"></ul>
+              <div class="row"><button class="primary" id="advsave">Save routing</button><button id="advcancel">Cancel</button><button id="advreset" title="Back to what you had before (connections and keys stay)">Restore defaults</button><span class="muted small" id="advmsg"></span></div>
+              <label class="row small"><input type="checkbox" id="showunavail"> Show models that cannot be picked, with the reason</label>
+            </div>
+          </section>
+          <section data-aip="usage" hidden>
+            <div class="meter" id="limitmeter"></div>
+            <form class="row" id="limitform"><label class="small muted">Monthly limit, all providers ($)</label><input id="limit" type="number" min="0" step="0.5" placeholder="no limit"><button>Save limit</button></form>
+            <p class="muted small">At a limit, Falcor asks before sending more for teaching or chat, and Autopilot hands new screens to you. A provider's own budget works the same way. Costs come from verified prices only; a model without one shows Unknown.</p>
+            <div id="aiusage"></div>
+          </section>
         </div>
         <div class="panel" data-sub="phoneapp" hidden>
           <p class="eyebrow">// PHONE APP</p>
@@ -519,7 +539,7 @@
         <div class="panel" data-sub="about" hidden>
           <p class="eyebrow">// ABOUT</p>
           <div class="abouthero"><img src="dragon.png" alt=""><div><h2>FALCOR.HUB</h2><p class="muted small" id="about"></p></div></div>
-          <p class="muted small">Phone control and automation on this computer. Nothing here talks to a website; Kimi is called only with your own key.</p>
+          <p class="muted small">Phone control and automation on this computer. Nothing here talks to a website; the AI services you connect are called only with your own keys.</p>
         </div>
       </div>
     </div>
@@ -544,6 +564,7 @@
 <script src="pixel.js"></script>
 <script src="app.js"></script>
 <script src="sandbox.js"></script>
+<script src="ai.js"></script>
 <script src="creations.js"></script>
 <script src="queue.js"></script>
 <script src="desk.js"></script>

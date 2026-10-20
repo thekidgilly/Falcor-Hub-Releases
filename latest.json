@@ -1,17 +1,17 @@
 {
-  "version": "0.20.2",
-  "notes": "Training timer and smarter Teach: while you play a new game's first five minutes, the time left shows on the Phone tab's recording bar, the game's card and the phone app. Teach Falcor on a game's page now opens the game for you, and what you show is played on the very next run (it used to be saved but Falcor kept its own older move). Recording no longer switches to the Sandbox tab.",
-  "publishedAt": "2026-10-19T18:11:48.481Z",
+  "version": "0.21.0",
+  "notes": "AI Control Center: use any AI provider. Settings → AI now has Providers, Model Library, Intelligent Routing and Usage and Limits. Connect Google Gemini, OpenAI, Anthropic Claude, Moonshot Kimi, OpenRouter, xAI, DeepSeek, Groq, Together AI, Fireworks AI, a custom OpenAI-compatible API or Ollama; each key is sealed and sent only to its own provider. Pick a Primary Gaming AI (Use for Gaming) and a Falcor Chat AI, or choose a model and fallback per operation. Your Kimi setup keeps working unchanged, and games keep everything they learned whichever model plays.",
+  "publishedAt": "2026-10-20T00:16:24.877Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "1ae89c7a987fee8395b912d32323eb95d42fb18be057b2682f90114c93cb9572",
-      "size": 1010704
+      "sha256": "3223cf9ae3b70665d7e8ba53dcb080a338ebffa8361226d56c7049d6e96be438",
+      "size": 1066221
     },
     {
       "path": "dist/preload.js",
-      "sha256": "323c04106725d50255d7dee69ec411fd07410eb0eff4595e5bc584a78d193dba",
-      "size": 1702
+      "sha256": "9c00b34d8ef5867c8bfb138d9de68accdb75bda282ada2232fc868b0675a7687",
+      "size": 1710
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -29,9 +29,9 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-25qB9p5d.js",
-      "sha256": "fd5886dfd49144449b979381369b8bf9f54ffe1d247a2642c85557093026404f",
-      "size": 169174
+      "path": "remote-ui/assets/index-CYu6AmKR.js",
+      "sha256": "b4bb3dbd2ebd66c9cbf6321e7f80db3fba295a700cc4d06ef5eb1ee2042b85da",
+      "size": 169687
     },
     {
       "path": "remote-ui/assets/index-I43jXfmx.css",
@@ -65,8 +65,13 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "4067b6b55b05121325e258883f0591c4860190aa633f0c4edf4ee6add71ce4e8",
-      "size": 3760
+      "sha256": "fa2f01a4296fbc1806897c293b39a19878fb33bb7156d3053e016279b6fd5d1a",
+      "size": 3854
+    },
+    {
+      "path": "ui/ai.js",
+      "sha256": "f697afe547ad7f4b9d1ba20eb989f243a5dc639f2a28995e3d88a41c90fb57f3",
+      "size": 23274
     },
     {
       "path": "ui/app.ico",
@@ -75,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "12247b4949e29c87335c4d3ad22fd5165c755e6888728e796324c149f7f93b46",
-      "size": 141878
+      "sha256": "3ef70962f8a1b7b8cc93a8b1e5f532f7e161d7bd16176b42328f8308e669f98a",
+      "size": 137624
     },
     {
       "path": "ui/app.png",
@@ -90,13 +95,13 @@
     },
     {
       "path": "ui/creations.js",
-      "sha256": "442c503d17afc2502b5dc90ad0c472e1ce527c491462b9e770dda2ba5a628d54",
-      "size": 18110
+      "sha256": "2df0723e1c0d5266765078677e3438601bf3f325a1b5777bae2a3105d6581376",
+      "size": 18108
     },
     {
       "path": "ui/desk.js",
-      "sha256": "de5df0032790e3b0e7e343ed9e5f5452def467da5c1682f8e2f291807a794989",
-      "size": 44635
+      "sha256": "aefa979fd337e75e58c7c4e9afcd43299a0d55a265896d457bcba770a5595235",
+      "size": 44631
     },
     {
       "path": "ui/dragon.png",
@@ -125,8 +130,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "544ea85cd392942400db890e4c1cc76edce55b7f6cff1382c492c71debca0d30",
-      "size": 52588
+      "sha256": "6f462fd4d35ee7801d196590cacb2f4a1bbceec0c9eafb05ee82545684e580eb",
+      "size": 54476
     },
     {
       "path": "ui/motion.css",
@@ -135,8 +140,8 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "7b2ce8540a1b6f53141e9bd492b1c21103a3199a277e88fbedd5ef9273345e48",
-      "size": 59818
+      "sha256": "b20e4dd163a9a895a717b5a3059d4bc7b347d1e56c9dfc5e8bac0a0b90a836a3",
+      "size": 59816
     },
     {
       "path": "ui/queue.js",
@@ -150,8 +155,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "095d50b02a60b50ae3de3f5ea3f174c5d822c46b8e76a33c10f700baacd34799",
-      "size": 87126
+      "sha256": "b6af1eec7ccc58ef99dfe091ec51cbf392d4701ddfe053e3f98b2f9b51a8348c",
+      "size": 90423
     },
     {
       "path": "ui/tokens.css",

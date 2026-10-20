@@ -16,7 +16,7 @@
     {id: 'needs', name: 'Needs you', about: 'Approvals, stuck runs and anything waiting on you', min: [220, 110], size: [300, 220], weight: .9},
     {id: 'apps', name: 'Apps', about: 'Open any app on the phone', min: [220, 160], size: [300, 360], weight: 1.3},
     {id: 'creations', name: 'Creations', about: 'Run or stop your Sandbox sequences', min: [240, 140], size: [320, 300], weight: 1.1},
-    {id: 'today', name: 'Today', about: 'How today went, what is next, Kimi spending', min: [220, 130], size: [300, 270], weight: 1},
+    {id: 'today', name: 'Today', about: 'How today went, what is next, AI spending', min: [220, 130], size: [300, 270], weight: 1},
     {id: 'link', name: 'Connection', about: 'The cable, the mirror, the tools and paired phones', min: [220, 140], size: [300, 290], weight: 1},
   ];
   const byId = Object.fromEntries(WINS.map(w => [w.id, w]));
@@ -554,7 +554,7 @@
       + '<dl class="spec"><dt>Queue</dt><dd>' + (c && c.total ? c.completed + ' of ' + c.total + ' done' + (c.left ? ' · ' + c.left + ' left' : '') : 'Nothing planned today') + '</dd>'
       + '<dt>Next</dt><dd>' + (nx ? esc(nx.name) + '<small>' + esc(time(nx.at)) + ' · ' + esc(when(nx.at)) + '</small>' : '—') + '</dd>'
       + '<dt>Runs</dt><dd>' + (TD.rows ? rows.length + plus + ' today' : 'Reading…') + '</dd>'
-      + '<dt>Kimi</dt><dd>' + esc(money(spent)) + (lim !== null && lim !== undefined ? ' of ' + esc(money(lim)) : '') + ' this month<small>estimated; the bill from Moonshot is exact</small></dd></dl>'
+      + '<dt>AI</dt><dd>' + esc(money(spent)) + (lim !== null && lim !== undefined ? ' of ' + esc(money(lim)) : '') + ' this month<small>estimated; the bill from Moonshot is exact</small></dd></dl>'
       + (lim ? '<div class="meter' + (frac >= 1 ? ' bad' : frac >= .8 ? ' warn' : '') + '">' + Array.from({length: 20}, (_, i) => '<i class="' + (i < Math.round(frac * 20) ? 'on' : '') + '"></i>').join('') + '</div>' : ''));
   }
 
