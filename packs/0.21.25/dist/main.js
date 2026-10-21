@@ -4843,6 +4843,21 @@ function skipMark(f, corner = "left") {
     return null;
   }
   if (!d || "sim" in d || d.bpp < 3) return null;
+  if (corner === "right-light") {
+    let dark = 0, light = 0, n = 0, sx = 0, sy = 0;
+    for (let y = Math.floor(0.045 * d.h); y < 0.1 * d.h; y += 2) for (let x = Math.floor(0.85 * d.w); x < 0.97 * d.w; x += 2) {
+      const o = (y * d.w + x) * d.bpp, r = d.px[o], g = d.px[o + 1], b = d.px[o + 2];
+      n++;
+      if (Math.max(r, g, b) < 110) {
+        dark++;
+        sx += x;
+        sy += y;
+      } else if (Math.min(r, g, b) > 215) light++;
+    }
+    if (!(n && dark >= n * 8e-3 && dark <= n * 0.15 && light >= n * 0.7)) return null;
+    const cx = sx / dark / d.w, cy = sy / dark / d.h;
+    return cx > 0.86 && cx < 0.96 ? { x: cx, y: cy } : null;
+  }
   const [x0, x1, y0, y1] = corner === "left" ? [0.045, 0.11, 0.055, 0.095] : corner === "right" ? [0.87, 0.955, 0.055, 0.095] : [0.885, 0.975, 0.025, 0.065];
   const scan = (ax, bx, ay, by) => {
     let white = 0, dark = 0, n = 0, sx = 0, sy = 0;
@@ -4928,6 +4943,47 @@ function wyScreen(f) {
   const top = px(0.5, 0.04);
   if (top[0] > 220 && top[1] > 200 && top[2] > 190 && wood(px(0.04, 0.8)) && trayEmpty(f) && !rollButton(f)) return { kind: "between" };
   return null;
+}
+function wyBadge(f) {
+  if (f.mime !== "image/png") return null;
+  let d;
+  try {
+    d = decodePng(f);
+  } catch {
+    return null;
+  }
+  if (!d || "sim" in d || d.bpp < 3) return null;
+  const GX = 12, GY = 8, x0 = 0.128, x1 = 0.164, y0 = 0.116, y1 = 0.132;
+  let out = "";
+  for (let gy = 0; gy < GY; gy++) for (let gx = 0; gx < GX; gx++) {
+    let dark = 0, n = 0;
+    const ax = Math.floor((x0 + (x1 - x0) * gx / GX) * d.w), bx = Math.max(ax + 1, Math.floor((x0 + (x1 - x0) * (gx + 1) / GX) * d.w));
+    const ay = Math.floor((y0 + (y1 - y0) * gy / GY) * d.h), by = Math.max(ay + 1, Math.floor((y0 + (y1 - y0) * (gy + 1) / GY) * d.h));
+    for (let y = ay; y < by; y++) for (let x = ax; x < bx; x++) {
+      const o = (y * d.w + x) * d.bpp;
+      n++;
+      if ((d.px[o] + d.px[o + 1] + d.px[o + 2]) / 3 < 170) dark++;
+    }
+    out += n && dark / n >= 0.35 ? "1" : "0";
+  }
+  const ones = out.split("1").length - 1;
+  return ones >= 6 && ones <= GX * GY * 0.6 ? out : null;
+}
+function badgeLevel(sig, kept) {
+  const far = (a, b) => {
+    let n = 0;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) n++;
+    return a.length === b.length ? n : 999;
+  };
+  let best = null, second = 999;
+  for (const [lv, sigs] of Object.entries(kept)) {
+    const dd = Math.min(...sigs.map((s2) => far(sig, s2)));
+    if (!best || dd < best.d) {
+      if (best) second = Math.min(second, best.d);
+      best = { level: Number(lv), d: dd };
+    } else second = Math.min(second, dd);
+  }
+  return best && best.d <= 8 && second > best.d + 4 ? best.level : null;
 }
 function freecashPopup(f) {
   if (f.mime !== "image/png") return false;
@@ -6385,7 +6441,8 @@ Return JSON only:
 {"method":"selector"|"point"|"clear"|"hold"|"drag"|"path"|"key"|"wait"|"handoff"|"done","package":"<as given>","observationId":"<as given>","selector":{"text"|"desc"|"resourceId":"..."},"point":{"x":0..1,"y":0..1},"from":<place>,"to":<place>,"points":[<place>,...],"key":"BACK"|"HOME"|"ENTER","ms":400,"expectedEffect":"what should change","confidence":0..1,"evidence":"which node or words","level":null,"lastHold":null,"readyIn":null,"then":[{"method":"point","point":{"x":0..1,"y":0..1}}]}`;
 var GAME_RULES = [{
   id: "word-yatzy",
-  match: /yatzy/i,
+  match: /yatzy|whamzee/i,
+  badge: "completed",
   text: `RULES for Word Yatzy (this game only):
 - The player's level is the number on the avatar badge, top left of the home screen; only that badge is the level.
 - Daily quests: play toward the open tasks you saw ("Swap 10 times": the shuffle/swap button by ROLL is free, press it; "Play X, Y or Z" or bonus tiles: use those letters and squares; long words for points), as long as each word still fits an open row.
@@ -6393,6 +6450,7 @@ var GAME_RULES = [{
 - Letter tiles (loose letters and a row or bar the word is built in). How touching works: tapping a LOOSE tile moves it to the end of the bar, and the other loose tiles STAY WHERE THEY ARE: so spell the whole word in ONE answer, the first letter's tile as this move and the rest in "then", each at its tile's centre in this picture (fast: one answer per word). Tapping a tile IN THE BAR does nothing; a bar tile goes back only by method "clear" with "point" on that one tile (Falcor drags it down), the bar's LAST (rightmost) tile first, one per answer. When the bar holds a real word, the game shows a green score on each row that accepts it: that is the word's proof, so tap that score box at once to place the word (the highest score, or the row the GUIDE or owner names); never keep editing a word that already shows a score. Tap a score box only where you SEE a green number in this picture. A whole word in the bar with NO green score anywhere does not fit an open row or is not a word: "clear" it and pick another. First read EVERY letter, both loose and already in the bar, then pick ONE real English dictionary word made only of letters you see that FITS AN EMPTY ROW: on a board of rows, a word fits an open row that has AT LEAST as many slots as the word has letters (count them; a filled row is used up; a word longer than every open row fits nowhere), and a word that fills a row's slots exactly earns its bonus, so prefer a real word of an open row's exact length, else a shorter real word that fits. In "evidence" first name the open rows' lengths, then the word in capitals ("open: 3; word CAT: C,A,T"). Before every answer read the bar from THIS picture, letter by letter (the strip just above the loose letters); a letter is in it only if you see it there now, never because "recent" says you meant to put it there. The bar must read as the START of your word (an empty bar is a start): if it holds any other letters, "clear" its last tile, one per answer, until it does; never spell onto letters that are not your word's start. A short word that fits an open row (ANT, CAT, TEN) beats a long one that fits none. A ROLL that costs something is never pressed: a ROLL with a \u25B6 / video badge plays an ad and one with a gem price spends gems (after the free rolls are used); spell from the letters you have instead. Plan the word for a ROW: as soon as letters show, pick the open row to fill (exact length first, then the most points from its DL/TL/DW/TW squares and letter values) and the best real word for it, then tap its letters at once, and END "then" with a tap on that row's score box in the YOU column (Falcor places the word there the moment it turns green). When the bar shows green scores, your ONLY move is to tap the green score worth most: never clear, re-spell or roll then. A WHITE score box means that word is already placed: never tap it again; with no loose letters left, the next move is ROLL. NEVER press ROLL (or re-roll) while letters are shown and any real word of 2+ letters made from them fits an open row: spell it. Roll only to start a round (an empty tray) or when truly no word fits. Then tap the word's letters (the ones not yet in the bar) in order, all in one answer. A letter twice in the word needs two different tiles. Never spell a guess.`
 }];
 var rulesFor = (pkg, name) => GAME_RULES.filter((r) => r.match.test(pkg) || r.match.test(name));
+var countsCompleted = (pkg, name) => rulesFor(pkg || "", name || "").some((r) => r.badge === "completed");
 var KINDS = [
   [/\b(?:words?|letters?|spell\w*)\b/i, "a word game"],
   [/\b(?:match[- ]?3|gems?|candy|crush|blast)\b/i, "a match game"],
@@ -6689,7 +6747,7 @@ function gameStep(ctx) {
   if (launch) return launch;
   const adapter = adapterFor(ctx.mission.appPackage);
   if (!adapter) {
-    const level = readLevel(o) ?? (drawnOnly(o) ? aiLevel(ctx) : null);
+    const level = readLevel(o) ?? (drawnOnly(o) ? aiLevel(ctx) ?? (typeof ctx.s.badgeLevel === "number" ? ctx.s.badgeLevel : null) : null);
     if (level !== null) {
       if (ctx.s.levelFirst === void 0) ctx.s.levelFirst = level;
       ctx.s.levelLast = level;
@@ -7061,7 +7119,7 @@ var MissionRunner = class {
             const until = d.now() + 1e4;
             let arrowAt = 0, closed = false;
             while (g?.frame && d.now() < until && !closed) {
-              const arrow = skipMark(g.frame, "left"), cross = arrowAt ? skipMark(g.frame, "right") : null;
+              const arrow = skipMark(g.frame, "left"), cross = arrowAt ? skipMark(g.frame, "right") : skipMark(g.frame, "right-light");
               if (cross) {
                 closed = true;
                 say("Closing the ad with its \u2715.");
@@ -7159,7 +7217,7 @@ var MissionRunner = class {
             }
             continue;
           }
-          const endCardWatch = interrupt.kind === "ad" && adScreen(obs) && !/gms\.ads/i.test(obs.activity || "") && drawnOnly(obs) && !!obs.frame && mission.type === "game_level" && Number(ctx.s.adWaits || 0) >= 1 && Number(ctx.s.adWatches || 0) < 2;
+          const endCardWatch = interrupt.kind === "ad" && adScreen(obs) && !/gms\.ads/i.test(obs.activity || "") && !!(obs.frame || d.allowVision) && mission.type === "game_level" && Number(ctx.s.adWaits || 0) >= 1 && Number(ctx.s.adWatches || 0) < 2;
           if (endCardWatch) {
             ctx.s.adWatches = Number(ctx.s.adWatches || 0) + 1;
             let g = await d.driver.glance();
@@ -7171,7 +7229,7 @@ var MissionRunner = class {
                 live();
                 still = prev && sceneDiff(prev, g.frame) < 2.5 ? still + 1 : 0;
                 prev = g.frame;
-                const cross = still >= 2 ? skipMark(g.frame, "right") || skipMark(g.frame, "top-right") : null;
+                const cross = still >= 2 ? skipMark(g.frame, "right") || skipMark(g.frame, "top-right") || skipMark(g.frame, "right-light") : null;
                 if (cross) {
                   closed = true;
                   say("The ad's end card shows; closing it with its \u2715.");
@@ -7283,7 +7341,29 @@ var MissionRunner = class {
           const rollAt = !placeAt && obs.frame && trayEmpty(obs.frame) && ctx.s.rollFailed !== steadyKey(obs) && !(ahead && ahead.moves.length) && drawnOnly(obs) ? rollButton(obs.frame) : null;
           const isWy = rulesFor(mission.appPackage, mission.appLabel || "").some((r) => r.id === "word-yatzy");
           const wy0 = !placeAt && !rollAt && !(ahead && ahead.moves.length) && drawnOnly(obs) && obs.frame && isWy ? wyScreen(obs.frame) : null;
-          const wy = wy0 && (wy0.kind === "between" || ctx.s.wyFailed !== steadyKey(obs)) ? wy0 : null;
+          let wy = wy0 && (wy0.kind === "between" || ctx.s.wyFailed !== steadyKey(obs)) ? wy0 : null;
+          if (wy && wy.kind === "home" && obs.frame) {
+            const sig = wyBadge(obs.frame);
+            if (sig) {
+              const kept = d.badges?.get(mission.appPackage) || {}, lv = badgeLevel(sig, kept);
+              if (lv !== null) {
+                if (ctx.s.badgeLevel !== lv) say("Level " + lv + " on the badge (a badge read before).");
+                ctx.s.badgeLevel = lv;
+                ctx.s.levelLast = lv;
+                if (ctx.s.levelFirst === void 0) ctx.s.levelFirst = lv;
+                if (lv > (checkpoint?.level ?? 0)) {
+                  await persist({ level: lv, scene: "level " + lv }, obs);
+                  mission.checkpoint = checkpoint;
+                  evidence.push(ev(obs, "Level " + lv + " on the home screen badge", "screen_hash", 0.85, String(lv)));
+                  say("Verified: level " + lv + ".");
+                }
+              } else if (d.planner != null && d.allowVision && !(ctx.s.badgeAsked || (ctx.s.badgeAsked = /* @__PURE__ */ new Set())).has(sig)) {
+                ctx.s.badgeAsked.add(sig);
+                ctx.s.readBadge = sig;
+                wy = null;
+              }
+            }
+          }
           if (!wy || wy.kind !== "between") {
             ctx.s.betweenLooks = 0;
             ctx.s.betweenSince = void 0;
@@ -7721,13 +7801,14 @@ var MissionRunner = class {
     const onAd = adScreen(obs);
     if (onAd) {
       ctx.s.adTries = Number(ctx.s.adTries || 0) + 1;
-      input.recent.push(`This screen is an ad (an ad network's own screen inside the game). Its way out is a small mark in a top or bottom corner: an X or \u2715, or arrows pointing right (\u203A, \xBB, \u23ED, often in a circle), sometimes after a countdown. Tap ONLY that mark (say "close" or "skip" in evidence); if none is shown yet, answer "wait" with ms 3000. Never tap anything else on it (no install, no "Get", no offer, no link).`);
+      input.recent.push(`This screen is an ad (an ad network's own screen inside the game). Its way out is a small mark in a top or bottom corner: an X or \u2715 (white on dark, or dark on a white bar above the ad page), or arrows pointing right (\u203A, \xBB, \u23ED, often in a circle), sometimes after a countdown. Tap ONLY that mark (say "close" or "skip" in evidence); if none is shown yet, answer "wait" with ms 3000. Never tap anything else on it (no install, no "Get", no offer, no link).`);
     }
     if (mission.type === "game_level" && !ctx.s.questsDone && !questsPay(mission)) ctx.s.questsDone = true;
     if (mission.type === "game_level" && !ctx.s.questsDone) {
       if (Number(ctx.s.questAsks = Number(ctx.s.questAsks || 0) + 1) > 4) ctx.s.questsDone = true;
       else input.recent.push(`SESSION START, before the next match: open the game's daily quests (Daily Tasks, Quests, Missions, Achievements: a tab or button with a red badge, often in the bottom bar; then "View Tasks"), press every lit COLLECT / CLAIM (free rewards: they raise the level), close that panel, and remember the open tasks (e.g. "Swap 10 times", "Play X, Y or Z", "Win 2 matches") to play toward them. When nothing is left to collect, say "quests done" in evidence and go on playing.`);
     }
+    if (ctx.s.readBadge) input.recent.push(`READ THE LEVEL: the player's level is the small number on the badge at the lower right of the avatar, top left of this home screen. Give that number in "level", then press PLAY! on a match where it is your turn (else NEW GAME).`);
     if (drawnOnly(obs) && obs.frame) input.recent.push('This screen is ONE PICTURE with no controls: answer only with method "point" (x,y fractions of the picture), "drag", "path", "hold", "wait" or "key"; never "selector". Spell a word as a first point and the rest in "then".');
     if (mission.type === "game_level") input.recent.push("FOCUS: play matches" + (ctx.s.questsDone ? " (the daily tasks were already checked this session: never open them again)" : " and complete the DAILY TASKS / quests") + ". On the home screen: " + (ctx.s.questsDone ? "" : "collect any finished daily task, then ") + "press PLAY! on a game where it is your turn, else NEW GAME. Close every other screen (collections, tiles, ladders, chests, events, shop, offers) at once with its \u2715, Close or Continue; never open them.");
     if (mission.type === "game_level" && !onAd && Number(ctx.s.aiWaits || 0) >= 1) input.recent.push('Your last answer was "wait" and this screen has NOT changed since: it is fully loaded and waiting for you. Press its main button now (CLAIM, NEXT GAME, PLAY!, CONTINUE, OK) or close it with its \u2715; do not answer "wait" again unless a countdown is visible.');
@@ -7801,6 +7882,19 @@ var MissionRunner = class {
         if (plan.level !== void 0 && plan.level !== null && drawnOnly(obs)) {
           const r = ctx.s.aiLevels || (ctx.s.aiLevels = []);
           r.push({ obs: obs.id, level: plan.level });
+        }
+        const badge = ctx.s.readBadge;
+        ctx.s.readBadge = void 0;
+        if (badge && typeof plan.level === "number" && plan.level > 0) {
+          const known = typeof mission.checkpoint?.level === "number" ? mission.checkpoint.level : null;
+          if (known === null || plan.level >= known && plan.level <= known + 1) {
+            const kept = d.badges?.get(mission.appPackage) || {}, k = String(plan.level);
+            for (const lv of Object.keys(kept)) if (lv !== k) kept[lv] = kept[lv].filter((s2) => s2 !== badge);
+            kept[k] = [badge, ...(kept[k] || []).filter((s2) => s2 !== badge)].slice(0, 3);
+            d.badges?.set(mission.appPackage, kept);
+            ctx.s.badgeLevel = plan.level;
+            say("Falcor AI read level " + plan.level + " on the badge; it is known by its picture from now on.");
+          }
         }
         if ((plan.lastHold === "short" || plan.lastHold === "long") && d.holds) d.holds.read(mission.appPackage, plan.lastHold);
         if (plan.readyIn && mission.type === "game_level" && (plan.method === "wait" || plan.method === "handoff")) {
@@ -8085,6 +8179,7 @@ var Orchestrator = class _Orchestrator {
       recipes: d.recipes,
       avoid: d.avoid,
       holds: d.holds,
+      badges: d.badges,
       ads: d.ads,
       allowVision: !!d.vision?.(),
       claims: {
@@ -9436,12 +9531,13 @@ var GENRE_LINE = new RegExp("^(?:genre:\\s*)?(" + GENRES + ")(?:\\s*[,/\xB7&|]\\
 var BUTTONISH = /^(?:view|see|show|read|more|learn more|tap to|open|hide)\b.{0,20}$|^(?:details|more details|offer details|game details|how to (?:earn|play)|how it works|about(?: this game)?|description|requirements|rules|terms(?: & conditions| and conditions)?|faq|support|help|share|report|favorite|favourite|copy|copied|current goal|next goal|game goals|earn rate|total rewards|fastest|limited time|new|hot|featured|recommended|top offers?|all offers|my offers|in progress|completed|start & earn|start and earn|start earning|start playing|install game|play game|get started|claim|claim reward|collect|continue)$/i;
 var NOT_A_NAME = /^(?:[‹«←<]\s*.*|all games|back to .*|current level|your level|level reward|back|play|play now|install|install now|start|start playing|open|details|offer|offers|rewards?|milestones?|tasks?|goals?|how it works|terms|faq|help|home|games?|my games|featured|new|hot|settings|profile|wallet|balance|leaderboard|events?|close|×|✕|more|info|description|about|continue|next|ok|see all|show more|view all)$/i;
 var DONE_WITH = /\b(?:complete|completing|finish|finishing|beat|beating|clear|clearing|pass|passing|win|winning)\s+(?:the\s+)?(?:\w+\s+)?$/i;
-function requirementOf(text2) {
+function requirementOf(text2, game) {
   const all = [];
   REQ.lastIndex = 0;
+  const done = game ? !countsCompleted(game.pkg, game.name) : true;
   for (let m = REQ.exec(text2); m; m = REQ.exec(text2)) {
     const kind = m[1].toLowerCase() === "lvl" ? "level" : m[1].toLowerCase(), v = Number(m[2].replace(/,/g, ""));
-    all.push({ kind, value: kind !== "day" && DONE_WITH.test(text2.slice(0, m.index)) ? v + 1 : v });
+    all.push({ kind, value: done && kind !== "day" && DONE_WITH.test(text2.slice(0, m.index)) ? v + 1 : v });
   }
   return all.find((r) => r.kind !== "day") || all[0] || null;
 }
@@ -9834,21 +9930,23 @@ function mergeOffer(old, d) {
   }, diff: diff2 };
 }
 var statusOfStored = (m) => m.status && m.status !== "expired" ? m.status : m.done ? "goal_reached" : "not_started";
-function milestoneState(m, o, now, level, next) {
-  const s2 = statusOfStored(m), req = requirementOf(m.text) || m.requirement, lv = req && ["level", "section", "stage", "chapter", "world", "floor", "wave", "round", "area", "zone"].includes(req.kind) ? req : null;
+var START_MILESTONE = /^(?:start (?:playing|the game)|play the game|open the game|install and (?:play|open))(?: the game)?$/i;
+function milestoneState(m, o, now, level, next, played = false) {
+  const s2 = statusOfStored(m), req = requirementOf(m.text, o.game) || m.requirement, lv = req && ["level", "section", "stage", "chapter", "world", "floor", "wave", "round", "area", "zone"].includes(req.kind) ? req : null;
   if (RANK[s2] >= RANK.goal_reached) return { status: s2, by: m.by || "owner", note: m.evidence || "" };
+  if (played && START_MILESTONE.test(m.text.trim())) return { status: "goal_reached", by: "falcor", note: "Falcor has played the game; confirm it in the earning app." };
   if (lv && level !== null && level >= lv.value) return { status: "goal_reached", by: "falcor", note: "Falcor saw the game at " + lv.kind + " " + level + "; confirm it in the earning app." };
   const expires = o.deadline?.expiresAt ?? o.expiresAt;
   if (expires !== null && expires !== void 0 && expires < now) return { status: "expired", by: "screen", note: "The offer ended." };
   if (next && lv && level !== null && level > 0) return { status: "in_progress", by: "falcor", note: lv.kind + " " + level + " of " + lv.value };
   return { status: s2, by: m.by || "owner", note: "" };
 }
-function offerEarnings(o, now, level = null) {
+function offerEarnings(o, now, level = null, played = false) {
   const units = /* @__PURE__ */ new Map();
   const of = (u) => units.get(u) || units.set(u, { unit: u, advertised: null, sum: 0, free: 0, purchase: 0, extra: 0, reached: 0, pending: 0, credited: 0, paid: 0, unknown: 0, mismatch: null }).get(u);
   if (o.total) of(o.total.unit).advertised = o.total.amount;
-  const next = o.milestones.findIndex((m) => !REACHED.has(statusOfStored(m)));
-  const states = o.milestones.map((m, i) => milestoneState(m, o, now, level, i === next));
+  const next = o.milestones.findIndex((m) => !REACHED.has(statusOfStored(m)) && !(played && START_MILESTONE.test(m.text.trim())));
+  const states = o.milestones.map((m, i) => milestoneState(m, o, now, level, i === next, played));
   o.milestones.forEach((m, i) => {
     if (m.extra) of(m.extra.unit).extra += m.extra.amount;
     if (m.amount === null) {
@@ -13296,8 +13394,8 @@ function countdownMs(log) {
 }
 var reviewGuide = (r) => !r ? "" : "LAST SESSION (" + new Date(r.at).toISOString().slice(0, 16) + "): " + r.outcome + ". " + [...r.worked, ...r.failed].join(" ") + " NEXT: " + r.next;
 var DONE = /* @__PURE__ */ new Set(["ACTION_VERIFIED", "CREDIT_PENDING", "REWARD_VERIFIED", "RECEIVED", "FAILED", "EXPIRED", "BLOCKED", "CANCELLED", "INVALIDATED"]);
-var levelIn = (t) => {
-  const r = requirementOf(t);
+var levelIn = (t, game) => {
+  const r = requirementOf(t, game);
   return r && ["level", "stage", "section", "chapter", "world", "round", "wave", "floor"].includes(r.kind) ? r.value : null;
 };
 var GameAutopilot = class {
@@ -13384,9 +13482,9 @@ var GameAutopilot = class {
       if (deadlineOf(o, now).ended) continue;
       const { states } = offerEarnings(o, now, level), ms2 = withIds(o.milestones);
       const m = ms2.find((x, i) => {
-        const n2 = levelIn(x.text);
+        const n2 = levelIn(x.text, o.game);
         return n2 !== null && (level === null || n2 > level) && (states[i].status === "not_started" || states[i].status === "in_progress");
-      }) || null, n = m ? levelIn(m.text) : null;
+      }) || null, n = m ? levelIn(m.text, o.game) : null;
       if (m && n !== null) out.push({ objective: "milestone", label: o.source.name + ": " + m.text, target: n, offerId: o.id, missionId: null });
     }
     for (const m of missions.filter((x) => x.appPackage === pkg && !DONE.has(x.state))) out.push({ objective: "task", label: "Task: " + m.objective, target: goalLevel(m), offerId: null, missionId: m.id });
@@ -13694,8 +13792,8 @@ var NOTE = "Runs automatically at scheduled times even when Phone Autopilot is o
 var HORIZON_DAYS = 90;
 var DAY3 = 864e5;
 var STRATS = { quick: "Quick Rewards: the nearest milestone first, then stop", balanced: "Balanced: every level milestone that fits before the deadline", max: "Maximum Rewards: every level milestone, also past the estimate" };
-var levelIn2 = (t) => {
-  const r = requirementOf(t);
+var levelIn2 = (t, game) => {
+  const r = requirementOf(t, game);
   return r && ["level", "stage", "section", "chapter", "world", "kingdom", "island", "village", "city", "realm", "round", "wave", "floor"].includes(r.kind) ? r.value : null;
 };
 var GamePlans = class {
@@ -13734,10 +13832,10 @@ var GamePlans = class {
       offerIds.push(o.id);
       if (dl.at !== null && (deadline.at === null || dl.at < deadline.at)) deadline = { at: dl.at, source: o.source.name };
       if (dl.at === null) unknowns.push(o.source.name + ": no deadline known" + (o.deadline?.kind === "duration" ? " (it counts from the day you started; set it in Edit offer)" : "") + ".");
-      const { states } = offerEarnings(o, now, level);
+      const { states } = offerEarnings(o, now, level, played);
       withIds(o.milestones).forEach((m, i) => {
-        const start = /^(?:start (?:playing|the game)|play the game|open the game|install and (?:play|open))(?: the game)?$/i.test(m.text.trim());
-        const n = levelIn2(m.text), st = states[i]?.status || "not_started", reached = st !== "not_started" && st !== "in_progress" || n !== null && level !== null && level >= n || start && played;
+        const start = START_MILESTONE.test(m.text.trim());
+        const n = levelIn2(m.text, o.game), st = states[i]?.status || "not_started", reached = st !== "not_started" && st !== "in_progress" || n !== null && level !== null && level >= n || start && played;
         steps.push({
           msId: m.id,
           offerId: o.id,
@@ -13830,6 +13928,7 @@ var GamePlans = class {
   // What a game's page shows: the stored plan (refreshed against the offer while still a draft) or a fresh draft.
   view(pkg, level) {
     const s2 = this.stored(pkg), c = this.e.autopilot.get(pkg);
+    if (s2 && s2.status !== "draft" && this.sync(s2, level, false)) this.save(s2);
     let p = s2 && s2.status !== "draft" ? s2 : this.draft(pkg, s2?.strategy || "balanced", level);
     if ((p.status === "active" || p.status === "paused") && c && c.planId === p.id) p = { ...p, status: c.paused ? "paused" : c.active ? "active" : "ended", ended: c.active || c.paused ? p.ended : c.ended };
     const next = p.steps.find((x) => x.state === "todo") || null;
@@ -13910,24 +14009,7 @@ var GamePlans = class {
   next(pkg, planId, target) {
     const p = this.stored(pkg);
     if (!p || p.id !== planId) return null;
-    const fresh = this.ladder(pkg, target);
-    for (const f of fresh.steps) {
-      const have = p.steps.find((x) => x.msId === f.msId);
-      if (!have && f.state === "todo" && f.level !== null) {
-        p.steps.push(f);
-        this.log(p, "Added from the offer: " + f.text + ".");
-      } else if (have && have.state === "todo" && f.state === "reached") {
-        have.state = "reached";
-        have.reachedAt = this.e.now();
-      }
-    }
-    p.steps.sort((a, b) => (a.level ?? 1e9) - (b.level ?? 1e9));
-    if (fresh.deadline.at !== null) p.deadline = fresh.deadline;
-    for (const s2 of p.steps) if (s2.state === "todo" && s2.level !== null && target !== null && s2.level <= target) {
-      s2.state = "reached";
-      s2.reachedAt = this.e.now();
-      this.log(p, "Reached: " + s2.text + " (" + (s2.amount ?? "?") + " " + s2.unit + ").");
-    }
+    this.sync(p, target);
     const n = p.steps.find((s2) => s2.state === "todo" && s2.level !== null) || null;
     if (!n) {
       p.status = "done";
@@ -13936,6 +14018,45 @@ var GamePlans = class {
     }
     this.save(p);
     return n ? { level: n.level, offerId: n.offerId, text: n.text } : null;
+  }
+  // A stored plan against the offer as it stands and the level the game is at: new level milestones join in level order,
+  // each step's level is what its words mean for this game now (a playbook made before Word Yatzy's badge rule aimed
+  // "Complete Level 4" at level 5), and steps the earning app shows done, or at or below the level, are reached.
+  // Returns whether anything changed.
+  // (add: new milestones join only when a session ends (next); showing the plan never adds back what its strategy left out)
+  sync(p, level, add = true) {
+    let changed = false;
+    const fresh = this.ladder(p.pkg, level);
+    for (const f of fresh.steps) {
+      const have = p.steps.find((x) => x.msId === f.msId);
+      if (!have) {
+        if (add && f.state === "todo" && f.level !== null) {
+          p.steps.push(f);
+          this.log(p, "Added from the offer: " + f.text + ".");
+          changed = true;
+        }
+        continue;
+      }
+      if (have.level !== f.level) {
+        have.level = f.level;
+        changed = true;
+      }
+      if (have.state === "todo" && f.state === "reached") {
+        have.state = "reached";
+        have.reachedAt = this.e.now();
+        this.log(p, "Reached: " + have.text + " (" + (have.amount ?? "?") + " " + have.unit + ").");
+        changed = true;
+      }
+    }
+    p.steps.sort((a, b) => (a.level ?? 1e9) - (b.level ?? 1e9));
+    if (fresh.deadline.at !== null) p.deadline = fresh.deadline;
+    for (const s2 of p.steps) if (s2.state === "todo" && s2.level !== null && level !== null && s2.level <= level) {
+      s2.state = "reached";
+      s2.reachedAt = this.e.now();
+      this.log(p, "Reached: " + s2.text + " (" + (s2.amount ?? "?") + " " + s2.unit + ").");
+      changed = true;
+    }
+    return changed;
   }
   ended(pkg, planId, why) {
     const p = this.stored(pkg);
@@ -14322,6 +14443,7 @@ var HubEngine = class _HubEngine {
       avoid: this.o.avoid,
       vision: this.o.vision,
       holds: new HoldMemory({ load: (pkg) => this.kv("holds:" + pkg, []), save: (pkg, t) => this.setKv("holds:" + pkg, t) }),
+      badges: { get: (pkg) => this.kv("badges:" + pkg, {}), set: (pkg, v) => this.setKv("badges:" + pkg, v) },
       ads: { allowed: (pkg) => this.adsOn(pkg), present: (pkg) => !!pkg && this.adsAlways(pkg) || !!this.o.present?.() },
       held: (id) => !!this.queue?.held(id),
       reserved: (id) => !!this.queue?.reserved(id)
@@ -15445,7 +15567,7 @@ var HubEngine = class _HubEngine {
       }
       for (const m of missions) await this.taskAction(m.id, "remove").catch(() => null);
       this.coachWait.delete(key2);
-      for (const k of ["training:", "coach:", "skills:", "plan:", "holds:"]) this.o.store.set(k + key2, "null");
+      for (const k of ["training:", "coach:", "skills:", "plan:", "holds:", "badges:"]) this.o.store.set(k + key2, "null");
       this.o.forgetApp?.(key2);
     }
     for (const o of offers) this.removeOffer(o.id);
@@ -15736,7 +15858,8 @@ var HubEngine = class _HubEngine {
   }
   // One offer as the Games tab shows it (the same on the phone).
   offerView(o, now, level) {
-    const { units, states, next } = offerEarnings(o, now, level), dl = deadlineOf(o, now);
+    const pkg = o.game.pkg || "", played = !!pkg && (this.autopilot.reviews(pkg).length > 0 || (this.o.learned?.() || []).some((k) => k.pkg === pkg && k.sessions > 0));
+    const { units, states, next } = offerEarnings(o, now, level, played), dl = deadlineOf(o, now);
     const milestones = withIds(o.milestones).map((m, i) => ({ ...m, state: states[i].status, stateLabel: MSTATE_LABEL[states[i].status], stateBy: states[i].by, note: states[i].note, reached: states[i].status === "goal_reached" && states[i].by === "falcor", next: i === next }));
     const reached = milestones.filter((m) => REACHED.has(m.state)).length;
     const status2 = milestones.length && reached === milestones.length ? "completed" : dl.ended ? "expired" : "active";
@@ -16310,9 +16433,10 @@ var ADB = {
   },
   forwardVideo: (s2, port, scid) => ["-s", s2, "forward", "tcp:" + int2(port, 1024, 65535), "localabstract:scrcpy_" + scidOf(scid)],
   unforwardVideo: (s2, port) => ["-s", s2, "forward", "--remove", "tcp:" + int2(port, 1024, 65535)],
-  videoServer: (s2, scid, version) => {
+  // (control: the owner's fast touches over scrcpy's control socket, video.ts; the phone's clipboard is never synced)
+  videoServer: (s2, scid, version, control = false) => {
     if (!/^\d{1,2}\.\d{1,2}(?:\.\d{1,2})?$/.test(version)) throw new ActionError("Invalid scrcpy version.");
-    return ["-s", s2, "shell", "CLASSPATH=" + VIDEO_JAR + " app_process / com.genymobile.scrcpy.Server " + version + " scid=" + scidOf(scid) + " log_level=warn tunnel_forward=true audio=false control=false cleanup=true send_device_meta=false video_codec=h264 max_size=1280 max_fps=60 video_bit_rate=6000000"];
+    return ["-s", s2, "shell", "CLASSPATH=" + VIDEO_JAR + " app_process / com.genymobile.scrcpy.Server " + version + " scid=" + scidOf(scid) + " log_level=warn tunnel_forward=true audio=false control=" + (control ? "true clipboard_autosync=false" : "false") + " cleanup=true send_device_meta=false video_codec=h264 max_size=1280 max_fps=60 video_bit_rate=6000000"];
   }
 };
 var VIDEO_JAR = "/data/local/tmp/falcor-scrcpy-server.jar";
@@ -20940,21 +21064,49 @@ var freePort = () => new Promise((resolve, reject) => {
   });
 });
 var pause = (ms2) => new Promise((r) => setTimeout(r, ms2));
+var TOUCH_ACTION = { down: 0, up: 1, move: 2 };
+function touchMessage(action, fx, fy, w, h) {
+  const b = Buffer.alloc(32), clamp = (v) => Math.min(1, Math.max(0, Number.isFinite(v) ? v : 0));
+  b[0] = 2;
+  b[1] = TOUCH_ACTION[action];
+  b.writeBigInt64BE(-2n, 2);
+  b.writeUInt32BE(Math.round(clamp(fx) * (w - 1)), 10);
+  b.writeUInt32BE(Math.round(clamp(fy) * (h - 1)), 14);
+  b.writeUInt16BE(w, 18);
+  b.writeUInt16BE(h, 20);
+  b.writeUInt16BE(action === "up" ? 0 : 65535, 22);
+  return b;
+}
+function keyMessage(down, code) {
+  const b = Buffer.alloc(14);
+  b[0] = 0;
+  b[1] = down ? 0 : 1;
+  b.writeUInt32BE(code >>> 0, 2);
+  return b;
+}
+function textMessage(t) {
+  const s2 = Buffer.from(t.slice(0, 300), "utf8"), b = Buffer.alloc(5 + s2.length);
+  b[0] = 1;
+  b.writeUInt32BE(s2.length, 1);
+  s2.copy(b, 5);
+  return b;
+}
 async function startVideo(o) {
   const scid = ((0, import_node_crypto5.randomBytes)(4).readUInt32BE(0) & 2147483647).toString(16).padStart(8, "0");
   const port = await freePort();
   await o.exec(ADB.pushVideoServer(o.serial, o.serverPath), { timeoutMs: 3e4 });
   await o.exec(ADB.forwardVideo(o.serial, port, scid), { timeoutMs: 1e4 });
-  let ended = false, sock = null, child = null, err = "";
+  let ended = false, sock = null, ctl = null, child = null, err = "";
   const end = (why) => {
     if (ended) return;
     ended = true;
     sock?.destroy();
+    ctl?.destroy();
     child?.kill();
     void o.exec(ADB.unforwardVideo(o.serial, port), { timeoutMs: 5e3 }).catch(() => null);
     o.onEnd(why);
   };
-  child = (0, import_node_child_process3.spawn)(o.adbPath, ADB.videoServer(o.serial, scid, o.version), { shell: false, windowsHide: true });
+  child = (0, import_node_child_process3.spawn)(o.adbPath, ADB.videoServer(o.serial, scid, o.version, !!o.control), { shell: false, windowsHide: true });
   child.stderr?.on("data", (d) => {
     err = (err + String(d)).slice(-600);
   });
@@ -20993,11 +21145,44 @@ async function startVideo(o) {
   }
   sock.setTimeout(0);
   sock.setNoDelay(true);
+  if (o.control) {
+    ctl = await new Promise((resolve) => {
+      const c = import_node_net.default.connect(port, "127.0.0.1", () => {
+        c.removeListener("error", fail);
+        resolve(c);
+      });
+      const fail = () => {
+        c.destroy();
+        resolve(null);
+      };
+      c.once("error", fail);
+      c.setTimeout(3e3, fail);
+    });
+    if (ctl) {
+      ctl.setTimeout(0);
+      ctl.setNoDelay(true);
+      ctl.on("data", () => {
+      });
+      ctl.on("error", () => {
+        ctl = null;
+      });
+      ctl.on("close", () => {
+        ctl = null;
+      });
+    }
+  }
+  let w = 0, h = 0;
   const parser = new VideoParser();
   sock.on("data", (chunk) => {
     if (ended) return;
     try {
-      for (const p of parser.push(chunk)) o.onPacket(p);
+      for (const p of parser.push(chunk)) {
+        if (p.type === "session") {
+          w = p.width;
+          h = p.height;
+        }
+        o.onPacket(p);
+      }
     } catch (e) {
       end(e instanceof Error ? e.message : "The video stream failed.");
     }
@@ -21005,12 +21190,26 @@ async function startVideo(o) {
   sock.on("close", () => end(ended ? null : "The phone's video stopped."));
   sock.on("error", (e) => end(e.message));
   sock.resume();
-  return { stop: () => end(null) };
+  const write = (b) => {
+    if (ended || !ctl || ctl.destroyed) return false;
+    ctl.write(b);
+    return true;
+  };
+  const control = o.control ? {
+    // (positions are fractions of the picture; the server takes them in the video's own size, which follows rotation)
+    touch: (action, x, y) => !!w && !!h && write(touchMessage(action, x, y, w, h)),
+    key: (code) => write(keyMessage(true, code)) && write(keyMessage(false, code)),
+    text: (t) => write(textMessage(t)),
+    size: () => ({ w, h })
+  } : null;
+  return { stop: () => end(null), get control() {
+    return ctl ? control : null;
+  } };
 }
 
 // src/main.ts
 var where = globalThis.falcorHub || { appRoot: (0, import_node_path8.join)(__dirname, ".."), packRoot: (0, import_node_path8.join)(__dirname, ".."), packVersion: null, installVersion: import_electron2.app.getVersion(), packsDir: (0, import_node_path8.join)(import_electron2.app.getPath("userData"), "packs") };
-var VERSION = "0.21.20";
+var VERSION = "0.21.25";
 var simulated = process.argv.includes("--simulated");
 if (!import_electron2.app.requestSingleInstanceLock()) {
   if (where.packVersion) {
@@ -21235,6 +21434,26 @@ function windowFrame(deviceId) {
     win.webContents.send("frameWanted", { req, deviceId });
   });
 }
+var KEYS3 = { BACK: 4, HOME: 3, APP_SWITCH: 187, ENTER: 66, DEL: 67, TAB: 61, ESCAPE: 111 };
+var wheels = /* @__PURE__ */ new Map();
+import_electron2.ipcMain.on("touch", (_e, a) => {
+  const r = a && typeof a === "object" ? a : null;
+  const id = String(r?.deviceId || ""), ctl = videos.get(id)?.control, e = hub?.engine;
+  if (!r || !ctl || !e || e.teachStatus()) return;
+  const lease = e.leases.current(id, Date.now());
+  if (!lease || lease.kind !== "human") return;
+  e.leases.renew(lease.leaseId, Date.now());
+  const x = Number(r.x), y = Number(r.y);
+  if ((r.kind === "down" || r.kind === "move" || r.kind === "up") && Number.isFinite(x) && Number.isFinite(y)) ctl.touch(r.kind, x, y);
+  else if (r.kind === "key" && typeof r.key === "string" && KEYS3[r.key] !== void 0) ctl.key(KEYS3[r.key]);
+  else if (r.kind === "text" && typeof r.text === "string" && r.text.length) ctl.text(r.text);
+  else if (r.kind === "wheel" && Number.isFinite(x) && Number.isFinite(y) && Date.now() - (wheels.get(id) || 0) > 250) {
+    wheels.set(id, Date.now());
+    const dy = r.dir === "up" ? 0.12 : -0.12, from = Math.min(0.85, Math.max(0.15, y));
+    ctl.touch("down", x, from);
+    for (let i = 1; i <= 6; i++) setTimeout(() => ctl.touch(i === 6 ? "up" : "move", x, from + dy * i / 6), i * 16);
+  }
+});
 var need = () => {
   if (!hub) throw new Error("Starting\u2026");
   return hub;
@@ -21342,6 +21561,7 @@ var handlers = {
       serial: drv.serial,
       serverPath: p.scrcpyServer,
       version: VENDOR.scrcpy.version,
+      control: true,
       onPacket: (pk) => {
         hub?.engine.footagePacket(id, pk);
         win?.webContents.send("video", pk.type === "session" ? { deviceId: id, ...pk } : { deviceId: id, type: pk.type, key: pk.key, pts: pk.pts, data: new Uint8Array(pk.data.buffer, pk.data.byteOffset, pk.data.length) });
@@ -21355,7 +21575,7 @@ var handlers = {
     });
     videos.set(id, v);
     if ("frameSource" in hook) hook.frameSource = src2;
-    return true;
+    return { control: !!v.control };
   },
   videoStop: (a) => {
     videos.get(String(a.deviceId))?.stop();

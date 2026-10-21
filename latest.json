@@ -1,17 +1,17 @@
 {
-  "version": "0.21.24",
-  "notes": "^Games^ tab:^ Start^ playing^ the^ game^ counts^ as^ reached^ once^ Falcor^ has^ played^ the^ game,^ so^ the^ card's^ goal^ count^ matches^ the^ earning^ app.^ Word^ Yatzy's^ Complete^ Level^ N^ is^ reached^ when^ the^ badge^ shows^ N,^ and^ the^ level^ badge^ is^ read^ by^ itself.^",
-  "publishedAt": "2026-10-21T20:53:21.539Z",
+  "version": "0.21.25",
+  "notes": "^The^ Phone^ tab^ mirror^ is^ now^ full^ speed:^ with^ Take^ Control^ your^ taps^ land^ in^ under^ a^ fifth^ of^ a^ second^ ^(they^ took^ up^ to^ 3.7^ s^)^ and^ drags^ move^ live,^ over^ the^ same^ scrcpy^ channel^ the^ old^ lightning^ window^ used.^ The^ lightning^ button^ is^ now^ a^ phone-with-plus^ button^ that^ opens^ a^ second^ display^ of^ the^ phone^ you^ can^ drag^ anywhere.^",
+  "publishedAt": "2026-10-21T22:17:45.087Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "c2bfa57a603ef1eca0110eaad671181263f783bb07c433d03b1d8d917bb2622a",
-      "size": 1161468
+      "sha256": "87bab6baca2c2bb54cc0dca9f175ecc3f3910818e6e042ea78ef5eb1dce1126f",
+      "size": 1165164
     },
     {
       "path": "dist/preload.js",
-      "sha256": "0e77a3c0106647afa41b4dc68da1364f33c8507be9e0e4f23ea5ec96c4575187",
-      "size": 2033
+      "sha256": "6973da0a154dc802abd1e2a192420e5fc067a9e8cdf8dfdfc5ab2f3b7ef3c38c",
+      "size": 2208
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -34,9 +34,9 @@
       "size": 56554
     },
     {
-      "path": "remote-ui/assets/index-D_3SWxEV.js",
-      "sha256": "9391de9987c4e1c6c0837f38f829c1cd5b16cdc91908a55fce32b452a7742973",
-      "size": 168357
+      "path": "remote-ui/assets/index-U8eg03So.js",
+      "sha256": "7c0b62284a40d2371ea7c086058702dd15bf955fef6542c047979add4d9a7d89",
+      "size": 168546
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "1fc1190f4526ba51428e2c3fe60e83678f303c9d456239a83cc04d603e567d33",
+      "sha256": "f7dcb55357479a8a28120e1ac91191d4d392fc6a6c8f2e8dbc03e24ed88a4835",
       "size": 3854
     },
     {
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "7b9fbcf0364ef7607c5c9f17d8e9c278a395a95336f9268fe7023990dd2592c5",
-      "size": 139344
+      "sha256": "c830b82bd80449bc7e44ddec90459be5996b8192fb3e37077f4caa2c66f698e0",
+      "size": 141419
     },
     {
       "path": "ui/app.png",
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "b47bfb441d2dc3dd23f47967454309a73f38a5082c0fa40c778a1394d62f243d",
-      "size": 55416
+      "sha256": "74da2b760d68106cec82d487fa4079c293bc2d16c1ae0bfc3968e02db119c1a5",
+      "size": 55516
     },
     {
       "path": "ui/motion.css",
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "2670c4d170b29e2dc2b49680fa575886e2f56578d7f2ada812800da1e9e1f1f6",
-      "size": 61433
+      "sha256": "856ff54a11de2c5127924779ff2fa466c7b049a15668ca51f01d98092436a494",
+      "size": 61718
     },
     {
       "path": "ui/queue.js",

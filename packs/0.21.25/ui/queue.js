@@ -67,7 +67,8 @@
     // The queue's one switch: paused, nothing new starts by itself; running, what is scheduled starts at its time.
     const paused = !!(q && q.paused);
     text($('qtogglelabel'), paused ? 'Resume schedule' : 'Pause schedule');
-    $('qtoggle').className = 'small' + (paused ? ' primary' : ''); $('qtoggle').firstElementChild.className = 'led' + (paused ? '' : ' active');
+    // (Pause stops the schedule: red square and red words, so it reads as a stop)
+    $('qtoggle').className = 'small' + (paused ? ' primary' : ' stopish'); $('qtoggle').firstElementChild.className = 'led' + (paused ? '' : ' bad');
     $('qtoggle').disabled = !!d.emergency; $('qtoggle').dataset.op = paused ? 'resume' : 'pause';
     ticker(d, q, cur, next, paused);
   };
