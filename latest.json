@@ -1,12 +1,12 @@
 {
-  "version": "0.21.17",
+  "version": "0.21.18",
   "notes": "",
-  "publishedAt": "2026-10-21T15:33:59.906Z",
+  "publishedAt": "2026-10-21T17:08:20.409Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "4aaf9211958a46db17f3d02dd255359c5f45e3698c839e4d8936610b5b0296cd",
-      "size": 1127786
+      "sha256": "07ce43e23b236dfb1f6df516844fd8a22feb9f4b49b5e5306e09e760fb12977f",
+      "size": 1134587
     },
     {
       "path": "dist/preload.js",
@@ -145,8 +145,8 @@
     },
     {
       "path": "ui/queue.js",
-      "sha256": "a7f11696793935f2d19ece508ce96b895060fcb38a7857ed06c3afde9e072f92",
-      "size": 52439
+      "sha256": "a2c0062ee1449dbc0c6c28bec115b00ba8c47080a5dcddfe29232091bc3b7fcc",
+      "size": 53266
     },
     {
       "path": "ui/sandbox.js",
@@ -155,8 +155,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "a456aa7ab031cba43be14c6f0c7bbe82b601c294ef84441fc3a4bf71a31ad6c0",
-      "size": 96872
+      "sha256": "133be3d2b2ea81f6e0b925ecbe2fb77434b0289a9e069ede26d67350b3bbb1dd",
+      "size": 97026
     },
     {
       "path": "ui/tokens.css",

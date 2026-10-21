@@ -37,8 +37,9 @@
       html = '<div class="qcur s-' + (MOOD[cur.status] || 'run') + '"><div class="qhead"><span class="qico">' + kindIcon(cur.kind, cur.pkg) + '</span><b>' + esc(cur.name) + '</b><span class="qtime" data-start="' + cur.startedAt + '" data-dur="' + (cur.durationMin || '') + '"></span></div>'
         + '<div class="qsub">' + pill(cur.status, cur.label) + '<span>' + esc(word) + ' · ' + esc(cur.triggerLabel) + (cur.attempt > 1 ? ' · attempt ' + cur.attempt : '') + '</span></div>'
         + (cur.durationMin ? '<div class="progress qprog" data-style="--n:' + n + '">' + Array.from({length: n}, (_, i) => '<i class="' + (i < on ? 'on' : '') + '"></i>').join('') + '</div>' : '')
-        + stepLine(cur.reason || d.step || 'Working…')
-        + '<div class="row qctl">' + (paused || (q && q.paused) ? '<button class="small primary" data-qctl="resume">' + icon('play') + 'Resume</button>' : '<button class="small" data-qctl="pause">' + icon('pause') + 'Pause</button>')
+        + stepLine(cur.reason || d.step || 'Working…') + perfLine(d.perf)
+        // (Resume only for this activity itself paused; the schedule's own pause is the queue bar's switch)
+        + '<div class="row qctl">' + (paused ? '<button class="small primary" data-qctl="resume">' + icon('play') + 'Resume</button>' : '<button class="small" data-qctl="pause">' + icon('pause') + 'Pause</button>')
         + (cur.key ? '<button class="small" data-qctl="skip" title="Skip it and go on with the next">' + icon('skip') + 'Skip</button>' : '')
         + '<button class="small danger" data-qctl="stop" title="Stop it' + (cur.key ? ' and the queue' : '') + '">' + icon('stop') + 'Stop</button>'
         + (!controlling ? '<button class="small icon" data-qctl="take" title="Take control of the phone (the run pauses for you)">' + icon('control') + '</button>' : '') + '</div>' + nextLine + '</div>';
@@ -56,19 +57,50 @@
       const all = S.queue.counts, done = all.total > 0 && all.left === 0;
       html = '<div class="qidle"><b class="qbig">AUTOPILOT ACTIVE</b><span class="qwait">' + (q.paused ? 'QUEUE PAUSED' : done ? 'ALL OF TODAY\'S ACTIVITIES DONE' : 'WAITING FOR NEXT ACTIVITY') + '</span>'
         + (next ? '<span>Next: <b>' + esc(next.name) + '</b> · ' + (dayOf(next.at) === 'Today' ? '' : esc(dayOf(next.at)) + ' ') + esc(hm(next.at)) + ' <span class="muted">(' + esc(when(next.at)) + ')</span></span>' : '<span class="muted small">Nothing else is scheduled. Approved tasks without a schedule still run when they are due.</span>')
-        + (q.paused ? '<div class="row"><button class="small primary" data-qctl="resume">' + icon('play') + 'Resume the queue</button></div>' : '') + '</div>';
+        + (q.paused ? '<div class="row"><button class="small primary" data-qctl="resume">' + icon('play') + 'Resume scheduled runs</button></div>' : '') + '</div>';
     } else {
       const todo = S.queue ? S.queue.items.filter(i => i.deviceId === d.id && i.status === 'READY').length : 0;
       html = '<div class="idle"><span class="sleep"><img src="dragon.png" alt=""></span><span>Nothing is running.' + (next ? '<br>Next: <b>' + esc(next.name) + '</b> · ' + esc(hm(next.at)) + ' ' + esc(when(next.at)) : '<br>Schedule a game, a playbook or a creation: it runs here at its time.') + (todo ? '<br><span class="sand">' + todo + ' due now' + (q && q.paused ? ': the queue is paused.' : ': starting in turn.') + '</span>' : '') + '</span></div>'
-        + (q && q.paused ? '<div class="row"><button class="small primary" data-qctl="resume">' + icon('play') + 'Resume the queue</button></div>' : '');
+        + (q && q.paused ? '<div class="row"><button class="small primary" data-qctl="resume">' + icon('play') + 'Resume scheduled runs</button></div>' : '');
     }
     htmlOnce($('missionbody'), html); tickTimes();
     // The queue's one switch: paused, nothing new starts by itself; running, what is scheduled starts at its time.
     const paused = !!(q && q.paused);
-    text($('qtogglelabel'), paused ? 'Resume queue' : 'Pause queue');
+    text($('qtogglelabel'), paused ? 'Resume schedule' : 'Pause schedule');
     $('qtoggle').className = 'small' + (paused ? ' primary' : ''); $('qtoggle').firstElementChild.className = 'led' + (paused ? '' : ' active');
     $('qtoggle').disabled = !!d.emergency; $('qtoggle').dataset.op = paused ? 'resume' : 'pause';
+    ticker(d, q, cur, next, paused);
   };
+  // The run measured as it goes (engine.ts#perf): AI asks and their average time, moves made without the AI, words
+  // placed and time lost to ads. Nothing shown before the first count.
+  function perfLine(p) {
+    if (!p || !p.running) return '';
+    const sec = ms => ms == null ? '–' : (ms / 1000).toFixed(ms < 10000 ? 1 : 0) + ' s', mins = Math.max(p.minutes, 1 / 60);
+    const parts = [['AI', p.aiCalls + (p.aiCalls ? ' · ' + sec(p.aiAvgMs) + ' avg' : '')], ['Local', p.local + (p.burst ? ' · ' + p.burst + ' fast' : '')]];
+    if (p.words) parts.push(['Words', p.words + ' · ' + (p.words / mins).toFixed(1) + '/min']);
+    parts.push(['Ads', clock(p.adMs)]);
+    return '<div class="qperf">' + parts.map(([k, v]) => '<span><b>' + esc(k) + '</b> ' + esc(v) + '</span>').join('') + '</div>';
+  }
+  // The LED ticker over the queue: where the schedule stands, and in passing what it is for.
+  function ticker(d, q, cur, next, paused) {
+    const box = $('qticker'); if (!box) return;
+    // (while paused the queue names no next time: what is lined up is counted instead)
+    const waiting = S.queue ? S.queue.items.filter(i => i.deviceId === d.id && ['READY', 'SCHEDULED', 'WAITING'].includes(i.status)).length
+      + (S.queue.whenDue || []).filter(w => w.deviceId === d.id && ['READY', 'SCHEDULED'].includes(w.state)).length : 0;
+    const up = next ? 'NEXT UP: ' + next.name + ' AT ' + hm(next.at) + (dayOf(next.at) === 'Today' ? ' (' + when(next.at) + ')' : ' ' + dayOf(next.at))
+      : waiting ? waiting + ' IN THE LINE-UP' : 'NOTHING LINED UP YET';
+    const msg = (d.emergency ? ['EMERGENCY STOP IS ON', 'NOTHING RUNS UNTIL YOU CLEAR IT']
+      : cur ? ['NOW PLAYING: ' + cur.name, cur.durationMin ? 'UP TO ' + cur.durationMin + ' MIN, LESS IF THE GAME RUNS DRY' : 'RUNNING', paused ? 'SCHEDULE PAUSED: NOTHING ELSE STARTS BY ITSELF' : next || waiting ? up : 'NOTHING ELSE LINED UP AFTER IT', 'ONE AT A TIME ON THIS PHONE']
+      : paused ? ['SCHEDULE PAUSED', 'NOTHING STARTS BY ITSELF', up, 'PLAY NOW ON A GAME STILL WORKS', 'RESUME SCHEDULE TO LET THE LINE-UP RUN']
+      : ['SCHEDULE ON', up, 'GAMES AND PLAYBOOKS TAKE TURNS BY THEMSELVES', 'AN HOUR OF PLAY AT MOST, THEN THE NEXT ONE GOES']).join('   ✦   ').toUpperCase();
+    // (its colour is the schedule's: gold while paused, green while on)
+    box.className = 'ticker' + (d.emergency ? ' red' : paused ? ' sand' : '');
+    if (box.dataset.msg === msg) return;
+    box.dataset.msg = msg;
+    // Twice in a row, so the loop is seamless; its speed follows its length.
+    box.firstElementChild.textContent = msg + '   ✦   ' + msg + '   ✦   ';
+    box.style.setProperty('--dur', Math.max(12, Math.round(msg.length / 5)) + 's');
+  }
   function tickTimes() {
     for (const el of document.querySelectorAll('[data-start]')) { const ms = Date.now() - Number(el.dataset.start), dur = Number(el.dataset.dur); text(el, dur ? minsOf(ms) + ' / ' + dur + ' MIN' : clock(ms)); }
     for (const el of document.querySelectorAll('[data-since]')) text(el, '· thinking ' + Math.max(0, Math.round((Date.now() - Number(el.dataset.since)) / 1000)) + ' s');
@@ -84,7 +116,7 @@
     }
     if (sbc && d.sandbox) { await call('sandbox', {op: sbc.dataset.sbctl, runId: d.sandbox.runId}); }
   });
-  $('qtoggle').onclick = async () => { const d = dev(); if (!d) return; const op = $('qtoggle').dataset.op || 'pause'; await qcall(op, {deviceId: d.id}); toast(op === 'pause' ? 'Queue paused. Nothing new starts until you resume it.' : 'Queue resumed: scheduled activities start at their times.'); };
+  $('qtoggle').onclick = async () => { const d = dev(); if (!d) return; const op = $('qtoggle').dataset.op || 'pause'; const r = await qcall(op, {deviceId: d.id}); toast(op === 'pause' ? 'Schedule paused. Nothing starts by itself until you resume it; Play now still works.' : r && r.started ? 'Schedule resumed: ' + r.started + ' is playing now; the rest follow in turn.' : 'Schedule resumed: nothing else is lined up today, so the next one starts at its time.'); };
 
   // ------------------------------------------------------------------ Today's Queue (a window on the Phone tab)
   document.querySelectorAll('#qviews button').forEach(b => b.onclick = () => { Q.view = b.dataset.v; Q.data = null; document.querySelectorAll('#qviews button').forEach(x => cls(x, 'on', x === b)); $('qlist').innerHTML = ''; delete $('qlist').dataset.ready; void load(true); });
@@ -117,7 +149,7 @@
         rows.push({k: i.key, i, n: num.get(i.key)});
       }
       if (Q.view === 'today' && ended.length && !Q.fold) rows.push({k: 'unfold', unfold: true});
-      if (Q.view === 'today' && v.whenDue.length) { rows.push({k: 'g:due', head: 'WHEN DUE · ' + v.whenDue.length, tip: 'Approved tasks without a schedule: schedule one (···) to line it up in the queue.'}); for (const w of v.whenDue) rows.push({k: 'w:' + w.id, w}); }
+      if (Q.view === 'today' && v.whenDue.length) { rows.push({k: 'g:due', head: v.whenDue.every(w => w.state === 'RUNNING') ? 'PLAYING NOW' : 'READY · NO SET TIME · ' + v.whenDue.length, tip: 'Approved tasks with no time of their own: Play now or Resume schedule starts them; schedule one (···) to give it a time.'}); for (const w of v.whenDue) rows.push({k: 'w:' + w.id, w}); }
       if (!items.length && !v.whenDue?.length) rows.push({k: 'empty', empty: S.queue.schedules ? (Q.view === 'today' ? 'Nothing scheduled today.' : 'Nothing scheduled ' + (Q.view === 'tomorrow' ? 'tomorrow' : 'in the next 7 days') + '.') + (qdev() && qdev().next ? ' Next: ' + qdev().next.name + ', ' + dayOf(qdev().next.at).toLowerCase() + ' ' + hm(qdev().next.at) + '.' : '') : 'No activities scheduled yet. Press + (or Schedule on a game, a task or a sequence).'});
       else if (Q.view === 'today' && !left && items.length) rows.push({k: 'alldone', empty: 'All of today\'s activities are done.'});
     }
@@ -126,7 +158,7 @@
       : r.fold || r.unfold ? '<li class="qfold"><button class="ghost small"></button></li>' : r.head ? '<li class="qhead2"></li>' : '<li class="qempty"></li>'), (n, r) => {
       if (r.i) drawItem(n, r.i, r.n);
       else if (r.h) drawHist(n, r.h);
-      else if (r.w) { text(n.querySelector('.qn'), '··'); htmlOnce(n.querySelector('.qico'), kindIcon(r.w.type === 'game_level' ? 'game' : 'task', r.w.pkg)); text(n.querySelector('.qname'), r.w.name); text(n.querySelector('.qmeta'), r.w.app + ' · ' + (r.w.nextAt && r.w.nextAt > Date.now() ? 'from ' + hm(r.w.nextAt) : 'when due')); htmlOnce(n.querySelector('.qst'), pill(r.w.state === 'RUNNING' ? 'RUNNING' : r.w.state === 'NEEDS_ATTENTION' ? 'WAITING_FOR_USER' : r.w.state === 'ACTION_VERIFIED' ? 'COMPLETED' : 'SCHEDULED', r.w.state === 'NEEDS_ATTENTION' ? 'Waiting for user' : r.w.stateLabel)); n.dataset.w = r.w.id; }
+      else if (r.w) { const qn = n.querySelector('.qn'); text(qn, r.w.state === 'RUNNING' ? 'NOW' : r.w.nextAt && r.w.nextAt > Date.now() ? hm(r.w.nextAt) : 'READY'); qn.classList.add('qtimecol'); htmlOnce(n.querySelector('.qico'), kindIcon(r.w.type === 'game_level' ? 'game' : 'task', r.w.pkg)); text(n.querySelector('.qname'), r.w.name); text(n.querySelector('.qmeta'), r.w.app + ' · ' + (r.w.nextAt && r.w.nextAt > Date.now() ? 'from ' + hm(r.w.nextAt) : 'no set time')); htmlOnce(n.querySelector('.qst'), pill(r.w.state === 'RUNNING' ? 'RUNNING' : r.w.state === 'NEEDS_ATTENTION' ? 'WAITING_FOR_USER' : r.w.state === 'ACTION_VERIFIED' ? 'COMPLETED' : 'SCHEDULED', r.w.state === 'NEEDS_ATTENTION' ? 'Waiting for user' : r.w.stateLabel)); n.dataset.w = r.w.id; }
       else if (r.fold) { const c = r.fold.filter(i => i.status === 'COMPLETED').length; htmlOnce(n.firstElementChild, icon('check') + esc(r.fold.length + ' finished today' + (c !== r.fold.length ? ' (' + c + ' completed)' : '') + ' · show')); }
       else if (r.unfold) htmlOnce(n.firstElementChild, icon('chevron') + 'Hide finished');
       else if (r.head) { text(n, r.head); n.title = r.tip || ''; }
@@ -138,7 +170,8 @@
   };
   function drawItem(n, i, num) {
     n.className = 'qrow s-' + (MOOD[i.status] || 'muted') + (i.live ? ' live' : '');
-    text(n.querySelector('.qn'), pad2(num));
+    // (its time first and plain: when it runs, or NOW while it runs)
+    text(n.querySelector('.qn'), i.live ? 'NOW' : ENDED.has(i.status) ? pad2(num) : hm(i.at)); n.querySelector('.qn').classList.toggle('qtimecol', !ENDED.has(i.status) || i.live);
     htmlOnce(n.querySelector('.qico'), kindIcon(i.kind, i.pkg)); n.querySelector('.qico').title = (KIND[i.kind] || KIND.task)[1];
     text(n.querySelector('.qname'), i.name);
     const dep = (i.deps || []).filter(x => x.state !== 'ok').map(x => x.name);

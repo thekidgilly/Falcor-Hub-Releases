@@ -589,7 +589,7 @@ function renderAutopilot(g, d) {
   if (c && c.paused) $('gpapstop').hidden = false;
   $('gpapstart').disabled = !d || !!d.emergency || !g.installed || !!g.locked;
   $('gpapstart').title = !d ? 'Plug in the phone' : d.emergency ? 'Emergency Stop is on' : !g.installed ? 'Not installed on the phone' : g.locked ? g.locked : 'Falcor plays this game toward the goal now, then comes back by itself until it is verified';
-  $('gpapstart').innerHTML = icon('play') + (c && c.paused ? 'Carry on' : 'Start Autopilot');
+  $('gpapstart').innerHTML = icon('play') + (c && c.paused ? 'Play now' : 'Start Autopilot');
   const r = g.review, L = [];
   const state = !c ? ['OFF', 'muted'] : c.running ? ['PLAYING', 'green'] : on ? ['ON', 'green'] : c.paused ? ['PAUSED', 'sand'] : ['OFF', 'muted'];
   // (a playbook shows its own state; below it only what is happening now and what the last session taught)
@@ -611,6 +611,9 @@ function pbMode(g) { return !!(g.smart && (g.smart.runnable || ['active', 'pause
 function renderPlan(g) {
   const v = g.smart, box = $('gpplan'), d = dev();
   const gate = !d ? {ok: false, why: 'Plug in the phone.'} : d.emergency ? {ok: false, why: 'Emergency Stop is on.'} : !g.installed ? {ok: false, why: 'Install the game on the phone first.'} : g.locked ? {ok: false, why: g.locked} : {ok: true, why: ''};
+  // Being played this moment (the queue's current session is this game): its session ends by start + its minutes.
+  const cur = d && S.queue && S.queue.devices && S.queue.devices[d.id] ? S.queue.devices[d.id].current : null;
+  if (cur && cur.pkg === g.pkg) { gate.playing = true; gate.until = cur.durationMin ? cur.startedAt + cur.durationMin * 60000 : null; }
   const html = pbMode(g) || (v && v.plan.steps.length) ? P.playbookHtml(v, gate) : '';
   box.hidden = !html; htmlOnce(box, html);
 }
@@ -619,8 +622,8 @@ $('gpplan').addEventListener('click', async e => {
   const g = S.games.find(x => x.pkg === gamePkg), d = dev(); if (!g) return;
   const k = b.dataset.pb; b.classList.add('busy');
   try {
-    if (k === 'start' || k === 'carry') { if (!d) return; await planRun(g, d); }
-    else { await call('gamePlaybook', {pkg: g.pkg, op: k}); toast(k === 'pause' ? 'Playbook paused. Nothing comes back by itself until you carry on.' : 'Playbook stopped. Its sessions are cancelled.'); }
+    if (k === 'start') { if (!d) return; await planRun(g, d); }
+    else { await call('gamePlaybook', {pkg: g.pkg, op: k}); toast(k === 'pause' ? 'Playbook paused. Nothing plays until you press Play now.' : 'Playbook stopped. Its sessions are cancelled.'); }
   } finally { b.classList.remove('busy'); }
 });
 async function planRun(g, d, extra = {}) {
@@ -629,7 +632,7 @@ async function planRun(g, d, extra = {}) {
   if (r && r.needsApproval) { const ok = await apApprove({...r.needsApproval, run: true}); if (!ok) return; extra = {...extra, rulesAllow: true}; r = await call('gamePlaybook', {pkg: g.pkg, op: 'run', deviceId: d.id, strategy, ...extra}); }
   if (r && r.conflict) { const choice = await qAsk(r.conflict); if (!choice) return; r = await call('gamePlaybook', {pkg: g.pkg, op: 'run', deviceId: d.id, strategy, ...extra, choice}); }
   if (r && r.already) toast(g.name + ': the playbook is already running.', 'warn');
-  else if (r && (r.started || r.queued)) { toast('Smart Playbook on for ' + g.name + '. It comes back by itself until every milestone is verified.'); go('phone'); }
+  else if (r && (r.started || r.queued)) { toast(r.queued ? g.name + ' plays next, after what is running now.' : 'Playing ' + g.name + ' now, for up to an hour. It comes back by itself until every milestone is verified.'); go('phone'); }
 }
 async function apStart(extra = {}) {
   const g = S.games.find(x => x.pkg === gamePkg), d = dev(); if (!g || !d) return;
@@ -665,7 +668,7 @@ function apApprove(n) {
 }
 $('gpapstart').onclick = () => void apStart().catch(() => null);
 const planOwned = () => { const g = S.games.find(x => x.pkg === gamePkg); return !!(g && g.campaign && g.campaign.planId); };
-$('gpappause').onclick = async () => { await call(planOwned() ? 'gamePlaybook' : 'gameAutopilot', {pkg: gamePkg, op: 'pause'}); toast('Game Autopilot paused. Nothing comes back by itself until you carry on.'); };
+$('gpappause').onclick = async () => { await call(planOwned() ? 'gamePlaybook' : 'gameAutopilot', {pkg: gamePkg, op: 'pause'}); toast('Game Autopilot paused. Nothing plays until you press Play now.'); };
 $('gpapstop').onclick = async () => { await call(planOwned() ? 'gamePlaybook' : 'gameAutopilot', {pkg: gamePkg, op: 'stop'}); toast('Game Autopilot stopped. Its returns are cancelled.'); };
 // Rewarded ads: on for every game. Falcor plays an ad offer while the owner is here to watch it and closes it once the
 // reward is granted; a game can be turned off (and on again) here.
