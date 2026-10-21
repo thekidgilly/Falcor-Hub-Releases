@@ -114,7 +114,8 @@
       <section class="win" data-win="queue" aria-label="Today's queue">
         <header class="winbar"><span class="wintitle">// TODAY'S QUEUE</span><span class="winx muted qsum" id="qsum"></span></header>
         <div class="winbody fill"><div class="queue" id="queuepanel">
-          <div class="qbar"><div class="seg" id="qviews"><button data-v="today" class="on">Today</button><button data-v="tomorrow">Tomorrow</button><button data-v="upcoming">Upcoming</button><button data-v="history">History</button></div><span class="grow"></span><button class="small" id="qtoggle" title="The queue runs what you schedule (games, playbooks, creations) at its time, one after another. Pause holds everything until you resume."><span class="led"></span><span id="qtogglelabel">Pause queue</span></button><button class="small icon" id="qadd" title="Add an activity to the queue (a game, a task or a sequence)"><svg class="ico"><use href="#i-plus"></use></svg></button></div>
+          <div class="ticker" id="qticker" role="status" aria-live="polite"><span></span></div>
+          <div class="qbar"><div class="seg" id="qviews"><button data-v="today" class="on">Today</button><button data-v="tomorrow">Tomorrow</button><button data-v="upcoming">Upcoming</button><button data-v="history">History</button></div><button class="small" id="qtoggle" title="Scheduled runs (games, playbooks, creations) start by themselves at their time, one after another. Pause schedule stops them starting by themselves until you resume; Play now on a game still plays it."><span class="led"></span><span id="qtogglelabel">Pause schedule</span></button><button class="small icon" id="qadd" title="Add an activity to the queue (a game, a task or a sequence)"><svg class="ico"><use href="#i-plus"></use></svg></button></div>
           <ol class="qlist" id="qlist"></ol>
           <div class="qnotes" id="qnotes"></div>
         </div></div>
@@ -340,10 +341,11 @@
       </div>
       <div class="panel" id="gpofferbox" hidden><p class="eyebrow">// REWARD LADDER</p><p class="muted small">A goal reached in the game is not money: credited and paid out are. Set a stage from its menu; "observed" came from the earning app's page, "you" from you, "Falcor" from the game's level.</p><div id="gpoffers"></div></div>
       <div class="panel" id="gpweb" hidden><p class="eyebrow">// FROM THE WEB</p><div id="gpwebbody"></div></div>
-      <div class="panel"><p class="eyebrow">// EARNINGS IN THE GAME</p><p class="muted small">Per unit, never added across units. Collected means the game showed it claimed or credited; pending means the game says it is on its way.</p><div id="gpearn"></div><div id="gphist"></div></div>
-      <div class="panel"><p class="eyebrow">// TASKS IN THIS GAME</p><div class="tasklist" id="gptasks"></div></div>
+      <div class="panel" id="gpnotes"><p class="eyebrow">// YOUR NOTES FOR FALCOR</p><p class="muted small">How to play this game, in your words. Falcor reads them on every move and they win over anything it learned. One tip per note: a screen and what to do there.</p><div id="gpnotelist"></div><form class="row" id="gpnoteform"><input id="gpnotetext" maxlength="300" placeholder="e.g. On the sign-in screen pick Guest" autocomplete="off"><button class="small primary" type="submit">Add note</button></form></div>
+      <div class="panel" id="gpearnbox"><p class="eyebrow">// EARNINGS IN THE GAME</p><p class="muted small">Per unit, never added across units. Collected means the game showed it claimed or credited; pending means the game says it is on its way.</p><div id="gpearn"></div><div id="gphist"></div></div>
+      <div class="panel" id="gptasksbox"><p class="eyebrow">// TASKS IN THIS GAME</p><div class="tasklist" id="gptasks"></div></div>
       <div class="panel" id="gpactbox"><p class="eyebrow">// ACTIVITY</p><div id="gpact"></div></div>
-      <div class="panel" id="gptierbox" hidden><p class="eyebrow">// REWARDS IN THIS GAME</p><p class="muted small">From what Falcor learned while you played it.</p><div id="gptiers"></div></div>
+      <div class="panel" id="gptierbox" hidden><p class="eyebrow">// WHAT FALCOR LEARNED</p><p class="muted small">Steps and rewards Falcor saw while you played it (Teach Falcor).</p><div id="gptiers"></div></div>
       <div class="panel" id="gpknow"><p class="eyebrow">// WHAT FALCOR KNOWS</p><div id="gpknowbody"></div></div>
       <div class="panel" id="gpads"><p class="eyebrow">// REWARDED ADS</p><div id="gpadsbody"></div></div>
     </div>

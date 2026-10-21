@@ -1,12 +1,12 @@
 {
-  "version": "0.21.15",
-  "notes": "Word Yatzy: follows the game’s tutorial, closes the no-X ads (Whatnot, PuzzlePlay, JustPlay) safely, refuses words too long for any open row, never presses Open offer / Shop now / Start earning.",
-  "publishedAt": "2026-10-21T02:27:19.650Z",
+  "version": "0.21.16",
+  "notes": "Playbooks play up to an hour at a time and keep going while they make progress; they stop early when the game cannot go on (energy, timers) so the next game can play.\nPlay now replaces Carry on and always starts at once; Resume schedule starts the next game right away.\nClosing Falcor.Hub pauses the schedule: it opens again on Resume schedule, and games keep their Autopilot.\nToday's Queue: each row leads with its time (NOW / READY), an LED ticker shows the schedule (gold when paused, green when on), and Pause queue is now Pause schedule.\nWord Yatzy is much faster: a whole word in one move, and the green score is placed at once.\nBetter ad exits (TikTok, Whatnot, PuzzlePlay, JustPlay); never Super Hint, never rate, never the mute button, no wheel spins.",
+  "publishedAt": "2026-10-21T03:57:21.901Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "d7aab424ee78ffe1c78a71f9672a1fefce17a498c9a3fadd86ef52331337cb47",
-      "size": 1098642
+      "sha256": "0704acf6177df34175c8702ec070cd5325ac68dc55795401dd302019bb0efc73",
+      "size": 1107218
     },
     {
       "path": "dist/preload.js",
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
+      "path": "remote-ui/assets/index-B8te1J10.js",
+      "sha256": "771ee2dc3a60da3c1c89b551de7ee78eba170da0c85f7b62a8bf65119d009268",
+      "size": 169561
+    },
+    {
       "path": "remote-ui/assets/index-BR21GwA6.css",
       "sha256": "7b8f6cd9d07ccf1ed74937ba723ef5a92a4f1dd8b487206f1bfa98543004b434",
       "size": 56554
-    },
-    {
-      "path": "remote-ui/assets/index-ONysb5U6.js",
-      "sha256": "bbeebcdbc10098f742af37f4e7227321e444895f91916c88cf499e7594a7d383",
-      "size": 168962
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "c49c5f32afdb66c65ed51c611acc31738261ebf89459a63527c09a78ae8dee18",
+      "sha256": "9f049e7da2811d71f78e6ee351f34e09c262196218d2e7362f5380f9b48e7dd1",
       "size": 3854
     },
     {
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "5d2c9b9dfe0737f5f86d9b31083b77f22db5f7396cbbc96ad416e6cbca24b883",
-      "size": 137522
+      "sha256": "c2e2f10372145a156993fae9f2a66814112b480cae1c6a892fe768ced3cf00d2",
+      "size": 137922
     },
     {
       "path": "ui/app.png",
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "f9c563719df7d3028834c2c9a2f280b91f19bf5d89ffc4cdffe0c0a28ee1f9e8",
-      "size": 55278
+      "sha256": "b47bfb441d2dc3dd23f47967454309a73f38a5082c0fa40c778a1394d62f243d",
+      "size": 55416
     },
     {
       "path": "ui/motion.css",
@@ -140,13 +140,13 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "10cc26227469772465a6f7f3b951133bacb160eb63ebd17e953e1d7cb8191cb9",
-      "size": 61637
+      "sha256": "85939dff79993de44df6ebe204c6ae97e0c69dfe5b0466549a0031578cf230cb",
+      "size": 62574
     },
     {
       "path": "ui/queue.js",
-      "sha256": "2b4b3ac8ac83f9512e0be844c9926829d065eefecf6b6a45c1bc0c4641b93732",
-      "size": 49764
+      "sha256": "a7f11696793935f2d19ece508ce96b895060fcb38a7857ed06c3afde9e072f92",
+      "size": 52439
     },
     {
       "path": "ui/sandbox.js",
@@ -155,8 +155,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "79f0934c532f0623df580c32fc46e16c3b8f159993084685231c68267a12c067",
-      "size": 95588
+      "sha256": "a456aa7ab031cba43be14c6f0c7bbe82b601c294ef84441fc3a4bf71a31ad6c0",
+      "size": 96872
     },
     {
       "path": "ui/tokens.css",

@@ -450,25 +450,11 @@
   // What the web said about a game (looked up during Auto-capture): a summary, tips, things to avoid and the sources.
   // A captured game's online research: a bar with its steps while it runs, then Ready to play.
   const PREP = [['instructions', 'How to play and its controls'], ['tips', 'Tips, tricks and hints'], ['guide', 'A guide and its screenshots'], ['notes', 'Falcor\'s notes for this game']];
-  // A newly captured game's setup checklist (training.ts on the computer) and Teach Falcor's lessons, the same on both
-  // apps; only real states are shown. Empty when there is nothing to show.
+  // Teach Falcor's lessons on a game, the same on both apps; only real states are shown. Empty when there is nothing.
   const trainHtml = g => {
-    const t = g.training, lessons = g.lessons || [];
-    if (!t && !lessons.length && !(g.coach && g.coach.state !== 'idle')) return '';
-    const row = (ok, label, extra) => '<li class="' + (ok === true ? 'green' : ok === 'part' ? 'sand' : 'muted') + '"><span>' + (ok === true ? '[✓]' : ok === 'part' ? '[~]' : '[ ]') + '</span> ' + label + (extra ? ' <em>' + extra + '</em>' : '') + '</li>';
+    const lessons = g.lessons || [];
+    if (!lessons.length && !(g.coach && g.coach.state !== 'idle')) return '';
     const L = [];
-    if (t) {
-      const done = t.status === 'done', wait = !g.installed;
-      L.push('<div class="top"><p class="eyebrow">// SET UP ' + esc(g.name.toUpperCase()) + '</p>' + (t.recording ? '<span class="pill red rec">● RECORDING</span>' : done ? '<span class="pill green">TRAINED</span>' : t.status === 'analyzing' ? '<span class="pill sand">ANALYZING</span>' : '<span class="pill muted">' + (wait ? 'WAITING FOR GAME ON PHONE' : 'PLAY TO TEACH') + '</span>') + '</div>');
-      L.push('<ul class="checklist">' + row(!!(g.earning && g.earning.length), 'Game captured and offer reviewed')
-        + row(g.research ? true : g.prep && g.prep.phase === 'running' ? 'part' : false, g.research ? 'Game guide and research ready' : g.prep && g.prep.phase === 'running' ? 'Researching the game online…' : 'Research not available (offline): Falcor learns from you instead')
-        + row(t.entry.state === 'learned' ? true : t.entry.state === 'partial' ? 'part' : false, t.entry.state === 'learned' ? 'Game opening learned' + (t.entry.guest ? ' (as a guest, as you did)' : '') : t.entry.state === 'partial' ? 'Game opening partly seen: Falcor checks the rest on its first run' : 'Game opening and guest entry: captured automatically as you open the game')
-        + row(t.creditedMs >= t.needMs ? true : t.creditedMs > 0 ? 'part' : false, 'Play five minutes to teach Falcor', esc(t.progress) + ' · gameplay only')
-        + row(done ? true : t.status === 'analyzing' ? 'part' : false, done ? 'Falcor learned how to enter and play' : t.status === 'analyzing' ? 'Analyzing your play…' : 'Falcor learns how to enter and play', t.ai && done ? esc(t.ai.note) : '')
-        + row(done && g.smart && g.smart.runnable ? true : false, 'Recommended Playbook ready', done && g.smart && g.smart.runnable ? 'review and press Start Autopilot' : '') + '</ul>');
-      if (!done) L.push('<div class="bar"><i data-style="width:' + t.percent + '%"></i></div><p class="small muted">' + (wait ? 'Waiting for the game on the phone: install it, then open it and play.' : 'Open the game and play normally for five minutes. Falcor automatically learns how you enter and play — no extra steps. Loading, sign-in choices and menus are recorded but do not count.') + '</p>');
-      else L.push('<p class="small muted">Trained ' + esc(new Date(t.completedAt).toLocaleString()) + ' · ' + (t.footage.segments ? esc(t.footage.seconds) + ' s of video in ' + t.footage.segments + ' file' + (t.footage.segments === 1 ? '' : 's') : 'no video (screens and ' + t.footage.frames + ' pictures)') + (t.local ? ' · ' + esc(t.local.summary) : '') + '</p>');
-    }
     const co = g.coach || {state: 'idle'};
     if (co.state === 'recording') L.push('<p class="small"><span class="pill red rec">● TEACHING</span> Recording your play · ' + esc(Math.round(co.elapsedMs / 1000)) + ' s. Leave the game or press Finish & Learn when you are done.</p>');
     else if (co.state === 'waiting') L.push('<p class="small sand">Teach Falcor: open ' + esc(g.name) + ' on the phone; recording starts when it is in front.</p>');
@@ -518,16 +504,24 @@
     const live = p.status === 'active', paused = p.status === 'paused', pot = (v.potential || []).map(x => money(x.amount, x.unit));
     const todo = p.steps.filter(x => x.state === 'todo').length, mine = p.steps.filter(x => x.state === 'needs_you').length, got = p.steps.filter(x => x.state === 'reached').length;
     const cal = v.calendar, btn = (k, label, cls) => '<button class="' + cls + '" data-pb="' + k + '"' + (k === 'start' || k === 'carry' ? (gate && !gate.ok ? ' disabled title="' + esc(gate.why) + '"' : '') : '') + '>' + label + '</button>';
-    const cta = live ? btn('pause', icon('pause') + 'Pause', '') + btn('stop', icon('stop') + 'Stop', 'danger')
-      : paused ? btn('carry', icon('play') + 'Carry on', 'primary big pbgo') + btn('stop', icon('stop') + 'Stop', 'danger')
+    // Play now plays at once whenever the game is not being played this moment (paused, or waiting for its next time).
+    const playing = live && gate && gate.playing, time = t => new Date(t).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
+    const cta = playing ? btn('pause', icon('pause') + 'Pause', '') + btn('stop', icon('stop') + 'Stop', 'danger')
+      : live ? btn('start', icon('play') + 'Play now', 'primary big pbgo') + btn('pause', icon('pause') + 'Pause', '') + btn('stop', icon('stop') + 'Stop', 'danger')
+      : paused ? btn('start', icon('play') + 'Play now', 'primary big pbgo') + btn('stop', icon('stop') + 'Stop', 'danger')
       : v.runnable ? btn('start', icon('play') + 'Start Playbook Autopilot', 'primary big pbgo') : '';
+    // One line that says what is happening and when it plays next.
+    const now = playing ? '▶ Playing now' + (gate.until ? ', until ' + time(gate.until) + ' at the latest (an hour of play at most)' : '') + '.'
+      : live ? (v.nextAt ? 'Next session ' + (new Date(v.nextAt).toDateString() === new Date().toDateString() ? 'today' : day(v.nextAt)) + ' at ' + time(v.nextAt) + (v.nextWhy ? ' · ' + v.nextWhy : '') : v.nextWhy || 'Waiting for its next session.')
+      : paused ? 'Paused by you. Nothing plays until you press Play now.' : '';
     return '<div class="pb pb-' + p.status + '"><div class="pbhead"><p class="eyebrow pbglow">// SMART PLAYBOOK</p><span class="pill ' + st[1] + '">' + st[0] + '</span></div>'
       + '<div class="pbhero"><div class="pbsum"><span class="pbkick">' + (todo ? 'POTENTIAL LEFT' : mine ? 'WHAT IS LEFT' : got ? 'EARNED ON THE WAY' : 'POTENTIAL') + '</span><b class="pbbig">' + (pot.length ? esc(pot.join(' + ')) : todo ? 'Reward unknown' : mine ? 'Over to you' : '✓ All done') + '</b>'
       + '<span class="pbsub">' + [todo ? todo + ' milestone' + (todo === 1 ? '' : 's') + ' to play' : '', got ? got + ' reached' : '', mine ? mine + ' need' + (mine === 1 ? 's' : '') + ' you' : ''].filter(Boolean).join(' · ') + '</span></div>'
       + '<div class="pbcta">' + cta + (gate && !gate.ok && !live ? '<span class="pbwhy">' + esc(gate.why) + '</span>' : '') + '</div></div>'
+      + (now ? '<p class="pbstatus' + (playing ? ' on' : '') + '">' + esc(now) + '</p>' : '')
       + pathHtml(p.steps, v.next)
-      + (cal && todo ? '<div class="pbcal"><span class="pbkick">SESSIONS</span><span>' + (live || paused ? (v.nextAt ? 'Next ' + esc(day(v.nextAt)) + ' ' + esc(new Date(v.nextAt).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})) + ' · ' : '') : 'Starts now, then ') + 'daily until ' + esc(day(cal.until)) + ' (' + (cal.byDeadline ? 'the offer\'s deadline' : 'up to ' + cal.horizonDays + ' days') + ')</span></div>' : '')
-      + (v.nextWhy && live ? '<p class="pbnow">' + esc(v.nextWhy) + '</p>' : '') + (p.ended ? '<p class="pbnow">' + esc(p.ended) + '</p>' : '')
+      + (cal && todo ? '<div class="pbcal"><span class="pbkick">SESSIONS</span><span>' + (live || paused ? '' : 'Starts now. ') + 'Plays up to an hour at a time, straight on while it makes progress; stops early only when the game cannot go on (energy, timers), then comes back the moment it is ready. Until ' + esc(day(cal.until)) + ' (' + (cal.byDeadline ? 'the offer\'s deadline' : 'up to ' + cal.horizonDays + ' days') + ').</span></div>' : '')
+      + (p.ended ? '<p class="pbnow">' + esc(p.ended) + '</p>' : '')
       + '<details class="pbmore"><summary>Details</summary><p><em>Deadline</em> ' + (p.deadline.at ? esc(new Date(p.deadline.at).toLocaleString()) + ' · ' + esc(p.deadline.source) : 'unknown') + '</p><p><em>Time per level</em> ' + (p.estimate.minPerLevel ? '≈ ' + p.estimate.minPerLevel + ' min' : 'unknown') + ' · ' + esc(p.estimate.note) + '</p>'
       + p.notes.map(n => '<p>' + esc(n) + '</p>').join('') + p.unknowns.map(n => '<p class="sand">' + esc(n) + '</p>').join('') + '<p>' + esc(v.note) + ' It never buys anything and never taps inside an ad.</p></details></div>';
   };

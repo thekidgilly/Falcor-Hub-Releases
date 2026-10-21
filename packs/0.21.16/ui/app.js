@@ -106,8 +106,6 @@ function render() {
   const learning = S.teaching && S.teaching.auto && (!S.teaching.kind || S.teaching.kind === 'teach') ? S.teaching.id : null, was = autoSeen;
   autoSeen = learning;
   if (learning && learning !== was) { toast('Falcor opened ' + S.teaching.name + ' and is recording. Play it on the mirror; when you leave the game, Falcor studies it and adds it to Games.'); if (tab !== 'sandbox') { go('sandbox'); if (window.sbMode) sbMode('teach'); return; } }
-  if (S.teaching && S.teaching.kind === 'training' && trainSeen !== S.teaching.id) toast('Training ' + S.teaching.name + ': recording while you play. ' + clock(S.teaching.leftMs || 0) + ' of gameplay left; nothing to press.');
-  trainSeen = S.teaching && S.teaching.kind === 'training' ? S.teaching.id : null;
   if (!learning && was) toast('Teaching ended. If you played, Falcor is studying it; the game shows in Games with its guide.');
   // Success moments: a task that just became verified bursts.
   for (const t of S.tasks) { const was = prevStates.get(t.id); if (was && was !== t.state && /VERIFIED|RECEIVED/.test(t.state)) setTimeout(() => P.burst(document.querySelector('.task[data-key="' + t.id + '"]') || $('tiles') || $('logo')), 50); prevStates.set(t.id, t.state); }
@@ -381,21 +379,20 @@ $('mirrorbox').addEventListener('keydown', e => {
 });
 
 // ------------------------------------------------------------------ Teach Falcor
-let teachSeen = null, after = null, trainSeen = null;
+let teachSeen = null, after = null;
 function renderTeach() {
   const t = S.teaching;
   $('rec').hidden = !t;
   if (t) {
-    teachSeen = {at: Date.now(), ms: t.elapsedMs, state: t.state, left: t.kind === 'training' ? t.leftMs : null};
+    teachSeen = {at: Date.now(), ms: t.elapsedMs, state: t.state, left: null};
     cls($('rec'), 'paused', t.state === 'paused');
-    text($('rectitle'), (t.state === 'paused' ? 'PAUSED · ' : t.kind === 'training' ? 'TRAINING · ' : 'TEACHING · ') + t.name);
-    // Training: the five minutes of gameplay still to play (credited time, not the clock), then the screens seen.
-    text($('recinfo'), (t.kind === 'training' && t.leftMs !== null ? clock(t.leftMs) + ' of play left · ' : '') + t.screens + ' screens · ' + t.touches + ' touches · ' + t.marks + ' marks');
+    text($('rectitle'), (t.state === 'paused' ? 'PAUSED · ' : 'TEACHING · ') + t.name);
+    text($('recinfo'), t.screens + ' screens · ' + t.touches + ' touches · ' + t.marks + ' marks');
     $('recpause').innerHTML = icon(t.state === 'paused' ? 'play' : 'pause'); $('recpause').title = t.state === 'paused' ? 'Resume' : 'Pause';
     tickRec();
   } else teachSeen = null;
 }
-function tickRec() { if (!teachSeen) return; if (teachSeen.left !== null && teachSeen.left !== undefined) { text($('rectime'), clock(teachSeen.left) + ' left'); return; } text($('rectime'), clock(teachSeen.ms + (teachSeen.state === 'recording' ? Date.now() - teachSeen.at : 0))); }
+function tickRec() { if (!teachSeen) return; text($('rectime'), clock(teachSeen.ms + (teachSeen.state === 'recording' ? Date.now() - teachSeen.at : 0))); }
 setInterval(tickRec, 500);
 // Teach lives in the Sandbox (it is the Sandbox's recording mode): the Phone tab's Teach opens it there.
 $('teach').onclick = () => { go('sandbox'); openTeach(); };
@@ -517,8 +514,8 @@ function renderGame(g) {
   $('gpopen').title = !d ? 'Plug in the phone' : !g.installed ? 'Not installed on the phone' : d.running ? 'A task is running' : d.emergency ? 'Emergency Stop is on' : 'Open it on the phone and take control';
   // Teach Falcor on this game: one press, then play; Finish & Learn while it records (or just leave the game).
   const co = g.coach || {state: 'idle'}, mine = co.state === 'recording' || co.state === 'waiting';
-  $('gpteach').disabled = !mine && (!d || !g.installed || !!d.emergency || !!S.teaching || !!(g.training && g.training.status !== 'done'));
-  $('gpteach').title = mine ? 'Stop recording and learn from it now (leaving the game does the same)' : g.training && g.training.status !== 'done' ? 'Falcor is learning this game from your first five minutes: just play it' : 'Play it your way: Falcor records and learns from you (no time to fill, nothing else to press)';
+  $('gpteach').disabled = !mine && (!d || !g.installed || !!d.emergency || !!S.teaching);
+  $('gpteach').title = mine ? 'Stop recording and learn from it now (leaving the game does the same)' : 'Play it your way: Falcor records and learns from you (no time to fill, nothing else to press)';
   $('gpteach').innerHTML = icon(mine ? 'check' : 'rec') + (co.state === 'recording' ? 'Finish & Learn' : co.state === 'waiting' ? 'Cancel Teach' : 'Teach Falcor');
   renderTrain(g);
   // Play now / Schedule run the game's own automation (its task, or a sequence that opens it); without one it needs setup.
@@ -540,12 +537,17 @@ function renderGame(g) {
   htmlOnce($('gpoffers'), P.offersHtml(g, true)); P.fix($('gpoffers'));
   htmlOnce($('gpact'), P.activityHtml(g));
   $('gpopen').hidden = $('gpteach').hidden = $('gptask').hidden = $('gpchat').hidden = $('gpguide').hidden = g.pkg.startsWith('offer:');
+  // (only once something was collected or claimed: an empty explanation is noise beside the playbook)
+  $('gpearnbox').hidden = !(g.rewards || []).length && !(g.history || []).length;
   htmlOnce($('gpearn'), P.rewardsHtml(g)); P.fix($('gpearn'));
   htmlOnce($('gphist'), P.historyHtml(g));
   $('gptierbox').hidden = !(g.tiers || []).length && !(g.objectives || []).length;
   htmlOnce($('gptiers'), P.tiersHtml(g));
+  renderNotes(g);
+  // (a game's Smart Playbook makes its tasks; the list shows only when there are some, made here or by hand from More)
+  $('gptasksbox').hidden = !g.tasks.length;
   const box = $('gptasks');
-  if (!g.tasks.length) htmlOnce(box, '<div class="empty" data-empty><span>No tasks for this game yet. Add one from More.</span></div>');
+  if (!g.tasks.length) htmlOnce(box, '');
   else {
     if (box.querySelector('[data-empty]')) box.innerHTML = '';
     keyed(box, g.tasks, t => t.id, () => P.el('<div class="gtask"><div class="main"></div><div class="acts"></div></div>'), (n, t) => {
@@ -587,7 +589,7 @@ function renderAutopilot(g, d) {
   if (c && c.paused) $('gpapstop').hidden = false;
   $('gpapstart').disabled = !d || !!d.emergency || !g.installed || !!g.locked;
   $('gpapstart').title = !d ? 'Plug in the phone' : d.emergency ? 'Emergency Stop is on' : !g.installed ? 'Not installed on the phone' : g.locked ? g.locked : 'Falcor plays this game toward the goal now, then comes back by itself until it is verified';
-  $('gpapstart').innerHTML = icon('play') + (c && c.paused ? 'Carry on' : 'Start Autopilot');
+  $('gpapstart').innerHTML = icon('play') + (c && c.paused ? 'Play now' : 'Start Autopilot');
   const r = g.review, L = [];
   const state = !c ? ['OFF', 'muted'] : c.running ? ['PLAYING', 'green'] : on ? ['ON', 'green'] : c.paused ? ['PAUSED', 'sand'] : ['OFF', 'muted'];
   // (a playbook shows its own state; below it only what is happening now and what the last session taught)
@@ -609,6 +611,9 @@ function pbMode(g) { return !!(g.smart && (g.smart.runnable || ['active', 'pause
 function renderPlan(g) {
   const v = g.smart, box = $('gpplan'), d = dev();
   const gate = !d ? {ok: false, why: 'Plug in the phone.'} : d.emergency ? {ok: false, why: 'Emergency Stop is on.'} : !g.installed ? {ok: false, why: 'Install the game on the phone first.'} : g.locked ? {ok: false, why: g.locked} : {ok: true, why: ''};
+  // Being played this moment (the queue's current session is this game): its session ends by start + its minutes.
+  const cur = d && S.queue && S.queue.devices && S.queue.devices[d.id] ? S.queue.devices[d.id].current : null;
+  if (cur && cur.pkg === g.pkg) { gate.playing = true; gate.until = cur.durationMin ? cur.startedAt + cur.durationMin * 60000 : null; }
   const html = pbMode(g) || (v && v.plan.steps.length) ? P.playbookHtml(v, gate) : '';
   box.hidden = !html; htmlOnce(box, html);
 }
@@ -617,8 +622,8 @@ $('gpplan').addEventListener('click', async e => {
   const g = S.games.find(x => x.pkg === gamePkg), d = dev(); if (!g) return;
   const k = b.dataset.pb; b.classList.add('busy');
   try {
-    if (k === 'start' || k === 'carry') { if (!d) return; await planRun(g, d); }
-    else { await call('gamePlaybook', {pkg: g.pkg, op: k}); toast(k === 'pause' ? 'Playbook paused. Nothing comes back by itself until you carry on.' : 'Playbook stopped. Its sessions are cancelled.'); }
+    if (k === 'start') { if (!d) return; await planRun(g, d); }
+    else { await call('gamePlaybook', {pkg: g.pkg, op: k}); toast(k === 'pause' ? 'Playbook paused. Nothing plays until you press Play now.' : 'Playbook stopped. Its sessions are cancelled.'); }
   } finally { b.classList.remove('busy'); }
 });
 async function planRun(g, d, extra = {}) {
@@ -627,7 +632,7 @@ async function planRun(g, d, extra = {}) {
   if (r && r.needsApproval) { const ok = await apApprove({...r.needsApproval, run: true}); if (!ok) return; extra = {...extra, rulesAllow: true}; r = await call('gamePlaybook', {pkg: g.pkg, op: 'run', deviceId: d.id, strategy, ...extra}); }
   if (r && r.conflict) { const choice = await qAsk(r.conflict); if (!choice) return; r = await call('gamePlaybook', {pkg: g.pkg, op: 'run', deviceId: d.id, strategy, ...extra, choice}); }
   if (r && r.already) toast(g.name + ': the playbook is already running.', 'warn');
-  else if (r && (r.started || r.queued)) { toast('Smart Playbook on for ' + g.name + '. It comes back by itself until every milestone is verified.'); go('phone'); }
+  else if (r && (r.started || r.queued)) { toast(r.queued ? g.name + ' plays next, after what is running now.' : 'Playing ' + g.name + ' now, for up to an hour. It comes back by itself until every milestone is verified.'); go('phone'); }
 }
 async function apStart(extra = {}) {
   const g = S.games.find(x => x.pkg === gamePkg), d = dev(); if (!g || !d) return;
@@ -663,22 +668,43 @@ function apApprove(n) {
 }
 $('gpapstart').onclick = () => void apStart().catch(() => null);
 const planOwned = () => { const g = S.games.find(x => x.pkg === gamePkg); return !!(g && g.campaign && g.campaign.planId); };
-$('gpappause').onclick = async () => { await call(planOwned() ? 'gamePlaybook' : 'gameAutopilot', {pkg: gamePkg, op: 'pause'}); toast('Game Autopilot paused. Nothing comes back by itself until you carry on.'); };
+$('gpappause').onclick = async () => { await call(planOwned() ? 'gamePlaybook' : 'gameAutopilot', {pkg: gamePkg, op: 'pause'}); toast('Game Autopilot paused. Nothing plays until you press Play now.'); };
 $('gpapstop').onclick = async () => { await call(planOwned() ? 'gamePlaybook' : 'gameAutopilot', {pkg: gamePkg, op: 'stop'}); toast('Game Autopilot stopped. Its returns are cancelled.'); };
 // Rewarded ads: on for every game. Falcor plays an ad offer while the owner is here to watch it and closes it once the
 // reward is granted; a game can be turned off (and on again) here.
 function renderAds(g) {
-  const box = $('gpadsbody'), sig = g.pkg + ':' + g.ads + ':' + g.adsLocked;
+  const box = $('gpadsbody'), sig = g.pkg + ':' + g.ads + ':' + g.adsAlways + ':' + g.adsLocked;
   $('gpads').hidden = g.pkg.startsWith('offer:');
   if (box.dataset.sig === sig) return; box.dataset.sig = sig;
+  const mode = !g.ads ? 'off' : g.adsAlways ? 'always' : 'on';
+  const opt = (m, label) => '<button class="small' + (mode === m ? ' primary' : '') + '" data-ads="' + m + '"' + (mode === m ? ' aria-pressed="true"' : '') + '>' + label + '</button>';
   box.innerHTML = g.adsLocked ? '<p class="muted small">Link this game to its installed app first.</p>'
-    : g.ads ? '<p class="small"><span class="led on"></span> On. When the game offers a reward for an ad, Falcor plays it while you are at the computer or in the phone app, waits for the reward, then closes it. It never taps inside the ad or buys anything.</p><button class="small" data-ads="off">Turn off for this game</button>'
-    : '<p class="muted small">Off for this game: Falcor passes by "watch an ad" offers here.</p><button class="small primary" data-ads="on">Turn on</button>';
+    : '<p class="small">' + (mode === 'always' ? '<span class="led on"></span> Always: whenever the game offers a reward for an ad, Falcor plays it, waits for the reward, then closes it with its X or skip arrows.'
+      : mode === 'on' ? '<span class="led on"></span> While you are here: Falcor plays reward ads only while you are at the computer or in the phone app.'
+      : 'Off: Falcor passes by "watch an ad" offers in this game.') + ' It never taps inside an ad or buys anything.</p><div class="row">' + opt('always', 'Always') + opt('on', 'While I am here') + opt('off', 'Off') + '</div>';
 }
 $('gpadsbody').onclick = async e => {
   const b = e.target.closest('[data-ads]'); if (!b || !gamePkg) return;
-  await call('setAds', {pkg: gamePkg, on: b.dataset.ads === 'on'});
-  toast(b.dataset.ads === 'on' ? 'Rewarded ads on for this game.' : 'Rewarded ads off for this game.');
+  const m = b.dataset.ads;
+  await call('setAds', {pkg: gamePkg, on: m !== 'off', always: m === 'always'});
+  toast(m === 'always' ? 'Rewarded ads: always, for this game.' : m === 'on' ? 'Rewarded ads: while you are here, for this game.' : 'Rewarded ads off for this game.');
+};
+// The owner's notes for this game (campaigns.ts#tell): read first on every move; added and removed here.
+function renderNotes(g) {
+  const box = $('gpnotelist'), notes = g.ownerNotes || [];
+  $('gpnotes').hidden = g.pkg.startsWith('offer:');
+  htmlOnce(box, notes.length ? '<ul class="notes">' + notes.map((n, i) => '<li><span>' + esc(n) + '</span><button class="small icon" data-delnote="' + i + '" title="Remove this note">' + icon('trash') + '</button></li>').join('') + '</ul>'
+    : '<p class="muted small">No notes yet. Tell Falcor what to press on a screen it gets stuck on.</p>');
+}
+$('gpnoteform').onsubmit = async e => {
+  e.preventDefault(); if (!gamePkg) return;
+  const t = $('gpnotetext').value.trim(); if (!t) return;
+  await call('gameTell', {pkg: gamePkg, text: t}); $('gpnotetext').value = ''; toast('Note added: Falcor follows it from the next move.');
+};
+$('gpnotelist').onclick = async e => {
+  const b = e.target.closest('[data-delnote]'); if (!b || !gamePkg) return;
+  const g = S.games && S.games.find(x => x.pkg === gamePkg), n = g && (g.ownerNotes || [])[Number(b.dataset.delnote)]; if (!n) return;
+  await call('gameTell', {pkg: gamePkg, text: '', forget: n}); toast('Note removed.');
 };
 // ---------------------------------------------------------------- offers from earning apps
 // Capture game reads the offer page open on the phone, screen after screen, into this form; nothing is saved until the
@@ -858,8 +884,7 @@ $('gpteach').onclick = async () => {
   // The game opens on the phone; recording starts by itself once it is in front. The owner keeps playing their way.
   renderGame(g); toast('Teach Falcor: play ' + g.name + ' your way, on the phone or the mirror. Leave the game or press Finish & Learn when you are done.');
 };
-// A newly captured game's setup checklist (training.ts): what is done, the five minutes of gameplay, the way in, and
-// what Falcor learned; then Teach Falcor's lessons on this game. Only real states are shown.
+// Teach Falcor's lessons on this game. Only real states are shown.
 function renderTrain(g) {
   const box = $('gptrain'), html = g.pkg.startsWith('offer:') ? '' : P.trainHtml(g);
   box.hidden = !html; if (html) { htmlOnce(box, html); P.fix(box); }
