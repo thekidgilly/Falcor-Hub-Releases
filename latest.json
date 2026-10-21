@@ -1,17 +1,17 @@
 {
-  "version": "0.21.11",
-  "notes": "New games are ready to play right away: no five-minute recording first (teach a game whenever you like with Teach Falcor). Fixed: opening Falcor.Hub while it was already running could make the next start fall back to an older version.",
-  "publishedAt": "2026-10-20T23:55:45.137Z",
+  "version": "0.21.13",
+  "notes": "Playbooks race to the end: Falcor comes back the moment energy, timers or daily rewards are ready. Game page: your notes for Falcor, rewarded ads Always, clearer sections. Scrambly offers read better (deadline, playtime, cashback). Pop-ups like Remove Ads and sign-up offers are closed.",
+  "publishedAt": "2026-10-21T00:28:39.846Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "d00f2334e615f6adbab88c20ae5c2198eedaafe02069fb4c1b9449c6127bfbc9",
-      "size": 1089122
+      "sha256": "cb6e3444a8cb34274100e54337b8094cf648049d06bba0532fb97adfe846347d",
+      "size": 1092318
     },
     {
       "path": "dist/preload.js",
-      "sha256": "9c00b34d8ef5867c8bfb138d9de68accdb75bda282ada2232fc868b0675a7687",
-      "size": 1710
+      "sha256": "789106cc302a5e34e2dfe36f61b176036a97ce398a2cfec25f772d381b1604c2",
+      "size": 1724
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -34,9 +34,9 @@
       "size": 56554
     },
     {
-      "path": "remote-ui/assets/index-D-xdHivW.js",
-      "sha256": "928117aa28bb3f77f5dba4e43c648dc369c6ae1b2482281e60c1aa926f4e1712",
-      "size": 168895
+      "path": "remote-ui/assets/index-ONysb5U6.js",
+      "sha256": "bbeebcdbc10098f742af37f4e7227321e444895f91916c88cf499e7594a7d383",
+      "size": 168962
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "ea39fd34d46eda2e659649ac350629e8eae15b4211936eada09dfd3e2b16ce30",
+      "sha256": "c49c5f32afdb66c65ed51c611acc31738261ebf89459a63527c09a78ae8dee18",
       "size": 3854
     },
     {
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "b0216cbccc3b64159a13566a270b043e35ccfa062f49ff8253c7c10efba138f8",
-      "size": 135554
+      "sha256": "5d2c9b9dfe0737f5f86d9b31083b77f22db5f7396cbbc96ad416e6cbca24b883",
+      "size": 137522
     },
     {
       "path": "ui/app.png",
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "3f5acee6a6d02e908eaa35d67a794f2573167d72350f46b227e5e570951c6b18",
-      "size": 54714
+      "sha256": "f9c563719df7d3028834c2c9a2f280b91f19bf5d89ffc4cdffe0c0a28ee1f9e8",
+      "size": 55278
     },
     {
       "path": "ui/motion.css",
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "8f9faa7cb2993dccb3569322a2cb9a7bac099cb10c929358b7c2da2cdeb95bff",
-      "size": 61570
+      "sha256": "10cc26227469772465a6f7f3b951133bacb160eb63ebd17e953e1d7cb8191cb9",
+      "size": 61637
     },
     {
       "path": "ui/queue.js",
@@ -155,8 +155,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "a997871e8293c88e2373f2aa6d0ed804bc95f77484bec13ca1cebaa7a1a5a027",
-      "size": 95100
+      "sha256": "79f0934c532f0623df580c32fc46e16c3b8f159993084685231c68267a12c067",
+      "size": 95588
     },
     {
       "path": "ui/tokens.css",

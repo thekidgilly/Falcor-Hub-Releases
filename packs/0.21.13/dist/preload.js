@@ -50,6 +50,7 @@ var CALLS = [
   "appIcon",
   "openApp",
   "setAds",
+  "gameTell",
   "gameAutopilot",
   "gamePlaybook",
   "gameTeach",
