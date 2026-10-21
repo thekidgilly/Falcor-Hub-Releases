@@ -548,13 +548,15 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .qbar .seg button { padding: 3px 7px; font-size: var(--t11); }
 .qbar #qadd { padding: 4px; }
 .qlist { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; min-height: 0; display: grid; align-content: start; gap: 1px; }
-.qrow { display: grid; grid-template-columns: 22px 20px minmax(0, 1fr) auto 20px; gap: 6px; align-items: center; padding: 4px 2px 4px 5px; border-left: 2px solid transparent; border-radius: 3px; cursor: pointer; }
+.qrow { display: grid; grid-template-columns: 40px 20px minmax(0, 1fr) auto 20px; gap: 6px; align-items: center; padding: 4px 2px 4px 5px; border-left: 2px solid transparent; border-radius: 3px; cursor: pointer; }
 .qrow:hover { background: var(--panel-2); }
 .qrow.live { background: rgba(var(--accent-rgb), .07); border-left-color: var(--accent); }
 .qrow.s-red { border-left-color: rgba(255,119,113,.55); } .qrow.s-sand:not(.live) { border-left-color: rgba(220,196,154,.45); }
 .qrow.s-green .qname, .qrow.s-muted .qname { color: var(--muted); }
 .qn { font: var(--t11) var(--voice); color: var(--muted); font-variant-numeric: tabular-nums; }
 .qrow.hist .qn { font-size: 10px; }
+.qn.qtimecol { color: #F2F2F2; font-size: 13px; }
+.qrow.live .qn.qtimecol { color: #5CE59A; }
 .qmain { display: grid; min-width: 0; }
 .qname { font: var(--t13) var(--voice); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qmeta, .qwhy { font-size: var(--t11); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -591,7 +593,7 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .qexisting { margin-top: 0; }
 .tsched { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 4px; } .tsched label { align-items: center; color: var(--muted); font-size: var(--t12); } .tsched .ico { width: 12px; height: 12px; color: var(--accent); }
 /* A narrow queue or Device window (each window body is a size container, desk.js): tighter rows, the note goes. */
-@container (max-width: 280px) { .qrow { grid-template-columns: 18px 18px minmax(0, 1fr) auto 18px; gap: 4px; } .qbar .seg button { padding: 3px 5px; } .qmodes #autonote { display: none; } }
+@container (max-width: 280px) { .qrow { grid-template-columns: 38px 18px minmax(0, 1fr) auto 18px; gap: 4px; } .qbar .seg button { padding: 3px 5px; } .qmodes #autonote { display: none; } }
 .gpap .gpaphead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; } .gpap .gpaphead .row { flex-wrap: wrap; gap: 6px; } .gpap select { max-width: 280px; } .gpap input[type=number] { width: 90px; }
 .gpapstate { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin-top: 8px; font-size: var(--t12); } .gpapstate em { font-style: normal; color: var(--muted); margin-right: 4px; }
 .gpapreview { margin-top: 8px; font-size: var(--t12); } .gpapreview ul { margin: 4px 0; padding-left: 16px; } .gpapreview li { margin: 2px 0; }
@@ -818,7 +820,14 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 @media (max-width: 1100px) { .airoutes li { grid-template-columns: 1fr 1fr; } }
 .aitable { width: 100%; border-collapse: collapse; font-size: var(--t12); } .aitable th, .aitable td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); } .aitable th { font: var(--t11) var(--voice); color: var(--muted); }
 .gpai { font-size: var(--t12); color: var(--muted); }
-.qbar { flex-wrap: wrap; row-gap: 6px; } .qbar #qtoggle { margin-left: auto; }
+/* The LED ticker over the queue: Departure Mono on a dot-matrix strip, scrolling in pixel steps. */
+.ticker { overflow: hidden; white-space: nowrap; margin: 0 0 8px; padding: 5px 0; border: 1px solid #1f2a22; background: #050805 radial-gradient(circle, rgba(92,229,154,.08) 1px, transparent 1.2px) 0 0 / 4px 4px; color: #5CE59A; font: 12px/1 'Departure Mono', monospace; letter-spacing: .08em; text-shadow: 0 0 4px rgba(92,229,154,.75), 0 0 10px rgba(92,229,154,.35); }
+.ticker > span { display: inline-block; padding-left: 100%; animation: ticker var(--dur, 20s) steps(240) infinite; }
+.ticker.sand { color: #F5B544; border-color: #2b2416; text-shadow: 0 0 4px rgba(245,181,68,.75), 0 0 10px rgba(245,181,68,.3); background-color: #080604; }
+.ticker.red { color: #F0544F; border-color: #2e1514; text-shadow: 0 0 4px rgba(240,84,79,.75); background-color: #080404; }
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+@media (prefers-reduced-motion: reduce) { .ticker { white-space: normal; } .ticker > span { animation: none; padding-left: 8px; } }
+.qbar { flex-wrap: wrap; row-gap: 6px; } .qbar #qtoggle { margin-left: 0; }
 /* Smart Playbook: the premium panel (pixel.js#playbookHtml). Green glow on what matters, the rest quiet. */
 .gpplan:not([hidden]) { margin-bottom: var(--s3); }
 .pb { position: relative; padding: 18px 20px; border: 1px solid #5CE59A33; background: radial-gradient(120% 140% at 0% 0%, #5CE59A12 0%, transparent 55%), linear-gradient(180deg, #0f1411 0%, #0A0A0A 100%); box-shadow: 0 0 0 1px #000 inset, 0 0 28px #5CE59A14; }
@@ -847,6 +856,8 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 @media (prefers-reduced-motion: reduce) { .pbpath li.now i { animation: none; } }
 .pbcal { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; padding: 10px 0 2px; border-top: 1px dashed #262626; font-size: 13px; color: #cfcfcf; }
 .pbnow { color: #b8b8b8; font-size: 12px; margin: 6px 0 0; }
+.pbstatus { color: #F5B544; font-size: 13px; margin: 8px 0 4px; }
+.pbstatus.on { color: #5CE59A; }
 .pbmore { margin-top: 10px; color: #8a8a8a; font-size: 12px; } .pbmore summary { cursor: pointer; letter-spacing: .12em; text-transform: uppercase; font-size: 11px; } .pbmore p { margin: 6px 0; } .pbmore em { color: #cfcfcf; font-style: normal; }
 .pbcta .pbgo { background: #5CE59A; color: #0A0A0A; border-color: #5CE59A; } .pbcta .pbgo .ico { fill: #0A0A0A; color: #0A0A0A; }
 .pbcta .pbgo[disabled] { background: #1d2a22; color: #5CE59A99; border-color: #5CE59A44; }
@@ -859,3 +870,10 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .gmore .gmenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; display: grid; gap: 4px; min-width: 240px; padding: 10px; background: #0d0d0d; border: 1px solid #333; box-shadow: 0 12px 32px #000c; }
 .gmore .gmenu .eyebrow { margin: 6px 2px 2px; font-size: 10px; }
 .gmore .gmenu button { justify-content: flex-start; width: 100%; }
+
+/* The owner's notes for a game (its page): one tip per line, removable; the form adds one. */
+#gpnotes .notes { list-style: none; margin: var(--s2) 0; padding: 0; }
+#gpnotes .notes li { display: grid; grid-template-columns: 1fr auto; gap: var(--s3); align-items: start; padding: var(--s2) 0; border-top: 1px solid var(--line); font-size: var(--t13); }
+#gpnotes .notes li:first-child { border-top: 0; }
+#gpnoteform { margin-top: var(--s2); }
+#gpnoteform input { flex: 1; min-width: 0; }

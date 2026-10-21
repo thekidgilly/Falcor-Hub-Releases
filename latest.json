@@ -1,12 +1,12 @@
 {
-  "version": "0.21.16",
-  "notes": "Playbooks play up to an hour at a time and keep going while they make progress; they stop early when the game cannot go on (energy, timers) so the next game can play.\nPlay now replaces Carry on and always starts at once; Resume schedule starts the next game right away.\nClosing Falcor.Hub pauses the schedule: it opens again on Resume schedule, and games keep their Autopilot.\nToday's Queue: each row leads with its time (NOW / READY), an LED ticker shows the schedule (gold when paused, green when on), and Pause queue is now Pause schedule.\nWord Yatzy is much faster: a whole word in one move, and the green score is placed at once.\nBetter ad exits (TikTok, Whatnot, PuzzlePlay, JustPlay); never Super Hint, never rate, never the mute button, no wheel spins.",
-  "publishedAt": "2026-10-21T03:57:21.901Z",
+  "version": "0.21.17",
+  "notes": "",
+  "publishedAt": "2026-10-21T15:33:59.906Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "0704acf6177df34175c8702ec070cd5325ac68dc55795401dd302019bb0efc73",
-      "size": 1107218
+      "sha256": "4aaf9211958a46db17f3d02dd255359c5f45e3698c839e4d8936610b5b0296cd",
+      "size": 1127786
     },
     {
       "path": "dist/preload.js",
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-B8te1J10.js",
-      "sha256": "771ee2dc3a60da3c1c89b551de7ee78eba170da0c85f7b62a8bf65119d009268",
-      "size": 169561
-    },
-    {
       "path": "remote-ui/assets/index-BR21GwA6.css",
       "sha256": "7b8f6cd9d07ccf1ed74937ba723ef5a92a4f1dd8b487206f1bfa98543004b434",
       "size": 56554
+    },
+    {
+      "path": "remote-ui/assets/index-D_3SWxEV.js",
+      "sha256": "9391de9987c4e1c6c0837f38f829c1cd5b16cdc91908a55fce32b452a7742973",
+      "size": 168357
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "9f049e7da2811d71f78e6ee351f34e09c262196218d2e7362f5380f9b48e7dd1",
+      "sha256": "1fc1190f4526ba51428e2c3fe60e83678f303c9d456239a83cc04d603e567d33",
       "size": 3854
     },
     {
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "85939dff79993de44df6ebe204c6ae97e0c69dfe5b0466549a0031578cf230cb",
-      "size": 62574
+      "sha256": "2670c4d170b29e2dc2b49680fa575886e2f56578d7f2ada812800da1e9e1f1f6",
+      "size": 61433
     },
     {
       "path": "ui/queue.js",
