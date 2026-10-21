@@ -1,12 +1,12 @@
 {
-  "version": "0.21.13",
-  "notes": "Playbooks race to the end: Falcor comes back the moment energy, timers or daily rewards are ready. Game page: your notes for Falcor, rewarded ads Always, clearer sections. Scrambly offers read better (deadline, playtime, cashback). Pop-ups like Remove Ads and sign-up offers are closed.",
-  "publishedAt": "2026-10-21T00:28:39.846Z",
+  "version": "0.21.14",
+  "notes": "Word Yatzy: Falcor now spells real words that fit an open row (an exact fill earns the bonus), one letter at a time, clears wrong letters by dragging them back, and places a word by tapping its green score. It won a full match in testing.\nAds: payout or gift-card pop-ups are treated as ads (wait for the Google Play mark or the close, never Confirm or Cash out); a Play Store page an ad opens is left with Back; faint top-right close marks are found first.\nFalcor never rates or reviews an app.",
+  "publishedAt": "2026-10-21T01:43:54.235Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "cb6e3444a8cb34274100e54337b8094cf648049d06bba0532fb97adfe846347d",
-      "size": 1092318
+      "sha256": "362b77169dde4bbce89bfe2fc1a44cffd94c32ec78a9592b2f5745f38d66db2b",
+      "size": 1096214
     },
     {
       "path": "dist/preload.js",

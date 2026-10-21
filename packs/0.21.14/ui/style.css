@@ -859,3 +859,10 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .gmore .gmenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; display: grid; gap: 4px; min-width: 240px; padding: 10px; background: #0d0d0d; border: 1px solid #333; box-shadow: 0 12px 32px #000c; }
 .gmore .gmenu .eyebrow { margin: 6px 2px 2px; font-size: 10px; }
 .gmore .gmenu button { justify-content: flex-start; width: 100%; }
+
+/* The owner's notes for a game (its page): one tip per line, removable; the form adds one. */
+#gpnotes .notes { list-style: none; margin: var(--s2) 0; padding: 0; }
+#gpnotes .notes li { display: grid; grid-template-columns: 1fr auto; gap: var(--s3); align-items: start; padding: var(--s2) 0; border-top: 1px solid var(--line); font-size: var(--t13); }
+#gpnotes .notes li:first-child { border-top: 0; }
+#gpnoteform { margin-top: var(--s2); }
+#gpnoteform input { flex: 1; min-width: 0; }
