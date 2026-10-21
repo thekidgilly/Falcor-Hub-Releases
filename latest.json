@@ -1,12 +1,12 @@
 {
-  "version": "0.21.25",
-  "notes": "^The^ Phone^ tab^ mirror^ is^ now^ full^ speed:^ with^ Take^ Control^ your^ taps^ land^ in^ under^ a^ fifth^ of^ a^ second^ ^(they^ took^ up^ to^ 3.7^ s^)^ and^ drags^ move^ live,^ over^ the^ same^ scrcpy^ channel^ the^ old^ lightning^ window^ used.^ The^ lightning^ button^ is^ now^ a^ phone-with-plus^ button^ that^ opens^ a^ second^ display^ of^ the^ phone^ you^ can^ drag^ anywhere.^",
-  "publishedAt": "2026-10-21T22:17:45.087Z",
+  "version": "0.21.26",
+  "notes": "^Word^ Yatzy:^ each^ session^ opens^ Daily^ Tasks^ first^ and^ plays^ an^ open^ Daily^ Challenge;^ an^ opponent^ is^ waited^ for^ 15^ s^ at^ most,^ then^ another^ match;^ a^ match^ clock^ no^ longer^ ends^ the^ session;^ the^ Google^ Play^ pill's^ arrows^ and^ a^ playable^ ad's^ arrows^ close^ ads^ at^ once.^ Phone^ tab:^ Today's^ Queue^ is^ a^ clear^ line-up^ with^ large^ game^ icons^ ^(NOW,^ NEXT,^ then^ in^ order;^ Needs^ you^ below,^ with^ Add^ back^ to^ queue^),^ and^ Current^ activity^ shows^ the^ game's^ icon,^ level,^ next^ goal,^ goals,^ rewards^ and^ time^ left.^",
+  "publishedAt": "2026-10-21T23:03:23.535Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "87bab6baca2c2bb54cc0dca9f175ecc3f3910818e6e042ea78ef5eb1dce1126f",
-      "size": 1165164
+      "sha256": "9aa5d63331a56f6e1bb1716c3c226aab15fa3b1b96abde1960dbb46eae52b199",
+      "size": 1169599
     },
     {
       "path": "dist/preload.js",
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "c830b82bd80449bc7e44ddec90459be5996b8192fb3e37077f4caa2c66f698e0",
-      "size": 141419
+      "sha256": "e8fe91584a92f265559f696b77a7319c02c172b2b1c3fd7c44a2a1b0c5e1f81d",
+      "size": 141667
     },
     {
       "path": "ui/app.png",
@@ -145,8 +145,8 @@
     },
     {
       "path": "ui/queue.js",
-      "sha256": "9501365ef85cb7f8a9d3b403d9ad535d0107a35409bd30cb2b20e5fabad3530c",
-      "size": 53706
+      "sha256": "787cdf475a4c68e87750ec1722d826ae40a5a9b3f93f3d9c96bf31fd31b295ad",
+      "size": 57989
     },
     {
       "path": "ui/sandbox.js",
@@ -155,8 +155,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "056ec0c3e2c41e5e5ff4d74464e0eb0b40ae2a6170678187e1bed7a18c4c8f7e",
-      "size": 97092
+      "sha256": "c05e01efdbdc716114dda1df4190f1ece381bdb7ea8028464acb2bbd1fdd70a7",
+      "size": 97916
     },
     {
       "path": "ui/tokens.css",

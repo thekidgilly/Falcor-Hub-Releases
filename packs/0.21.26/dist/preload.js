@@ -97,6 +97,10 @@ import_electron.contextBridge.exposeInMainWorld("hub", {
     import_electron.ipcRenderer.on("video", (_e, p) => fn(p));
   },
   // The engine asks the window for its decoded video frame (a look's picture without a screen capture); the window answers.
+  // The owner's fast touches (main.ts 'touch'): fire and forget, many a second while a finger moves.
+  touch: (p) => {
+    import_electron.ipcRenderer.send("touch", p);
+  },
   onFrameWanted: (fn) => {
     import_electron.ipcRenderer.on("frameWanted", (_e, p) => fn(p));
   },

@@ -223,7 +223,7 @@ function renderLog() {
 $('devpick').onchange = e => { deviceId = e.target.value; render(); };
 $('take').onclick = async () => { await call('take', {deviceId}); toast('You have control. Click to tap, drag to swipe, scroll with the wheel, type with the keyboard.'); $('mirrorbox').focus(); };
 $('release').onclick = () => call('release', {deviceId});
-$('viewer').onclick = () => call('viewer', {deviceId}).then(() => toast('scrcpy window open. You have control while it is open.'));
+$('viewer').onclick = () => call('viewer', {deviceId}).then(() => toast('Second display open: drag it anywhere. You have control while it is open; close it to give the phone back to Falcor.'));
 $('kbd').onclick = () => { $('typeform').hidden = !$('typeform').hidden; if (!$('typeform').hidden) $('typetext').focus(); };
 $('askfalcor').onclick = () => { const d = dev(); chatFresh(d && d.foreground && !/launcher/.test(d.foreground) ? d.foreground : null); go('falcor'); $('chattext').focus(); };
 document.querySelectorAll('[data-key]').forEach(b => b.onclick = () => send({kind: 'key', key: b.dataset.key}));
@@ -231,6 +231,8 @@ $('typeform').onsubmit = async e => { e.preventDefault(); const t = $('typetext'
 
 async function send(action) {
   if (!controlling) { toast('Take Control first.', 'warn'); return; }
+  // (the Back, Home and Apps buttons and the typing box: straight to the phone when the fast channel is up)
+  if (typeof fast === 'function' && fast() && (action.kind === 'key' || action.kind === 'type' && action.text)) { touch(action.kind === 'key' ? 'key' : 'text', null, action.kind === 'key' ? {key: action.key} : {text: action.text}); return; }
   await call('input', {deviceId, action}).catch(() => {});
   nextFrame(0);
 }
@@ -357,7 +359,7 @@ if (window.hub.onFrameWanted) window.hub.onFrameWanted(async p => {
 async function startVideo(id) {
   if (typeof VideoDecoder === 'undefined') { vid.failed = true; vid.error = 'this window cannot decode video'; return; }
   vid.starting = true; vid.deviceId = id; vid.waitKey = true;
-  try { await window.hub.call('videoStart', {deviceId: id}); vid.on = true; vid.tries = 0; }
+  try { const r = await window.hub.call('videoStart', {deviceId: id}); vid.on = true; vid.tries = 0; vid.control = !!(r && r.control); }
   catch (e) { vid.error = errText(e); if (++vid.tries >= 2) { vid.failed = true; vid.failedAt = Date.now(); } }
   vid.starting = false;
 }
@@ -366,7 +368,7 @@ function endVideo(why) {
   if (vid.decoder && vid.decoder.state !== 'closed') try { vid.decoder.close(); } catch { /* closed */ }
   vid.decoder = null; vid.codec = ''; vid.config = null;
   if (vid.on && vid.deviceId) void window.hub.call('videoStop', {deviceId: vid.deviceId}).catch(() => {});
-  vid.on = false; showPictures();
+  vid.on = false; vid.control = false; showPictures();
   if (why) { vid.error = why; if (++vid.tries >= 2) { vid.failed = true; vid.failedAt = Date.now(); } }
 }
 function stopVideo() { if (vid.on) endVideo(null); }
@@ -374,12 +376,33 @@ function stopVideo() { if (vid.on) endVideo(null); }
 // screen fractions; every touch goes through Falcor (and into the recording while teaching). Markers never touch the picture.
 const at = e => { const el = e.currentTarget, r = el.getBoundingClientRect(); const iw = Number(el.dataset.w) || el.width || r.width, ih = Number(el.dataset.h) || el.height || r.height; const sc = Math.min(r.width / iw, r.height / ih), dw = iw * sc, dh = ih * sc, ox = (r.width - dw) / 2, oy = (r.height - dh) / 2; return {x: Math.min(1, Math.max(0, (e.clientX - r.left - ox) / dw)), y: Math.min(1, Math.max(0, (e.clientY - r.top - oy) / dh))}; };
 let down = null;
+// Full speed: with the video's control channel up (main.ts 'touch'), the finger goes down, moves and lifts on the phone
+// as the mouse does, in a few hundredths of a second; keys and typing go the same way. While Teach records, every touch
+// takes the gate's path so the lesson keeps it. (the phone app keeps its own simple live view)
+const fast = () => vid.on && vid.control && !S.teaching && !!window.hub.touch;
+const touch = (kind, p, extra) => window.hub.touch({deviceId, kind, ...(p ? {x: p.x, y: p.y} : {}), ...(extra || {})});
+let moveAt = 0;
 for (const surface of [$('mirror'), canvas]) {
   // The Sandbox's pointer modes (view, pick a target or a gesture, a run playing) take the mouse; Control and Teach touch.
-  surface.addEventListener('pointermove', e => { if (window.sbPointer && tab === 'sandbox') sbPointer('move', at(e), e); });
-  surface.addEventListener('pointerdown', e => { if (window.sbPointer && tab === 'sandbox' && sbPointer('down', at(e), e)) return; if (!controlling) { toast('Take Control first to touch the phone.', 'warn'); return; } down = {...at(e), t: Date.now()}; surface.setPointerCapture(e.pointerId); });
+  surface.addEventListener('pointermove', e => {
+    if (window.sbPointer && tab === 'sandbox') sbPointer('move', at(e), e);
+    // (live: the finger follows the mouse, at most one move every 8 ms)
+    if (down && down.fast && Date.now() - moveAt >= 8) { moveAt = Date.now(); touch('move', at(e)); }
+  });
+  surface.addEventListener('pointerdown', e => {
+    if (window.sbPointer && tab === 'sandbox' && sbPointer('down', at(e), e)) return;
+    if (!controlling) { toast('Take Control first to touch the phone.', 'warn'); return; }
+    down = {...at(e), t: Date.now(), fast: fast()}; surface.setPointerCapture(e.pointerId);
+    if (down.fast) touch('down', down);
+  });
+  surface.addEventListener('pointercancel', () => { if (down && down.fast) touch('up', down); down = null; });
   surface.addEventListener('pointerup', e => {
     if (window.sbPointer && tab === 'sandbox' && sbPointer('up', at(e), e)) return;
+    if (down && down.fast) {
+      const up = at(e); touch('up', up);
+      if (Math.hypot(up.x - down.x, up.y - down.y) > 0.03) P.trail($('overlay'), down.x * 100, down.y * 100, up.x * 100, up.y * 100); else P.tapMark($('overlay'), down.x * 100, down.y * 100, false);
+      lastTouch = {x: down.x * 100, y: down.y * 100}; down = null; return;
+    }
     if (!down) return; const up = at(e), ms = Date.now() - down.t, moved = Math.hypot(up.x - down.x, up.y - down.y);
     const a = moved > 0.03 ? {kind: 'swipe', x: down.x, y: down.y, toX: up.x, toY: up.y, ms: Math.min(2000, Math.max(120, ms))} : ms > 600 ? {kind: 'long_press', x: down.x, y: down.y, ms: Math.min(3000, ms)} : {kind: 'tap', x: down.x, y: down.y};
     if (a.kind === 'swipe') P.trail($('overlay'), down.x * 100, down.y * 100, up.x * 100, up.y * 100); else P.tapMark($('overlay'), down.x * 100, down.y * 100, false);
@@ -388,12 +411,14 @@ for (const surface of [$('mirror'), canvas]) {
   });
 }
 let lastTouch = {x: 50, y: 50}, wheelAt = 0;
-$('mirrorbox').addEventListener('wheel', e => { if (!controlling) return; e.preventDefault(); if (Date.now() - wheelAt < 400) return; wheelAt = Date.now(); void send({kind: 'scroll', direction: e.deltaY > 0 ? 'down' : 'up'}); }, {passive: false});
+$('mirrorbox').addEventListener('wheel', e => { if (!controlling) return; e.preventDefault();
+  if (fast()) { const t = e.target === canvas || e.target === $('mirror') ? at({currentTarget: e.target, clientX: e.clientX, clientY: e.clientY}) : {x: 0.5, y: 0.5}; touch('wheel', t, {dir: e.deltaY > 0 ? 'down' : 'up'}); return; }
+  if (Date.now() - wheelAt < 400) return; wheelAt = Date.now(); void send({kind: 'scroll', direction: e.deltaY > 0 ? 'down' : 'up'}); }, {passive: false});
 $('mirrorbox').addEventListener('keydown', e => {
   if (!controlling) return;
   const k = {Enter: 'ENTER', Backspace: 'DEL', Tab: 'TAB', Escape: 'BACK'}[e.key];
-  if (k) { e.preventDefault(); void send({kind: 'key', key: k}); }
-  else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) { e.preventDefault(); void send({kind: 'type', text: e.key === ' ' ? ' ' : e.key}); }
+  if (k) { e.preventDefault(); if (fast()) touch('key', null, {key: k}); else void send({kind: 'key', key: k}); }
+  else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) { e.preventDefault(); if (fast()) touch('text', null, {text: e.key}); else void send({kind: 'type', text: e.key === ' ' ? ' ' : e.key}); }
 });
 
 // ------------------------------------------------------------------ Teach Falcor
@@ -490,9 +515,14 @@ $('afterclose').onclick = () => { $('after').hidden = true; after = null; toast(
 let gamePkg = null;
 const icons = new Map();   // pkg → data URL ('' while loading, null when there is none)
 // A game's picture is asked for again when it changes (the app's icon read after the offer's artwork was shown).
-function iconHtml(g) {
+// (iconOf: the picture's data URL for a game, asked for once; the Current activity window uses it too)
+function iconOf(g) {
   const k = g.pkg + '@' + (g.iconAt || 0);
-  if (g.icon && !icons.has(k)) { icons.set(k, ''); window.hub.call('appIcon', {pkg: g.pkg}).then(u => P.normIcon(u)).then(u => { icons.set(k, u || null); if (tab === 'games') renderGames(true); }).catch(() => icons.set(k, null)); }
+  if (g.icon && !icons.has(k)) { icons.set(k, ''); window.hub.call('appIcon', {pkg: g.pkg}).then(u => P.normIcon(u)).then(u => { icons.set(k, u || null); if (tab === 'games') renderGames(true); else if (tab === 'phone') render(); }).catch(() => icons.set(k, null)); }
+  return icons.get(k) || null;
+}
+function iconHtml(g) {
+  const k = g.pkg + '@' + (g.iconAt || 0); iconOf(g);
   const u = icons.get(k);
   return u ? '<img src="' + esc(u) + '" alt="">' : P.monogram(g.name, g.pkg);
 }
