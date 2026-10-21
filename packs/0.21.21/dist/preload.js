@@ -95,5 +95,12 @@ import_electron.contextBridge.exposeInMainWorld("hub", {
   },
   onVideo: (fn) => {
     import_electron.ipcRenderer.on("video", (_e, p) => fn(p));
+  },
+  // The engine asks the window for its decoded video frame (a look's picture without a screen capture); the window answers.
+  onFrameWanted: (fn) => {
+    import_electron.ipcRenderer.on("frameWanted", (_e, p) => fn(p));
+  },
+  frameTaken: (p) => {
+    import_electron.ipcRenderer.send("frameTaken", p);
   }
 });

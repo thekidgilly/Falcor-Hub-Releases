@@ -1,11 +1,11 @@
 {
-  "version": "0.21.20",
-  "notes": "^Faster^ play:^ Falcor^ looks^ at^ the^ phone^ through^ the^ live^ video^ ^(a^ quarter^ of^ a^ second^ instead^ of^ two^),^ reads^ screens^ once,^ and^ dumps^ a^ game's^ controls^ far^ less^ often.^ Word^ Yatzy:^ ROLL^ between^ rounds,^ the^ Freecash^ pop-up,^ the^ round^ banner,^ matchmaking^ and^ the^ Spin^ Wheel^ are^ handled^ without^ the^ AI;^ an^ opponent^ who^ has^ not^ moved^ in^ a^ minute^ is^ left^ for^ another^ match;^ more^ ad^ end^ cards^ close^ by^ themselves;^ a^ Slow^ step^ line^ and^ a^ Look^ line^ in^ Current^ activity^ show^ where^ time^ goes.^",
-  "publishedAt": "2026-10-21T20:07:40.201Z",
+  "version": "0.21.21",
+  "notes": "^Pause^ schedule^ is^ now^ red^ ^(its^ square^ and^ its^ words^),^ so^ it^ reads^ as^ a^ stop.^",
+  "publishedAt": "2026-10-21T20:15:02.233Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "13b0565c616d53a3333f2326091a2096ca9ebbe2c267020de5c8a30b405fd466",
+      "sha256": "402f1c93132ea68d692fd2bef0b7ef711df04337d212119ad129720ea535762b",
       "size": 1154824
     },
     {
@@ -145,8 +145,8 @@
     },
     {
       "path": "ui/queue.js",
-      "sha256": "0d34f9c7d22451d60a040904a0837894ff9867701b450c676c6641ca8febeebe",
-      "size": 53618
+      "sha256": "9501365ef85cb7f8a9d3b403d9ad535d0107a35409bd30cb2b20e5fabad3530c",
+      "size": 53706
     },
     {
       "path": "ui/sandbox.js",
@@ -155,8 +155,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "133be3d2b2ea81f6e0b925ecbe2fb77434b0289a9e069ede26d67350b3bbb1dd",
-      "size": 97026
+      "sha256": "056ec0c3e2c41e5e5ff4d74464e0eb0b40ae2a6170678187e1bed7a18c4c8f7e",
+      "size": 97092
     },
     {
       "path": "ui/tokens.css",

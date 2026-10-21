@@ -37,7 +37,7 @@
       html = '<div class="qcur s-' + (MOOD[cur.status] || 'run') + '"><div class="qhead"><span class="qico">' + kindIcon(cur.kind, cur.pkg) + '</span><b>' + esc(cur.name) + '</b><span class="qtime" data-start="' + cur.startedAt + '" data-dur="' + (cur.durationMin || '') + '"></span></div>'
         + '<div class="qsub">' + pill(cur.status, cur.label) + '<span>' + esc(word) + ' · ' + esc(cur.triggerLabel) + (cur.attempt > 1 ? ' · attempt ' + cur.attempt : '') + '</span></div>'
         + (cur.durationMin ? '<div class="progress qprog" data-style="--n:' + n + '">' + Array.from({length: n}, (_, i) => '<i class="' + (i < on ? 'on' : '') + '"></i>').join('') + '</div>' : '')
-        + stepLine(cur.reason || d.step || 'Working…')
+        + stepLine(cur.reason || d.step || 'Working…') + perfLine(d.perf)
         // (Resume only for this activity itself paused; the schedule's own pause is the queue bar's switch)
         + '<div class="row qctl">' + (paused ? '<button class="small primary" data-qctl="resume">' + icon('play') + 'Resume</button>' : '<button class="small" data-qctl="pause">' + icon('pause') + 'Pause</button>')
         + (cur.key ? '<button class="small" data-qctl="skip" title="Skip it and go on with the next">' + icon('skip') + 'Skip</button>' : '')
@@ -67,10 +67,23 @@
     // The queue's one switch: paused, nothing new starts by itself; running, what is scheduled starts at its time.
     const paused = !!(q && q.paused);
     text($('qtogglelabel'), paused ? 'Resume schedule' : 'Pause schedule');
-    $('qtoggle').className = 'small' + (paused ? ' primary' : ''); $('qtoggle').firstElementChild.className = 'led' + (paused ? '' : ' active');
+    // (Pause stops the schedule: red square and red words, so it reads as a stop)
+    $('qtoggle').className = 'small' + (paused ? ' primary' : ' stopish'); $('qtoggle').firstElementChild.className = 'led' + (paused ? '' : ' bad');
     $('qtoggle').disabled = !!d.emergency; $('qtoggle').dataset.op = paused ? 'resume' : 'pause';
     ticker(d, q, cur, next, paused);
   };
+  // The run measured as it goes (engine.ts#perf): AI asks and their average time, moves made without the AI, words
+  // placed and time lost to ads. Nothing shown before the first count.
+  function perfLine(p) {
+    if (!p || !p.running) return '';
+    const sec = ms => ms == null ? '–' : (ms / 1000).toFixed(ms < 10000 ? 1 : 0) + ' s', mins = Math.max(p.minutes, 1 / 60);
+    const parts = [['AI', p.aiCalls + (p.aiCalls ? ' · ' + sec(p.aiAvgMs) + ' avg' : '')], ['Local', p.local + (p.burst ? ' · ' + p.burst + ' fast' : '')]];
+    if (p.words) parts.push(['Words', p.words + ' · ' + (p.words / mins).toFixed(1) + '/min']);
+    parts.push(['Ads', clock(p.adMs)]);
+    // (how fast the phone is looked at: the average look, how many took the video frame, and what the UI dumps cost)
+    if (p.looks) parts.push(['Look', sec(p.looks.avgMs) + (p.looks.video ? ' · ' + Math.round(100 * p.looks.video / p.looks.n) + '% video' : '') + (p.looks.dumps ? ' · ' + p.looks.dumps + ' dumps ' + sec(p.looks.dumpAvgMs) : '')]);
+    return '<div class="qperf">' + parts.map(([k, v]) => '<span><b>' + esc(k) + '</b> ' + esc(v) + '</span>').join('') + '</div>';
+  }
   // The LED ticker over the queue: where the schedule stands, and in passing what it is for.
   function ticker(d, q, cur, next, paused) {
     const box = $('qticker'); if (!box) return;

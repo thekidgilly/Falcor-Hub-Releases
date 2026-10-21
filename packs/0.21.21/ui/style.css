@@ -537,6 +537,7 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .qcur .step { color: var(--accent); font-size: var(--t12); } .qcur .step::before { content: '▸ '; }
 .qprog i { height: 6px; }
 .qctl { gap: 4px; } .qctl button { padding: 4px 8px; }
+.qperf { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: var(--t12); color: var(--muted); } .qperf b { color: var(--green); font-weight: 400; }
 .qnext { font-size: var(--t12); color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; } .qnext b { color: var(--text); font-weight: 400; }
 .qidle { display: grid; gap: 3px; font-size: var(--t12); }
 .qbig { font: var(--t16) var(--voice); letter-spacing: .08em; color: var(--accent); font-weight: 400; }
@@ -828,6 +829,7 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-100%); } }
 @media (prefers-reduced-motion: reduce) { .ticker { white-space: normal; } .ticker > span { animation: none; padding-left: 8px; } }
 .qbar { flex-wrap: wrap; row-gap: 6px; } .qbar #qtoggle { margin-left: 0; }
+#qtoggle.stopish { color: var(--red); border-color: var(--red); }
 /* Smart Playbook: the premium panel (pixel.js#playbookHtml). Green glow on what matters, the rest quiet. */
 .gpplan:not([hidden]) { margin-bottom: var(--s3); }
 .pb { position: relative; padding: 18px 20px; border: 1px solid #5CE59A33; background: radial-gradient(120% 140% at 0% 0%, #5CE59A12 0%, transparent 55%), linear-gradient(180deg, #0f1411 0%, #0A0A0A 100%); box-shadow: 0 0 0 1px #000 inset, 0 0 28px #5CE59A14; }

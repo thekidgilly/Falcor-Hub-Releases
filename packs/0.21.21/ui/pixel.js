@@ -344,7 +344,7 @@
     const plat = (g.platforms || []).length ? 'via ' + g.platforms.join(' · ') : (g.tasks || []).length ? g.tasks.length + ' challenge' + (g.tasks.length === 1 ? '' : 's') : 'no offers yet';
     return '<span class="gicon">' + icon + '</span><span class="gc"><span class="gtop"><b class="nm">' + esc(g.name) + '</b><span class="pill ' + st[1] + '">' + st[0] + '</span></span>'
       + '<span class="m">' + esc(plat) + '</span>'
-      + (g.prep ? '<span class="gprep ' + g.prep.phase + '">' + (g.prep.phase === 'running' ? 'RESEARCHING · ' + Math.round(g.prep.percent) + '%<span class="bar"><i data-style="width:' + Math.max(2, Math.round(g.prep.percent)) + '%"></i></span>' : g.prep.phase === 'failed' ? 'READY TO PLAY · no online tips' : '✓ READY TO PLAY') + '</span>' : '')
+      + (g.prep ? '<span class="gprep ' + g.prep.phase + '">' + '✓ READY TO PLAY' + '</span>' : '')
       + '<span class="gnums"><span><em>POTENTIAL</em><b>' + (pot.length ? esc(pot.join(' + ')) : '—') + '</b></span><span><em>VERIFIED</em><b class="' + (earned.length ? 'green' : 'muted') + '">' + (earned.length ? esc(earned.join(' + ')) : '0') + '</b></span></span>'
       + (goals.of ? '<span class="lad" title="' + goals.reached + ' of ' + goals.of + ' goals reached">' + Array.from({length: n}, (_, i) => '<i class="' + (i < on ? 'on' : '') + '"></i>').join('') + '</span>' : '<span class="lad none"></span>')
       + '<span class="gfoot"><span>' + (goals.of ? goals.reached + ' of ' + goals.of + ' goals' : esc(earnLine(g) || '')) + '</span><span class="' + (g.deadline && g.deadline.at && g.deadline.at - Date.now() < 86_400_000 ? 'sand' : 'muted') + '">' + esc(g.deadline ? g.deadline.text : '') + '</span></span></span>';
@@ -379,7 +379,9 @@
       + '<span class="muted small">' + esc((o.goals ? o.goals.reached + ' of ' + o.goals.of + ' goals' : '') + (dl.text ? ' · ' + dl.text : '') + (o.total ? ' · up to ' + money(o.total.amount, o.total.unit) : '')) + '</span><span class="grow"></span>'
       + (edit && many && true ? '<button class="small" data-offer-refresh="' + esc(o.id) + '" title="Read the offer page on the phone again and list what changed">' + icon('update') + 'Refresh offer</button>' : '') + (edit && many ? '<button class="small" data-offer-edit="' + esc(o.id) + '">' + icon('edit') + 'Edit offer</button>' : '') + (edit ? '<button class="small icon danger" data-offer-remove="' + esc(o.id) + '" title="Remove this offer">' + icon('trash') + '</button>' : '') + '</div>'
       + (dl.kind === 'duration' && !dl.at ? '<p class="small sand">Ends ' + esc(o.deadline.durationDays) + ' days after you start it. ' + (edit ? '<button class="small ghost" data-offer-started="' + esc(o.id) + '">I started it today</button>' : 'Say when you started it on the computer.') + '</p>' : '')
-      + '<div class="oearns">' + earnTiles(o) + '</div>' + ladderHtml(o) + '</div>';
+      // (the owner, 2026-10-21: the playbook already lists each milestone and its reward; the money tiles and stage menus
+      // repeated it less tidily, so the offer shows only its line, and on the computer its buttons)
+      + '</div>';
   }).join('');
   // ---------------------------------------------------------------- a game's picture, in one shape everywhere (both apps)
   // Transparent margins are trimmed (a launcher icon's layer is often a small shape in a large square). A picture that
@@ -448,8 +450,7 @@
   document.addEventListener('visibilitychange', () => document.documentElement.classList.toggle('idle-off', document.hidden));
 
   // What the web said about a game (looked up during Auto-capture): a summary, tips, things to avoid and the sources.
-  // A captured game's online research: a bar with its steps while it runs, then Ready to play.
-  const PREP = [['instructions', 'How to play and its controls'], ['tips', 'Tips, tricks and hints'], ['guide', 'A guide and its screenshots'], ['notes', 'Falcor\'s notes for this game']];
+  // A game with research kept from before (Capture game no longer looks games up online): Ready to play.
   // Teach Falcor's lessons on a game, the same on both apps; only real states are shown. Empty when there is nothing.
   const trainHtml = g => {
     const lessons = g.lessons || [];
@@ -465,11 +466,7 @@
   const prepHtml = p => {
     if (!p) return '';
     if (p.phase === 'done') return '<div class="prep done"><b class="green">' + icon('check') + 'READY TO PLAY</b><span class="muted small">' + esc(p.line) + '</span></div>';
-    const at = PREP.findIndex(x => x[0] === (p.stage === 'more' ? 'tips' : p.stage));
-    return '<div class="prep ' + (p.phase === 'failed' ? 'failed' : 'running') + '"><b>' + (p.phase === 'failed' ? 'RESEARCH FAILED · READY TO PLAY WITHOUT IT' : 'RESEARCHING ONLINE · ' + Math.round(p.percent) + '%') + '</b>'
-      + '<span class="bar"><i data-style="width:' + Math.max(2, Math.min(100, Math.round(p.percent))) + '%"></i></span>'
-      + '<ul class="steps">' + PREP.map((x, i) => '<li class="' + (p.phase === 'failed' ? '' : i < at ? 'ok' : i === at ? 'now' : '') + '">' + (i < at && p.phase !== 'failed' ? '✓ ' : i === at && p.phase !== 'failed' ? '… ' : '· ') + esc(x[1]) + '</li>').join('') + '</ul>'
-      + '<span class="muted small">' + esc(p.line) + '</span><span class="muted small">A light search: a few web lookups and one AI request (about 1.5¢).</span></div>';
+    return '';
   };
   const researchHtml = r => !r ? '' : '<div class="research">' + (r.summary ? '<p>' + esc(r.summary) + '</p>' : '')
     + (r.instructions && r.instructions.length ? '<p class="eyebrow">// HOW TO PLAY</p><ul class="tips">' + r.instructions.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>' : '')
