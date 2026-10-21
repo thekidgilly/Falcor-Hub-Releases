@@ -1,12 +1,12 @@
 {
-  "version": "0.21.22",
-  "notes": "^Ads:^ a^ dark^ X^ on^ a^ white^ bar^ at^ the^ top^ right^ ^(a^ playable^ ad's^ Cash^ out^ page^)^ is^ now^ seen^ and^ pressed^ by^ itself,^ and^ ad^ pages^ with^ words^ are^ watched^ for^ their^ X^ too.^ Pause^ schedule^ is^ red.^",
-  "publishedAt": "2026-10-21T20:22:32.982Z",
+  "version": "0.21.23",
+  "notes": "^Levels^ and^ milestones:^ Word^ Yatzy's^ Complete^ Level^ N^ is^ reached^ when^ the^ badge^ shows^ N^ ^(it^ waited^ for^ N+1^),^ the^ playbook^ re-checks^ its^ milestones^ every^ time^ it^ is^ shown,^ and^ the^ home^ screen's^ level^ badge^ is^ read^ by^ Falcor^ AI^ once^ per^ new^ level^ and^ then^ known^ by^ its^ picture,^ so^ the^ level^ updates^ by^ itself.^",
+  "publishedAt": "2026-10-21T20:39:46.339Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "18a34e5d2ad4c695bca36a0a171d32652d46bb00472213cbca65fba77261572c",
-      "size": 1155608
+      "sha256": "90e4c0edf032033e2f984fd4ae3735e3d49af5fa0c2fa8b25923ea3b4909b2cb",
+      "size": 1160982
     },
     {
       "path": "dist/preload.js",

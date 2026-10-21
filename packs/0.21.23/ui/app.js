@@ -252,11 +252,14 @@ let frameAt = 0, frameBusy = false, frameTimer = null, frames = 0, fpsAt = Date.
 function nextFrame(delay) { clearTimeout(frameTimer); frameTimer = setTimeout(pullFrame, delay); }
 async function pullFrame() {
   const d = dev();
-  if ((tab !== 'phone' && tab !== 'sandbox') || !d || !d.connected || !d.authorized || document.hidden) { nextFrame(800); stopVideo(); return; }
+  if (!d || !d.connected || !d.authorized || document.hidden) { nextFrame(800); stopVideo(); return; }
+  // (the video keeps running on every tab while the window shows: its decoded frames are the engine's looks during a
+  // run, ~50 ms each instead of a 2 s screen capture; only the picture mirror is for the Phone and Sandbox tabs)
   if (vid.on) { nextFrame(800); return; }
   // After two failed starts the picture mirror stays, but the video is tried again a minute later or on a new phone.
   if (vid.failed && (Date.now() - vid.failedAt > 60_000 || vid.deviceId !== d.id)) { vid.failed = false; vid.tries = 0; }
   if (!vid.failed && !vid.starting && !S.simulated && S.scrcpy) { void startVideo(d.id); nextFrame(800); return; }
+  if (tab !== 'phone' && tab !== 'sandbox') { nextFrame(800); return; }
   if (frameBusy) return;
   frameBusy = true;
   try {
@@ -336,6 +339,21 @@ function feedVideo(p) {
   try { vid.decoder.decode(new EncodedVideoChunk({type: p.key ? 'key' : 'delta', timestamp: p.pts, data: chunk})); } catch (e) { endVideo('decode failed'); }
 }
 window.hub.onVideo(p => { if (p && p.deviceId === vid.deviceId) feedVideo(p); });
+// The engine's looks take the decoded video frame instead of a screen capture (main.ts asks, adb.ts#frameSource): the
+// canvas at most 576 wide as a PNG; nothing when the video is not running or has not drawn a frame yet.
+let shotCanvas = null;
+if (window.hub.onFrameWanted) window.hub.onFrameWanted(async p => {
+  const reply = r => { try { window.hub.frameTaken({req: p.req, ...r}); } catch { /* the engine falls back to a capture */ } };
+  try {
+    if (!vid.on || !vid.decoder || vid.decoder.state !== 'configured' || !frameAt || canvas.hidden || p.deviceId !== vid.deviceId || !canvas.width || !canvas.height) { reply({png: null}); return; }
+    const w = Math.min(canvas.width, 576), h = Math.round(canvas.height * w / canvas.width);
+    if (!shotCanvas) shotCanvas = new OffscreenCanvas(w, h);
+    if (shotCanvas.width !== w || shotCanvas.height !== h) { shotCanvas.width = w; shotCanvas.height = h; }
+    shotCanvas.getContext('2d').drawImage(canvas, 0, 0, w, h);
+    const blob = await shotCanvas.convertToBlob({type: 'image/png'});
+    reply({png: await blob.arrayBuffer(), width: w, height: h, at: frameAt});
+  } catch { reply({png: null}); }
+});
 async function startVideo(id) {
   if (typeof VideoDecoder === 'undefined') { vid.failed = true; vid.error = 'this window cannot decode video'; return; }
   vid.starting = true; vid.deviceId = id; vid.waitKey = true;
