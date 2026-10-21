@@ -1,12 +1,12 @@
 {
-  "version": "0.21.23",
-  "notes": "^Levels^ and^ milestones:^ Word^ Yatzy's^ Complete^ Level^ N^ is^ reached^ when^ the^ badge^ shows^ N^ ^(it^ waited^ for^ N+1^),^ the^ playbook^ re-checks^ its^ milestones^ every^ time^ it^ is^ shown,^ and^ the^ home^ screen's^ level^ badge^ is^ read^ by^ Falcor^ AI^ once^ per^ new^ level^ and^ then^ known^ by^ its^ picture,^ so^ the^ level^ updates^ by^ itself.^",
-  "publishedAt": "2026-10-21T20:39:46.339Z",
+  "version": "0.21.24",
+  "notes": "^Games^ tab:^ Start^ playing^ the^ game^ counts^ as^ reached^ once^ Falcor^ has^ played^ the^ game,^ so^ the^ card's^ goal^ count^ matches^ the^ earning^ app.^ Word^ Yatzy's^ Complete^ Level^ N^ is^ reached^ when^ the^ badge^ shows^ N,^ and^ the^ level^ badge^ is^ read^ by^ itself.^",
+  "publishedAt": "2026-10-21T20:53:21.539Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "90e4c0edf032033e2f984fd4ae3735e3d49af5fa0c2fa8b25923ea3b4909b2cb",
-      "size": 1160982
+      "sha256": "c2bfa57a603ef1eca0110eaad671181263f783bb07c433d03b1d8d917bb2622a",
+      "size": 1161468
     },
     {
       "path": "dist/preload.js",

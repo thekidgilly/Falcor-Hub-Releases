@@ -67,7 +67,8 @@
     // The queue's one switch: paused, nothing new starts by itself; running, what is scheduled starts at its time.
     const paused = !!(q && q.paused);
     text($('qtogglelabel'), paused ? 'Resume schedule' : 'Pause schedule');
-    $('qtoggle').className = 'small' + (paused ? ' primary' : ''); $('qtoggle').firstElementChild.className = 'led' + (paused ? '' : ' active');
+    // (Pause stops the schedule: red square and red words, so it reads as a stop)
+    $('qtoggle').className = 'small' + (paused ? ' primary' : ' stopish'); $('qtoggle').firstElementChild.className = 'led' + (paused ? '' : ' bad');
     $('qtoggle').disabled = !!d.emergency; $('qtoggle').dataset.op = paused ? 'resume' : 'pause';
     ticker(d, q, cur, next, paused);
   };
@@ -79,6 +80,8 @@
     const parts = [['AI', p.aiCalls + (p.aiCalls ? ' · ' + sec(p.aiAvgMs) + ' avg' : '')], ['Local', p.local + (p.burst ? ' · ' + p.burst + ' fast' : '')]];
     if (p.words) parts.push(['Words', p.words + ' · ' + (p.words / mins).toFixed(1) + '/min']);
     parts.push(['Ads', clock(p.adMs)]);
+    // (how fast the phone is looked at: the average look, how many took the video frame, and what the UI dumps cost)
+    if (p.looks) parts.push(['Look', sec(p.looks.avgMs) + (p.looks.video ? ' · ' + Math.round(100 * p.looks.video / p.looks.n) + '% video' : '') + (p.looks.dumps ? ' · ' + p.looks.dumps + ' dumps ' + sec(p.looks.dumpAvgMs) : '')]);
     return '<div class="qperf">' + parts.map(([k, v]) => '<span><b>' + esc(k) + '</b> ' + esc(v) + '</span>').join('') + '</div>';
   }
   // The LED ticker over the queue: where the schedule stands, and in passing what it is for.
