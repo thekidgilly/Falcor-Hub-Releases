@@ -1,12 +1,12 @@
 {
-  "version": "0.21.18",
+  "version": "0.21.19",
   "notes": "",
-  "publishedAt": "2026-10-21T17:08:20.409Z",
+  "publishedAt": "2026-10-21T18:45:32.401Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "07ce43e23b236dfb1f6df516844fd8a22feb9f4b49b5e5306e09e760fb12977f",
-      "size": 1134587
+      "sha256": "b84973438d76a4f614941782cf918ab04183a04afbbf3114cae4db934f02889a",
+      "size": 1140727
     },
     {
       "path": "dist/preload.js",
