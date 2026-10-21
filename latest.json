@@ -1,12 +1,12 @@
 {
-  "version": "0.21.14",
-  "notes": "Word Yatzy: Falcor now spells real words that fit an open row (an exact fill earns the bonus), one letter at a time, clears wrong letters by dragging them back, and places a word by tapping its green score. It won a full match in testing.\nAds: payout or gift-card pop-ups are treated as ads (wait for the Google Play mark or the close, never Confirm or Cash out); a Play Store page an ad opens is left with Back; faint top-right close marks are found first.\nFalcor never rates or reviews an app.",
-  "publishedAt": "2026-10-21T01:43:54.235Z",
+  "version": "0.21.15",
+  "notes": "Word Yatzy: follows the game’s tutorial, closes the no-X ads (Whatnot, PuzzlePlay, JustPlay) safely, refuses words too long for any open row, never presses Open offer / Shop now / Start earning.",
+  "publishedAt": "2026-10-21T02:27:19.650Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "362b77169dde4bbce89bfe2fc1a44cffd94c32ec78a9592b2f5745f38d66db2b",
-      "size": 1096214
+      "sha256": "d7aab424ee78ffe1c78a71f9672a1fefce17a498c9a3fadd86ef52331337cb47",
+      "size": 1098642
     },
     {
       "path": "dist/preload.js",
