@@ -1,12 +1,12 @@
 {
-  "version": "0.21.21",
-  "notes": "^Pause^ schedule^ is^ now^ red^ ^(its^ square^ and^ its^ words^),^ so^ it^ reads^ as^ a^ stop.^",
-  "publishedAt": "2026-10-21T20:15:02.233Z",
+  "version": "0.21.22",
+  "notes": "^Ads:^ a^ dark^ X^ on^ a^ white^ bar^ at^ the^ top^ right^ ^(a^ playable^ ad's^ Cash^ out^ page^)^ is^ now^ seen^ and^ pressed^ by^ itself,^ and^ ad^ pages^ with^ words^ are^ watched^ for^ their^ X^ too.^ Pause^ schedule^ is^ red.^",
+  "publishedAt": "2026-10-21T20:22:32.982Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "402f1c93132ea68d692fd2bef0b7ef711df04337d212119ad129720ea535762b",
-      "size": 1154824
+      "sha256": "18a34e5d2ad4c695bca36a0a171d32652d46bb00472213cbca65fba77261572c",
+      "size": 1155608
     },
     {
       "path": "dist/preload.js",

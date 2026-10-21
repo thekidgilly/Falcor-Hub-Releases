@@ -4635,7 +4635,17 @@ var adScreen = (o) => AD_ACTIVITY.test(String(o.activity || ""));
 var drawnOnly = (o) => !(o.nodes || []).some((n) => (n.text || n.desc) && !isSurface(o, n));
 var isSurface = (o, n) => !n.text && !(n.desc && /Button/.test(n.cls)) && Math.max(0, n.bounds.r - n.bounds.l) * Math.max(0, n.bounds.b - n.bounds.t) >= o.width * o.height * 0.4;
 var grids = /* @__PURE__ */ new Map();
+var decoded = /* @__PURE__ */ new Map();
+var frameKey = (f) => f.data.length + ":" + f.data.slice(-64) + ":" + f.data.slice(1e3, 1032);
 function decodePng(f) {
+  const key2 = frameKey(f), hit = decoded.get(key2);
+  if (hit !== void 0) return hit;
+  const out = decodePngNow(f);
+  decoded.set(key2, out);
+  if (decoded.size > 6) decoded.delete(decoded.keys().next().value);
+  return out;
+}
+function decodePngNow(f) {
   const b = Buffer.from(f.data, "base64");
   let w = 0, h = 0, type = 0, depth = 0, p = 8;
   const idat = [];
@@ -4655,17 +4665,80 @@ function decodePng(f) {
   if (!bpp || depth !== 8 || !w || !h) return null;
   const raw = (0, import_node_zlib.inflateSync)(Buffer.concat(idat)), stride = w * bpp, px = Buffer.alloc(stride * h);
   for (let y = 0; y < h; y++) {
-    const f0 = raw[y * (stride + 1)], src2 = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1)), row = px.subarray(y * stride, (y + 1) * stride), up = y ? px.subarray((y - 1) * stride, y * stride) : null;
-    for (let i = 0; i < stride; i++) {
-      const a = i >= bpp ? row[i - bpp] : 0, u = up ? up[i] : 0, c = up && i >= bpp ? up[i - bpp] : 0;
-      const pr = f0 === 4 ? (() => {
+    const f0 = raw[y * (stride + 1)], s0 = y * (stride + 1) + 1, r0 = y * stride, u0 = r0 - stride;
+    if (f0 === 0) raw.copy(px, r0, s0, s0 + stride);
+    else if (f0 === 1) {
+      for (let i = 0; i < stride; i++) px[r0 + i] = raw[s0 + i] + (i >= bpp ? px[r0 + i - bpp] : 0) & 255;
+    } else if (f0 === 2) {
+      if (y) for (let i = 0; i < stride; i++) px[r0 + i] = raw[s0 + i] + px[u0 + i] & 255;
+      else raw.copy(px, r0, s0, s0 + stride);
+    } else if (f0 === 3) {
+      for (let i = 0; i < stride; i++) px[r0 + i] = raw[s0 + i] + ((i >= bpp ? px[r0 + i - bpp] : 0) + (y ? px[u0 + i] : 0) >> 1) & 255;
+    } else if (f0 === 4) {
+      for (let i = 0; i < stride; i++) {
+        const a = i >= bpp ? px[r0 + i - bpp] : 0, u = y ? px[u0 + i] : 0, c = y && i >= bpp ? px[u0 + i - bpp] : 0;
         const q2 = a + u - c, pa = Math.abs(q2 - a), pb = Math.abs(q2 - u), pc = Math.abs(q2 - c);
-        return pa <= pb && pa <= pc ? a : pb <= pc ? u : c;
-      })() : f0 === 1 ? a : f0 === 2 ? u : f0 === 3 ? a + u >> 1 : 0;
-      row[i] = src2[i] + pr & 255;
-    }
+        px[r0 + i] = raw[s0 + i] + (pa <= pb && pa <= pc ? a : pb <= pc ? u : c) & 255;
+      }
+    } else return null;
   }
   return { w, h, bpp, px };
+}
+function encodePng(rgb, w, h, level = 1) {
+  const raw = Buffer.alloc((w * 3 + 1) * h);
+  for (let y = 0; y < h; y++) rgb.copy(raw, y * (w * 3 + 1) + 1, y * w * 3, (y + 1) * w * 3);
+  const crc = (b) => {
+    let c = ~0;
+    for (const x of b) {
+      c ^= x;
+      for (let i = 0; i < 8; i++) c = c >>> 1 ^ 3988292384 & -(c & 1);
+    }
+    return ~c >>> 0;
+  };
+  const chunk = (t, b) => {
+    const l = Buffer.alloc(4);
+    l.writeUInt32BE(b.length);
+    const tb = Buffer.concat([Buffer.from(t), b]), c = Buffer.alloc(4);
+    c.writeUInt32BE(crc(tb));
+    return Buffer.concat([l, tb, c]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(w, 0);
+  ihdr.writeUInt32BE(h, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2;
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr), chunk("IDAT", (0, import_node_zlib.deflateSync)(raw, { level })), chunk("IEND", Buffer.alloc(0))]);
+}
+function rawToPng(raw, maxW = 540, level = 1) {
+  if (raw.length < 16) return null;
+  const w = raw.readUInt32LE(0), h = raw.readUInt32LE(4), fmt = raw.readUInt32LE(8);
+  const bpp = fmt === 3 ? 3 : fmt === 1 || fmt === 2 || fmt === 5 ? 4 : 0, swap = fmt === 5;
+  if (!bpp || !(w > 0 && w < 2e4 && h > 0 && h < 2e4)) return null;
+  const head = raw.length - w * h * bpp;
+  if (head !== 12 && head !== 16) return null;
+  const k = Math.max(1, Math.ceil(w / maxW)), ow = Math.floor(w / k), oh = Math.floor(h / k), rgb = Buffer.alloc(ow * oh * 3), n = k * k;
+  const px = raw.subarray(head);
+  for (let y = 0; y < oh; y++) for (let x = 0; x < ow; x++) {
+    let r = 0, g = 0, b = 0;
+    for (let dy = 0; dy < k; dy++) {
+      let o = ((y * k + dy) * w + x * k) * bpp;
+      for (let dx = 0; dx < k; dx++, o += bpp) {
+        r += px[o];
+        g += px[o + 1];
+        b += px[o + 2];
+      }
+    }
+    const q2 = (y * ow + x) * 3;
+    if (swap) {
+      rgb[q2] = b / n;
+      rgb[q2 + 2] = r / n;
+    } else {
+      rgb[q2] = r / n;
+      rgb[q2 + 2] = b / n;
+    }
+    rgb[q2 + 1] = g / n;
+  }
+  return { png: encodePng(rgb, ow, oh, level), width: ow, height: oh };
 }
 function greenBoxes(f) {
   if (f.mime !== "image/png") return [];
@@ -4713,34 +4786,13 @@ function smallPicture(f, maxW = 540) {
     return f;
   }
   if (!d || "sim" in d || d.bpp < 3 || d.w <= maxW) return f;
-  const k = Math.ceil(d.w / maxW), w = Math.floor(d.w / k), h = Math.floor(d.h / k), raw = Buffer.alloc((w * 3 + 1) * h);
+  const k = Math.ceil(d.w / maxW), w = Math.floor(d.w / k), h = Math.floor(d.h / k), rgb = Buffer.alloc(w * 3 * h);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) for (let c = 0; c < 3; c++) {
     let s2 = 0;
     for (let dy = 0; dy < k; dy++) for (let dx = 0; dx < k; dx++) s2 += d.px[((y * k + dy) * d.w + x * k + dx) * d.bpp + c];
-    raw[y * (w * 3 + 1) + 1 + x * 3 + c] = s2 / (k * k);
+    rgb[(y * w + x) * 3 + c] = s2 / (k * k);
   }
-  const crc = (b) => {
-    let c = ~0;
-    for (const x of b) {
-      c ^= x;
-      for (let i = 0; i < 8; i++) c = c >>> 1 ^ 3988292384 & -(c & 1);
-    }
-    return ~c >>> 0;
-  };
-  const chunk = (t, b) => {
-    const l = Buffer.alloc(4);
-    l.writeUInt32BE(b.length);
-    const tb = Buffer.concat([Buffer.from(t), b]), c = Buffer.alloc(4);
-    c.writeUInt32BE(crc(tb));
-    return Buffer.concat([l, tb, c]);
-  };
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(w, 0);
-  ihdr.writeUInt32BE(h, 4);
-  ihdr[8] = 8;
-  ihdr[9] = 2;
-  const png = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr), chunk("IDAT", (0, import_node_zlib.deflateSync)(raw, { level: 6 })), chunk("IEND", Buffer.alloc(0))]);
-  return { ...f, data: png.toString("base64"), width: w, height: h };
+  return { ...f, data: encodePng(rgb, w, h, 6).toString("base64"), width: w, height: h };
 }
 function rollButton(f) {
   if (f.mime !== "image/png") return null;
@@ -4758,23 +4810,139 @@ function rollButton(f) {
   const CW = 72, CH = 160;
   let best = null;
   for (let cy = Math.floor(CH * 0.9); cy < CH * 0.98; cy++) {
-    let run = 0, start = 0;
-    for (let cx = 0; cx <= CW; cx++) {
-      let on = false;
-      if (cx < CW) {
-        const o = (Math.floor((cy + 0.5) * d.h / CH) * d.w + Math.floor((cx + 0.5) * d.w / CW)) * d.bpp, r = d.px[o], g = d.px[o + 1], b = d.px[o + 2];
-        on = g > 110 && g > r + 45 && g > b + 25;
+    const kind = new Int8Array(CW);
+    for (let cx = 0; cx < CW; cx++) {
+      const o = (Math.floor((cy + 0.5) * d.h / CH) * d.w + Math.floor((cx + 0.5) * d.w / CW)) * d.bpp, r = d.px[o], g = d.px[o + 1], b = d.px[o + 2];
+      kind[cx] = g > 110 && g > r + 45 && g > b + 25 ? 1 : Math.min(r, g, b) > 200 ? 2 : 0;
+    }
+    for (let cx = 0; cx < CW; cx++) {
+      if (kind[cx] !== 1) continue;
+      let last = cx, green = 0, gap = 0;
+      for (let k = cx; k < CW; k++) {
+        if (kind[k] === 1) {
+          last = k;
+          green++;
+          gap = 0;
+        } else if (kind[k] === 2) {
+          if (++gap > 12) break;
+        } else break;
       }
-      if (on) {
-        if (!run) start = cx;
-        run++;
-      } else if (run) {
-        if (run >= CW / 3 && (start + run / 2) / CW <= 0.6 && (!best || run > best.w)) best = { x: (start + run / 2) / CW, y: (cy + 0.5) / CH, w: run };
-        run = 0;
-      }
+      const span = last - cx + 1;
+      if (span >= CW * 0.27 && green >= span * 0.45 && (cx + span / 2) / CW <= 0.6 && (!best || span > best.w)) best = { x: (cx + span / 2) / CW, y: (cy + 0.5) / CH, w: span };
+      cx = last;
     }
   }
   return best && { x: best.x, y: best.y };
+}
+function skipMark(f, corner = "left") {
+  if (f.mime !== "image/png") return null;
+  let d;
+  try {
+    d = decodePng(f);
+  } catch {
+    return null;
+  }
+  if (!d || "sim" in d || d.bpp < 3) return null;
+  if (corner === "right-light") {
+    let dark = 0, light = 0, n = 0, sx = 0, sy = 0;
+    for (let y = Math.floor(0.045 * d.h); y < 0.1 * d.h; y += 2) for (let x = Math.floor(0.85 * d.w); x < 0.97 * d.w; x += 2) {
+      const o = (y * d.w + x) * d.bpp, r = d.px[o], g = d.px[o + 1], b = d.px[o + 2];
+      n++;
+      if (Math.max(r, g, b) < 110) {
+        dark++;
+        sx += x;
+        sy += y;
+      } else if (Math.min(r, g, b) > 215) light++;
+    }
+    if (!(n && dark >= n * 8e-3 && dark <= n * 0.15 && light >= n * 0.7)) return null;
+    const cx = sx / dark / d.w, cy = sy / dark / d.h;
+    return cx > 0.86 && cx < 0.96 ? { x: cx, y: cy } : null;
+  }
+  const [x0, x1, y0, y1] = corner === "left" ? [0.045, 0.11, 0.055, 0.095] : corner === "right" ? [0.87, 0.955, 0.055, 0.095] : [0.885, 0.975, 0.025, 0.065];
+  const scan = (ax, bx, ay, by) => {
+    let white = 0, dark = 0, n = 0, sx = 0, sy = 0;
+    for (let y = Math.floor(ay * d.h); y < by * d.h; y += 2) for (let x = Math.floor(ax * d.w); x < bx * d.w; x += 2) {
+      const o = (y * d.w + x) * d.bpp, r = d.px[o], g = d.px[o + 1], b = d.px[o + 2];
+      n++;
+      if (Math.min(r, g, b) > 200) {
+        white++;
+        sx += x;
+        sy += y;
+      } else if (Math.max(r, g, b) < 70) dark++;
+    }
+    return { white, dark, n, sx, sy };
+  };
+  const m = scan(x0, x1, y0, y1);
+  if (!(m.n && m.white >= m.n * 0.012 && m.white <= m.n * 0.25 && m.dark >= m.n * 0.5)) return null;
+  if (corner === "top-right") {
+    const left = scan(0.7, 0.86, y0, y1);
+    if (left.n && left.dark >= left.n * 0.4) return null;
+  }
+  return { x: m.sx / m.white / d.w, y: m.sy / m.white / d.h };
+}
+function wyScreen(f) {
+  if (f.mime !== "image/png") return null;
+  let d;
+  try {
+    d = decodePng(f);
+  } catch {
+    return null;
+  }
+  if (!d || "sim" in d || d.bpp < 3) return null;
+  const px = (fx, fy) => {
+    const o = (Math.floor(fy * d.h) * d.w + Math.floor(fx * d.w)) * d.bpp;
+    return [d.px[o], d.px[o + 1], d.px[o + 2]];
+  };
+  const green = (c) => c[1] > 150 && c[1] > c[0] + 80 && c[1] > c[2] + 40;
+  const wood = (c) => c[0] > 120 && c[0] < 220 && c[0] > c[1] + 35 && c[1] > c[2] + 10;
+  const cream = (c) => c[0] > 225 && c[1] > 215 && c[2] > 190;
+  if (green(px(0.3, 0.15)) && green(px(0.7, 0.15)) && wood(px(0.5, 0.04)) && cream(px(0.25, 0.165))) {
+    let start = -1;
+    for (let y = 0.5; y < 0.93; y += 4e-3) {
+      const on = green(px(0.925, y));
+      if (on && start < 0) start = y;
+      if (!on && start >= 0) {
+        if (y - start >= 0.03) return { kind: "home", at: { x: 0.8, y: (start + y) / 2 }, label: "PLAY! on a match where it is your turn" };
+        start = -1;
+      }
+    }
+    return { kind: "home", at: { x: 0.5, y: 0.16 }, label: "NEW GAME" };
+  }
+  const ring = px(0.86, 0.1065), purple = (c) => c[2] > c[1] + 25 && c[0] > c[1] + 25 && c[1] < 60;
+  if (wood(px(0.25, 0.165)) && wood(px(0.75, 0.165)) && purple(px(0.1, 0.9)) && ring[0] > 230 && ring[1] > 230 && ring[2] > 230) return { kind: "spin", at: { x: 0.889, y: 0.1065 }, label: "the Spin Wheel's \u2715" };
+  const sky = (c) => c[2] > 200 && c[1] > 140 && c[0] < 120;
+  if (sky(px(0.07, 0.6)) && sky(px(0.95, 0.4)) && wood(px(0.15, 0.173))) {
+    if (green(px(0.33, 0.877)) && green(px(0.67, 0.877))) return { kind: "ladder", at: { x: 0.5, y: 0.877 }, label: "CONTINUE" };
+    if (green(px(0.5, 0.835))) return { kind: "ladder", at: { x: 0.5, y: 0.905 }, label: "Start from zero (free; never KEEP YOUR STREAK, it spends gems)" };
+    let start = -1;
+    for (let y = 0.3; y < 0.85; y += 4e-3) {
+      const on = green(px(0.44, y));
+      if (on && start < 0) start = y;
+      if (!on && start >= 0) {
+        if (y - start >= 0.02) return { kind: "ladder", at: { x: 0.52, y: (start + y) / 2 }, label: "Claim (the ladder's chest)" };
+        start = -1;
+      }
+    }
+    return null;
+  }
+  const top0 = px(0.5, 0.04);
+  if (top0[0] < 45 && top0[1] < 45 && top0[2] < 45 && wood(px(0.05, 0.5)) && wood(px(0.95, 0.5)) && green(px(0.3, 0.9)) && green(px(0.7, 0.9))) return { kind: "reward", at: { x: 0.5, y: 0.9 }, label: "Continue (a reward shown)" };
+  const rose = (c) => c[0] > 150 && c[0] - c[1] > 40 && c[2] >= c[1] - 5 && c[2] < 160;
+  const violet = (c) => c[2] > 130 && c[2] - c[0] > 40 && c[0] > 60 && c[0] < 120 && c[1] < 120;
+  if (rose(px(0.5, 0.6)) && rose(px(0.07, 0.6)) || violet(px(0.5, 0.6)) && violet(px(0.07, 0.6))) {
+    const blue = px(0.4, 0.946);
+    if (blue[2] > 200 && blue[2] > blue[0] + 100 && green(px(0.9, 0.955))) return { kind: "next", at: { x: 0.74, y: 0.955 }, label: "NEXT GAME" };
+    if (green(px(0.4, 0.946)) && green(px(0.6, 0.946)) && !green(px(0.15, 0.946)) && !green(px(0.9, 0.946))) return { kind: "claim", at: { x: 0.5, y: 0.946 }, label: "CLAIM" };
+    return null;
+  }
+  const dim = px(0.05, 0.5), card = px(0.5, 0.367);
+  if (dim[0] < 70 && dim[1] < 70 && dim[2] < 70 && card[0] > 240 && card[1] > 240 && green(px(0.38, 0.908)) && green(px(0.62, 0.908))) return { kind: "boost", at: { x: 0.5, y: 0.908 }, label: "PLAY! (never the gem offers or $1.99)" };
+  const band = (c) => c[0] > 140 && c[0] > c[1] + 60 && c[1] > c[2] + 30, dimmed = (c) => c[0] < 90 && c[1] < 90 && c[2] < 90, x1 = px(0.5, 0.525);
+  if (band(px(0.08, 0.49)) && band(px(0.92, 0.49)) && dimmed(px(0.5, 0.04)) && dimmed(px(0.5, 0.75)) && x1[0] > 230 && x1[1] > 200 && x1[2] > 110) return { kind: "between" };
+  if ([[0.5, 0.04], [0.05, 0.3], [0.95, 0.3], [0.05, 0.7], [0.95, 0.7], [0.5, 0.92]].every(([x, y]) => wood(px(x, y)))) return { kind: "between" };
+  const top = px(0.5, 0.04);
+  if (top[0] > 220 && top[1] > 200 && top[2] > 190 && wood(px(0.04, 0.8)) && trayEmpty(f) && !rollButton(f)) return { kind: "between" };
+  return null;
 }
 function freecashPopup(f) {
   if (f.mime !== "image/png") return false;
@@ -4785,13 +4953,21 @@ function freecashPopup(f) {
     return false;
   }
   if (!d || "sim" in d || d.bpp < 3) return false;
-  const px = (fx, fy) => {
-    const o = (Math.floor(fy * d.h) * d.w + Math.floor(fx * d.w)) * d.bpp;
-    return [d.px[o], d.px[o + 1], d.px[o + 2]];
+  const { w, h, bpp, px: p } = d;
+  const share = (fx, fy, rx, ry, ok) => {
+    let n = 0, hit = 0;
+    const x0 = Math.max(0, Math.floor((fx - rx) * w)), x1 = Math.min(w - 1, Math.ceil((fx + rx) * w)), y0 = Math.max(0, Math.floor((fy - ry) * h)), y1 = Math.min(h - 1, Math.ceil((fy + ry) * h));
+    const sx = Math.max(1, Math.floor((x1 - x0) / 10)), sy = Math.max(1, Math.floor((y1 - y0) / 6));
+    for (let y = y0; y <= y1; y += sy) for (let x = x0; x <= x1; x += sx) {
+      const o = (y * w + x) * bpp;
+      n++;
+      if (ok(p[o], p[o + 1], p[o + 2])) hit++;
+    }
+    return n ? hit / n : 0;
   };
-  const green = (c) => c[1] > 160 && c[1] > c[0] + 90 && c[1] > c[2] + 30;
-  const [x, card, b1, b2] = [px(0.906, 0.24), px(0.5, 0.36), px(0.5, 0.805), px(0.25, 0.805)];
-  return x[0] < 90 && x[1] < 90 && x[2] < 90 && card[0] > 240 && card[1] > 240 && card[2] > 215 && green(b1) && green(b2);
+  const dark = (r, g, b) => Math.max(r, g, b) < 120, cream = (r, g, b) => r > 235 && g > 235 && b > 205;
+  const green = (r, g, b) => g > 150 && g > r + 80 && g > b + 25;
+  return share(0.906, 0.24, 0.02, 0.012, dark) >= 0.08 && share(0.5, 0.36, 0.04, 0.02, cream) >= 0.5 && share(0.78, 0.805, 0.03, 0.012, green) >= 0.6 && share(0.25, 0.805, 0.03, 0.012, green) >= 0.6;
 }
 function trayEmpty(f) {
   if (f.mime !== "image/png") return false;
@@ -5538,6 +5714,18 @@ var GuardedDriver = class {
     this.last = o;
     return o;
   }
+  // A quick look by picture alone (~0.5 s, no UI dump), for a screen drawn without words such as a playing ad: the last
+  // look with a fresh picture. Pressing still re-checks the phone's app, rotation and lock. Null when the phone gives no
+  // fast picture or there was no look yet.
+  async glance() {
+    const r = this.raw, cap = r.glimpse || r.screencap;
+    if (!cap || !this.last) return null;
+    const shot = await cap.call(this.raw).catch(() => null);
+    if (!shot) return null;
+    const now = this.now();
+    this.last = { ...this.last, id: this.raw.deviceId + ":g" + now.toString(36), at: now, frame: { mime: shot.mime, data: shot.data.toString("base64"), width: shot.width || this.last.width, height: shot.height || this.last.height } };
+    return this.last;
+  }
   // The gate. `allowedPackages` is what the controller may touch: a mission's app; for the owner's Human Control, any
   // app (their own phone), still bound to their lease and the observation they saw.
   async act(env, allowedPackages) {
@@ -6264,8 +6452,10 @@ var ContextCache = class {
 
 // src/automation/android/runner.ts
 var FRESH_MS = 2500;
+var trayTap = (m) => m.kind === "tap" && m.y >= 0.72 && m.y < 0.9;
 var questsPay = (m) => /\bquests?\b|\bdaily (?:tasks?|rewards?|missions?)\b|\bachievements?\b|\bmissions?\b/i.test(m.objective) || rulesFor(m.appPackage, m.appLabel || "").some((r) => /daily quests/i.test(r.text));
 var PREFETCH_GAP_MS = 60;
+var BETWEEN_MS = 6e4;
 var MAX_REPLANS = 5;
 var Stopped = class extends Error {
 };
@@ -6691,6 +6881,7 @@ var MissionRunner = class {
     let seq = 0, steps = 0, actions = 0, recoveries = 0, dismissals = 0, aiSteps = 0, aiTrouble = 0, claim = "none", checkpoint = mission.checkpoint;
     const visits = /* @__PURE__ */ new Map(), dismissed = /* @__PURE__ */ new Map(), evidence = [], ledger = [];
     const stats = { accepted: 0, refused: {}, replans: 0, aiCalls: 0, planMs: [], noEffect: 0, startLevel: checkpoint0Level(mission), endLevel: null, ms: 0, scenes: 0, adsWatched: 0, seen: [] }, began = d.now();
+    d.onStats?.(stats);
     const ctx = { ads: { allowed: !!d.ads?.allowed(mission.appPackage), present: () => !!d.ads?.present(mission.appPackage), now: d.now, say }, avoid: d.avoid?.(mission.appPackage) || [], signal, from: from || mission.state, mission, obs: null, s: {}, game: newGameMemory(), period, vault: d.vault, lastVerdict: null, lastIntent: null, mode: d.mode || "run", prices: mission.type === "free_signup", stats };
     const version = d.appVersion ? await d.appVersion(mission.appPackage).catch(() => "") : "";
     const task = mission.type;
@@ -6717,21 +6908,31 @@ var MissionRunner = class {
       if (signal.aborted) throw new Stopped(String(signal.reason?.message || "Stopped."));
     };
     const SETTLED = 2.5;
+    const slow = [];
+    let sinceAct = d.now();
+    const waited = (what) => {
+      slow.push(what);
+    };
     const settled = async (o) => {
-      for (let i = 0; i < 8 && mission.type === "game_level" && o.frame && o.frame.mime === "image/png" && drawnOnly(o); i++) {
+      let n = 0;
+      for (let i = 0; i < 8 && mission.type === "game_level" && o.frame && o.frame.mime === "image/png" && drawnOnly(o) && !adScreen(o); i++) {
         await d.sleep(250, signal);
         const next = await d.driver.observe({ frame: true });
         live();
+        n++;
         const moving = !next.frame || sceneDiff(o.frame, next.frame) >= SETTLED;
         o = next;
         if (!moving) break;
       }
+      if (n >= 2) waited("settle\xD7" + n);
       return o;
     };
     const look = async () => {
       live();
+      const t0 = d.now();
       let o = await d.driver.observe({ frame: !!d.allowVision && !!ctx.s.wantFrame });
       live();
+      if (d.now() - t0 > 400) waited("look " + ((d.now() - t0) / 1e3).toFixed(1) + " s");
       o = await settled(o);
       if (d.allowVision && needsPicture(o)) ctx.s.wantFrame = true;
       if (mission.type === "game_level") noteWords(stats, o);
@@ -6749,9 +6950,14 @@ var MissionRunner = class {
     let lastStep = d.now();
     try {
       if (d.mode === "reconcile") say("Reconciling: looking only, nothing is claimed again.");
-      let obs = await look();
+      let obs = await look(), lastActions = actions;
       while (true) {
         live();
+        if (actions !== lastActions) {
+          lastActions = actions;
+          sinceAct = d.now();
+          slow.length = 0;
+        }
         if (d.now() - lastStep > STALE_GAP_MS) throw new Stopped("The computer was asleep for " + Math.round((d.now() - lastStep) / 6e4) + " min, so this run stopped.");
         if (!d.leases.renew(leaseId, d.now())) throw new Stopped("This mission no longer has the phone.");
         lastStep = d.now();
@@ -6788,15 +6994,22 @@ var MissionRunner = class {
         if (mission.type === "game_level" && obs.package === mission.appPackage && drawnOnly(obs) && obs.frame && blankFrame(obs.frame)) {
           if (Number(ctx.s.blankLooks = Number(ctx.s.blankLooks || 0) + 1) <= 20) {
             if (ctx.s.blankLooks === 1) say("Waiting for " + mission.appLabel + " to finish loading.");
+            waited("loading wait");
             await d.sleep(1500, signal);
             obs = await look();
             continue;
           }
         } else ctx.s.blankLooks = 0;
         const onAdNow = mission.type === "game_level" && !ctx.s.watching && (adScreen(obs) || obs.package === PLAY_STORE);
-        if (!onAdNow) ctx.s.adSince = null;
-        else if (!ctx.s.adSince) ctx.s.adSince = d.now();
+        if (onAdNow) {
+          ctx.s.adLast = d.now();
+          if (!ctx.s.adSince) ctx.s.adSince = d.now();
+        } else if (ctx.s.adSince && d.now() - Number(ctx.s.adLast || 0) > 15e3) {
+          ctx.stats.adMs = (ctx.stats.adMs || 0) + Number(ctx.s.adLast) - Number(ctx.s.adSince);
+          ctx.s.adSince = null;
+        }
         if (onAdNow && d.now() - Number(ctx.s.adSince) > 6e4 && Number(ctx.s.adCloses || 0) < 3) {
+          ctx.stats.adMs = (ctx.stats.adMs || 0) + d.now() - Number(ctx.s.adSince);
           ctx.s.adCloses = Number(ctx.s.adCloses || 0) + 1;
           ctx.s.adSince = null;
           visits.clear();
@@ -6833,6 +7046,7 @@ var MissionRunner = class {
         }
         if (foreign && obs.package === PLAY_STORE && mission.type === "game_level" && Number(ctx.s.storeBacks = Number(ctx.s.storeBacks || 0) + 1) <= 6) {
           say("An ad opened the Play Store; going back to the game (nothing installed).");
+          ctx.s.adCorner = 0;
           const r = await this.act(obs, { act: { kind: "launch", package: mission.appPackage }, expect: { kind: "package", package: mission.appPackage }, goal: "Leave the Play Store page", intent: "dismiss" }, { leaseId, seq: ++seq, allowed, limits, ctx, say });
           if (r.verdict === "REJECTED" && ["EMERGENCY", "LEASE"].includes(r.code || "")) throw new Stopped(r.error || "Stopped.");
           obs = r.verdict === "REJECTED" ? await look() : r.after;
@@ -6849,6 +7063,36 @@ var MissionRunner = class {
         const unity = /unity3d\.ads/i.test(obs.activity || "");
         if (!foreign && mission.type === "game_level" && adScreen(obs) && (unity || /applovin/i.test(obs.activity || "")) && !ctx.s.watching && Number(ctx.s.adCorner || 0) < 1) {
           ctx.s.adCorner = Number(ctx.s.adCorner || 0) + 1;
+          const tapAt = async (o, m) => {
+            const now = d.now();
+            const ack = await d.driver.act({ id: d.ids(), deviceId: d.driver.deviceId, observationId: o.id, leaseId, seq: ++seq, issuedAt: now, expiresAt: now + 5e3, action: { kind: "tap", x: m.x, y: m.y }, intent: "dismiss" }, allowed);
+            if (!ack.ok && ["EMERGENCY", "LEASE"].includes(ack.code || "")) throw new Stopped(ack.error || "Stopped.");
+            actions++;
+            return ack.ok;
+          };
+          let g = await d.driver.glance();
+          if (g?.frame) {
+            say("Skipping the ad: watching for its skip arrow \u25B6|, then its \u2715.");
+            const until = d.now() + 1e4;
+            let arrowAt = 0, closed = false;
+            while (g?.frame && d.now() < until && !closed) {
+              const arrow = skipMark(g.frame, "left"), cross = arrowAt ? skipMark(g.frame, "right") : skipMark(g.frame, "right-light");
+              if (cross) {
+                closed = true;
+                say("Closing the ad with its \u2715.");
+                await tapAt(g, cross);
+              } else if (arrow && (!arrowAt || d.now() - arrowAt > 1500)) {
+                say("Tapping the ad's skip arrow \u25B6| as it shows.");
+                arrowAt = d.now();
+                if (!await tapAt(g, arrow)) break;
+                await d.sleep(400, signal);
+              } else await d.sleep(150, signal);
+              if (!closed) g = await d.driver.glance();
+            }
+            await d.sleep(closed ? 800 : 0, signal);
+            obs = await look();
+            continue;
+          }
           say("Skipping the ad: top-left corner, its skip arrow, then its \u2715.");
           const ax = unity ? 0.107 : 0.076, ay = unity ? 0.083 : 0.073;
           for (const [x, y, ms2] of [[ax, ay, 300], [ax, ay, 1800], [0.913, 0.078, 1200]]) {
@@ -6930,6 +7174,38 @@ var MissionRunner = class {
             }
             continue;
           }
+          const endCardWatch = interrupt.kind === "ad" && adScreen(obs) && !/gms\.ads/i.test(obs.activity || "") && !!(obs.frame || d.allowVision) && mission.type === "game_level" && Number(ctx.s.adWaits || 0) >= 1 && Number(ctx.s.adWatches || 0) < 2;
+          if (endCardWatch) {
+            ctx.s.adWatches = Number(ctx.s.adWatches || 0) + 1;
+            let g = await d.driver.glance();
+            if (g?.frame) {
+              say("An ad is playing (" + (obs.activity || "").split("/").pop().slice(0, 60) + "); watching for its end card and its \u2715.");
+              const until = d.now() + 35e3;
+              let prev = g.frame, still = 0, closed = false;
+              while (g?.frame && d.now() < until && !closed) {
+                live();
+                still = prev && sceneDiff(prev, g.frame) < 2.5 ? still + 1 : 0;
+                prev = g.frame;
+                const cross = still >= 2 ? skipMark(g.frame, "right") || skipMark(g.frame, "top-right") || skipMark(g.frame, "right-light") : null;
+                if (cross) {
+                  closed = true;
+                  say("The ad's end card shows; closing it with its \u2715.");
+                  const now = d.now();
+                  const ack = await d.driver.act({ id: d.ids(), deviceId: d.driver.deviceId, observationId: g.id, leaseId, seq: ++seq, issuedAt: now, expiresAt: now + 5e3, action: { kind: "tap", x: cross.x, y: cross.y }, intent: "dismiss" }, allowed);
+                  if (!ack.ok && ["EMERGENCY", "LEASE"].includes(ack.code || "")) throw new Stopped(ack.error || "Stopped.");
+                  actions++;
+                } else {
+                  await d.sleep(300, signal);
+                  g = await d.driver.glance();
+                  if (g && (!adScreen(g) || g.package !== obs.package)) break;
+                }
+              }
+              await d.sleep(closed ? 800 : 0, signal);
+              visits.delete(key2);
+              obs = await look();
+              continue;
+            }
+          }
           if (interrupt.kind === "ad" && adScreen(obs) && Number(ctx.s.adWaits || 0) >= 2 && Number(ctx.s.adWaits || 0) < 8 && d.planner) {
             ctx.s.adWaits = Number(ctx.s.adWaits) + 1;
           } else if (interrupt.kind === "ad" && Number(ctx.s.adWaits || 0) >= 8 && canRestart) {
@@ -6938,14 +7214,17 @@ var MissionRunner = class {
             continue;
           } else if (interrupt.kind === "ad" && Number(ctx.s.adWaits || 0) < 8) {
             ctx.s.adWaits = Number(ctx.s.adWaits || 0) + 1;
-            say("An ad is showing; waiting for it to finish.");
+            say("An ad is showing" + (adScreen(obs) ? " (" + (obs.activity || "").split("/").pop().slice(0, 60) + ")" : "") + "; waiting for it to finish.");
             visits.delete(key2);
             await d.sleep(2500, signal);
             obs = await look();
             continue;
           } else return finish("NEEDS_ATTENTION", interrupt.reason + " Falcor could not close it safely.", { kind: interrupt.kind, reason: interrupt.reason });
         }
-        if (interrupt?.kind !== "ad") ctx.s.adWaits = 0;
+        if (interrupt?.kind !== "ad") {
+          ctx.s.adWaits = 0;
+          ctx.s.adWatches = 0;
+        }
         let step;
         (ctx.s.screens || (ctx.s.screens = /* @__PURE__ */ new Set())).add(obs.textHash);
         const known = d.procedures.suggest(mission.appPackage, version, task, obs.uiSignature, d.now());
@@ -7002,8 +7281,9 @@ var MissionRunner = class {
           }
           ctx.s.spellLook = false;
           if (ctx.s.spelled && !(ahead && ahead.moves.length)) ctx.s.spelled = false;
-          if (!placeAt && !(ahead && ahead.moves.length) && mission.type === "game_level" && drawnOnly(obs) && obs.frame && Number(ctx.s.settles || 0) < 3 && rollButton(obs.frame)) {
+          if (!placeAt && !(ahead && ahead.moves.length) && mission.type === "game_level" && drawnOnly(obs) && obs.frame && Number(ctx.s.settles || 0) < 1 && trayEmpty(obs.frame) && rollButton(obs.frame)) {
             const a = sceneSig(obs.frame);
+            waited("ROLL recheck");
             await d.sleep(600, signal);
             const again = await look(), b = again.frame ? sceneSig(again.frame) : null;
             if (a && b && !sameScene(a, b)) {
@@ -7016,15 +7296,27 @@ var MissionRunner = class {
           }
           ctx.s.settles = 0;
           const rollAt = !placeAt && obs.frame && trayEmpty(obs.frame) && ctx.s.rollFailed !== steadyKey(obs) && !(ahead && ahead.moves.length) && drawnOnly(obs) ? rollButton(obs.frame) : null;
+          const isWy = rulesFor(mission.appPackage, mission.appLabel || "").some((r) => r.id === "word-yatzy");
+          const wy0 = !placeAt && !rollAt && !(ahead && ahead.moves.length) && drawnOnly(obs) && obs.frame && isWy ? wyScreen(obs.frame) : null;
+          const wy = wy0 && (wy0.kind === "between" || ctx.s.wyFailed !== steadyKey(obs)) ? wy0 : null;
+          if (!wy || wy.kind !== "between") {
+            ctx.s.betweenLooks = 0;
+            ctx.s.betweenSince = void 0;
+          }
           if (Number(ctx.s.placed || 0) > 0) ctx.s.placed = Number(ctx.s.placed) - 1;
           if (!rollAt && Number(ctx.s.placed || 0) > 0 && !placeAt && drawnOnly(obs)) {
+            waited("score count-up");
             await d.sleep(700, signal);
             obs = await look();
             visits.set(key2, seen - 1);
             continue;
           }
           const check = !!held && Number(ctx.s.fromMemory || 0) >= (Number(ctx.s.blindChecks || 0) >= 2 ? 11 : 5);
-          if (held && !check) {
+          if (obs.frame && freecashPopup(obs.frame) && ctx.s.freecashFailed !== steadyKey(obs)) {
+            step = { act: { kind: "tap", x: 0.906, y: 0.24 }, expect: { kind: "changed" }, goal: "Close the Freecash pop-up", intent: "dismiss" };
+          } else if (wy && wy.kind !== "between") {
+            step = { act: { kind: "tap", x: wy.at.x, y: wy.at.y }, expect: { kind: "changed" }, goal: wy.kind === "spin" ? "Word Yatzy: close the Spin Wheel (its FREE SPIN plays an ad)" : "Word Yatzy: press " + wy.label, intent: wy.kind === "spin" ? "dismiss" : "play" };
+          } else if (held && !check) {
             ctx.s.fromMemory = Number(ctx.s.fromMemory || 0) + 1;
             step = { act: held.ms ? { kind: "long_press", x: held.x, y: held.y, ms: held.ms } : { kind: "tap", x: held.x, y: held.y }, expect: { kind: "changed" }, goal: (held.ms ? "Hold for " + held.ms + " ms" : "Tap") + " (" + held.why + ")", intent: "play" };
           } else if (scene && !since.has(scene) && !(use && use.level === lvl && use.n >= 3)) {
@@ -7034,10 +7326,38 @@ var MissionRunner = class {
             ctx.s.remembered = scene;
           } else if (placeAt) {
             step = { act: { kind: "tap", x: placeAt.x, y: placeAt.y }, expect: { kind: "changed" }, goal: "Place the word on its green score", intent: "play" };
-          } else if (obs.frame && freecashPopup(obs.frame) && ctx.s.freecashFailed !== steadyKey(obs)) {
-            step = { act: { kind: "tap", x: 0.906, y: 0.24 }, expect: { kind: "changed" }, goal: "Close the Freecash pop-up", intent: "dismiss" };
           } else if (rollAt) {
             step = { act: { kind: "tap", x: rollAt.x, y: rollAt.y }, expect: { kind: "changed" }, goal: "Roll the letter dice", intent: "play" };
+          } else if (wy && wy.kind === "between" && d.now() - Number(ctx.s.betweenSince || (ctx.s.betweenSince = d.now())) < BETWEEN_MS) {
+            if (Number(ctx.s.betweenLooks = Number(ctx.s.betweenLooks || 0) + 1) === 1) say("The opponent's turn: waiting for ROLL (a minute at most, then another match).");
+            waited("opponent wait");
+            await d.sleep(1500, signal);
+            obs = await look();
+            visits.set(key2, seen - 1);
+            continue;
+          } else if (wy && wy.kind === "between") {
+            ctx.s.betweenSince = void 0;
+            ctx.s.betweenLooks = 0;
+            step = { act: { kind: "tap", x: 0.06, y: 0.13 }, expect: { kind: "changed" }, goal: "Word Yatzy: leave the match (the opponent has not moved in a minute) for the home screen, to start or resume another", intent: "navigate" };
+          } else if (ahead && ahead.moves.length && ahead.pkg === obs.package && ctx.s.spelling && drawnOnly(obs) && trayTap(ahead.moves[0])) {
+            const n = ahead.moves.findIndex((m) => !trayTap(m)), moves = ahead.moves.splice(0, n < 0 ? ahead.moves.length : n);
+            ahead.moves.length = 0;
+            say("Spelling the rest of the word: " + moves.length + " letter" + (moves.length === 1 ? "" : "s") + " at once.");
+            for (const m of moves) {
+              const now = d.now();
+              const ack = await d.driver.act({ id: d.ids(), deviceId: d.driver.deviceId, observationId: obs.id, leaseId, seq: ++seq, issuedAt: now, expiresAt: now + 5e3, action: m, intent: "play" }, allowed);
+              if (!ack.ok) {
+                if (["EMERGENCY", "LEASE"].includes(ack.code || "")) throw new Stopped(ack.error || "Stopped.");
+                break;
+              }
+              actions++;
+              ctx.stats.burst = (ctx.stats.burst || 0) + 1;
+              await d.sleep(300, signal);
+            }
+            ctx.s.spelled = true;
+            await d.sleep(500, signal);
+            obs = await look();
+            continue;
           } else if (ahead && ahead.moves.length && ahead.pkg === obs.package) {
             const a = ahead.moves.shift();
             if (ctx.s.spelling && a.kind === "tap" && a.y > 0.58 && a.y < 0.72 && drawnOnly(obs)) {
@@ -7065,8 +7385,18 @@ var MissionRunner = class {
               ctx.s.adTries = 0;
               ctx.s.gmsWaits = 0;
             }
-            if (drawnOnly(obs) && obs.frame) for (let i = 0; i < 4; i++) {
-              if (i) await d.sleep(400, signal);
+            const sinceRoll = d.now() - Number(ctx.s.rolledAt || 0);
+            if (isWy && sinceRoll < 1800) {
+              waited("letters landing");
+              await d.sleep(1800 - sinceRoll, signal);
+              obs = await look();
+            }
+            const lettersReady = isWy && !!obs.frame && rollButton(obs.frame) !== null && !trayEmpty(obs.frame);
+            if (drawnOnly(obs) && obs.frame && !lettersReady) for (let i = 0; i < 4; i++) {
+              if (i) {
+                await d.sleep(400, signal);
+                if (i === 1) waited("motion before the ask");
+              }
               const next = await d.driver.observe({ frame: true });
               const moving = !!next.frame && !!obs.frame && sceneDiff(obs.frame, next.frame) >= PLAN_MOVED;
               obs = next;
@@ -7151,7 +7481,7 @@ var MissionRunner = class {
         if (pre && d.driver.lastObservation === pre || d.now() - obs.at > FRESH_MS) {
           const fresh = pre && d.now() - pre.at <= FRESH_MS && d.driver.lastObservation === pre ? pre : await d.driver.observe(drawnOnly(obs) && obs.frame ? { frame: true } : void 0);
           let why = stillValid(obs, fresh, step.act);
-          if (why && replanRun >= 2 && drawnOnly(obs) && drawnOnly(fresh) && fresh.package === obs.package && fresh.rotation === obs.rotation && /picture changed/.test(why)) {
+          if (why && replanRun >= 2 && drawnOnly(obs) && drawnOnly(fresh) && !adScreen(fresh) && fresh.package === obs.package && fresh.rotation === obs.rotation && /picture changed/.test(why)) {
             say("The picture keeps moving; playing the plan on the newest look.");
             why = null;
           }
@@ -7179,7 +7509,10 @@ var MissionRunner = class {
           if (!await d.claims.mark(mission.id, period, runId)) return finish("NEEDS_ATTENTION", "This period's reward may already have been claimed; reconciling instead of claiming again.", { kind: "reconcile", reason: "Claim already submitted this period" });
           ctx.s.claimPressed = true;
         }
+        if (d.now() - sinceAct > 2500 && !step.goal.startsWith("Falcor AI")) say("Slow step: " + ((d.now() - sinceAct) / 1e3).toFixed(1) + ' s before "' + step.goal.slice(0, 60) + '"' + (slow.length ? " (" + slow.slice(-12).join(", ") + ")" : ""));
+        slow.length = 0;
         const res = await this.act(obs, step, { leaseId, seq: ++seq, allowed, limits, ctx, say });
+        sinceAct = d.now();
         if (res.verdict !== "VERIFIED") ctx.s.ahead = void 0;
         if (step.goal.startsWith("Falcor AI (spelling)")) ctx.s.spelling = step.act.kind === "tap";
         else if (!step.goal.startsWith("Falcor AI (planned ahead)")) ctx.s.spelling = false;
@@ -7189,10 +7522,32 @@ var MissionRunner = class {
           ctx.s.rollFailed = void 0;
           ctx.s.freecashFailed = void 0;
         }
-        if (step.goal === "Place the word on its green score" && res.verdict === "VERIFIED") ctx.s.placed = 3;
+        if (step.goal === "Place the word on its green score" && res.verdict === "VERIFIED") {
+          ctx.s.placed = 3;
+          ctx.stats.words = (ctx.stats.words || 0) + 1;
+        }
         if (step.goal === "Place the word on its green score" && res.verdict === "NO_CHANGE") ctx.s.placeFailed = steadyKey(obs);
         if (step.goal === "Roll the letter dice" && res.verdict === "VERIFIED") ctx.s.placed = 0;
-        if (step.goal === "Roll the letter dice" && res.verdict === "NO_CHANGE") ctx.s.rollFailed = steadyKey(obs);
+        if (step.goal === "Roll the letter dice" && res.verdict === "NO_CHANGE") {
+          if (Number(ctx.s.rollTries = Number(ctx.s.rollTries || 0) + 1) >= 4) {
+            ctx.s.rollFailed = steadyKey(obs);
+            ctx.s.rollTries = 0;
+          } else {
+            say("ROLL took no press yet; pressing it again in a second.");
+            await d.sleep(1e3, signal);
+          }
+        }
+        if (step.goal === "Roll the letter dice" && res.verdict === "VERIFIED") {
+          ctx.s.rollTries = 0;
+          ctx.s.rolledAt = d.now();
+        }
+        if (step.goal.startsWith("Word Yatzy: ") && res.verdict === "NO_CHANGE") {
+          if (Number(ctx.s.wyTries = Number(ctx.s.wyTries || 0) + 1) >= 2) {
+            ctx.s.wyFailed = steadyKey(obs);
+            ctx.s.wyTries = 0;
+          } else await d.sleep(800, signal);
+        }
+        if (step.goal.startsWith("Word Yatzy: ") && res.verdict === "VERIFIED") ctx.s.wyTries = 0;
         if (step.goal === "Close the Freecash pop-up" && res.verdict === "NO_CHANGE") ctx.s.freecashFailed = steadyKey(obs);
         const recalled = ctx.s.remembered;
         ctx.s.remembered = void 0;
@@ -7359,6 +7714,7 @@ var MissionRunner = class {
     const d = this.d;
     if (!d.planner) return { handoff: "needs_help", reason: why + " Falcor AI is not configured, so the owner decides the next step." };
     say("Asking Falcor AI: " + why);
+    const wordYatzy = rulesFor(mission.appPackage, mission.appLabel || "").some((r) => r.id === "word-yatzy");
     const input = {
       mission: { type: mission.type, objective: redact(mission.objective), app: mission.appPackage },
       // (right after a missed hold, the picture that shows how it went: the game's "too short" or "too long")
@@ -7380,7 +7736,7 @@ var MissionRunner = class {
     const onAd = adScreen(obs);
     if (onAd) {
       ctx.s.adTries = Number(ctx.s.adTries || 0) + 1;
-      input.recent.push(`This screen is an ad (an ad network's own screen inside the game). Its way out is a small mark in a top or bottom corner: an X or \u2715, or arrows pointing right (\u203A, \xBB, \u23ED, often in a circle), sometimes after a countdown. Tap ONLY that mark (say "close" or "skip" in evidence); if none is shown yet, answer "wait" with ms 3000. Never tap anything else on it (no install, no "Get", no offer, no link).`);
+      input.recent.push(`This screen is an ad (an ad network's own screen inside the game). Its way out is a small mark in a top or bottom corner: an X or \u2715 (white on dark, or dark on a white bar above the ad page), or arrows pointing right (\u203A, \xBB, \u23ED, often in a circle), sometimes after a countdown. Tap ONLY that mark (say "close" or "skip" in evidence); if none is shown yet, answer "wait" with ms 3000. Never tap anything else on it (no install, no "Get", no offer, no link).`);
     }
     if (mission.type === "game_level" && !ctx.s.questsDone && !questsPay(mission)) ctx.s.questsDone = true;
     if (mission.type === "game_level" && !ctx.s.questsDone) {
@@ -7401,7 +7757,9 @@ var MissionRunner = class {
       try {
         const t0 = d.now();
         ctx.stats.aiCalls++;
-        let thinking = true, fresh = null;
+        let thinking = true, fresh = null, left = false;
+        const plan = new AbortController(), onStop = () => plan.abort();
+        signal.addEventListener("abort", onStop, { once: true });
         const watch = (async () => {
           while (thinking && !signal.aborted) {
             await new Promise((r) => setTimeout(r, PREFETCH_GAP_MS));
@@ -7411,16 +7769,44 @@ var MissionRunner = class {
             } catch {
               break;
             }
+            if (fresh.package && obs.package && fresh.package !== obs.package) {
+              left = true;
+              plan.abort();
+              break;
+            }
+            if (fresh.frame && !(obs.frame && freecashPopup(obs.frame)) && freecashPopup(fresh.frame)) {
+              left = true;
+              plan.abort();
+              break;
+            }
+            if (wordYatzy && fresh.frame && drawnOnly(fresh)) {
+              const k = wyScreen(fresh.frame)?.kind;
+              if (k && k !== "between" && k !== (obs.frame ? wyScreen(obs.frame)?.kind : void 0)) {
+                left = true;
+                plan.abort();
+                break;
+              }
+            }
           }
         })();
         try {
-          raw = await Promise.race([d.planner(input, signal), new Promise((_, reject) => signal.addEventListener("abort", () => reject(new Stopped("Stopped while planning.")), { once: true }))]);
+          raw = await Promise.race([
+            d.planner(input, plan.signal),
+            new Promise((_, reject) => signal.addEventListener("abort", () => reject(new Stopped("Stopped while planning.")), { once: true })),
+            new Promise((_, reject) => plan.signal.addEventListener("abort", () => {
+              if (left) reject(new Error("Another app came to the front."));
+            }, { once: true }))
+          ]);
+        } catch (e) {
+          if (!left || e instanceof Stopped) throw e;
         } finally {
           thinking = false;
           await watch;
+          signal.removeEventListener("abort", onStop);
         }
         ctx.stats.planMs.push(d.now() - t0);
         ctx.s.prefetched = fresh;
+        if (left) return { wait: 0, goal: fresh && fresh.package === obs.package ? "A screen Falcor knows came up; handling it at once." : "Another app came to the front; Falcor AI stopped planning." };
       } catch (e) {
         if (e instanceof Stopped) throw e;
         return { handoff: "ai_unavailable", reason: why + " Falcor AI did not answer (" + (e instanceof Error ? e.message : "error") + ")." };
@@ -7456,6 +7842,8 @@ var MissionRunner = class {
         if (plan.confidence < (mission.type === "game_level" ? 0.4 : 0.6) || !action) return { handoff: "low_confidence", reason: why + " Falcor AI is not sure (" + Math.round(plan.confidence * 100) + "%)." };
         const node = action.kind === "tap_node" ? find(obs.nodes, action.selector) : null;
         if (tried.includes(moveLabel(obs, action))) throw new ActionError(moveLabel(obs, action) + " was already tried on this screen and did nothing; pick a different move.");
+        if (wordYatzy && drawnOnly(obs) && obs.frame && action.kind === "tap" && action.x > 0.7 && action.x < 0.86 && action.y > 0.18 && action.y < 0.5 && !greenBoxes(obs.frame).some((b) => b.x > 0.72 && b.x < 0.86 && Math.abs(b.y - action.y) < 0.04))
+          throw new ActionError("there is no green score box at " + Math.round(action.y * 100) + '% down in the YOU column: the bar does not spell a word that fits an open row, or that word is already placed (a white box). Never tap a white or empty score box. With loose letters left, clear the bar (method "clear" on its last tile) and spell a real word that fits an open row; with no loose letters left, press ROLL.');
         if (node && ctx.avoid.includes((node.text || node.desc).trim().toLowerCase())) throw new ActionError('the guide or the tips from the web say never to press "' + (node.text || node.desc).trim() + '".');
         if (node && action.kind === "tap_node" && mission.type === "daily_checkin" && isClaim(node)) return { act: action, expect: { kind: "claimed" }, goal: 'Falcor AI: claim "' + (node.text || node.desc).trim() + '"', intent: "claim", learn: action.selector };
         if (onAd && action.kind !== "wait" && !(action.kind === "key" && action.key === "BACK") && !/\b(?:x|close|closes|closing|skip|skips|dismiss|arrows?)\b|[×⏭✕✖›»]/i.test(plan.evidence + " " + plan.expectedEffect))
@@ -7605,6 +7993,8 @@ var Orchestrator = class _Orchestrator {
   d;
   active = /* @__PURE__ */ new Map();
   // deviceId → running mission
+  // deviceId → the current (or last) run's counts as they grow, for the performance panel
+  perf = /* @__PURE__ */ new Map();
   procedures;
   constructor(deps, procedures) {
     this.d = deps;
@@ -7725,7 +8115,8 @@ var Orchestrator = class _Orchestrator {
           await store.saveMission(cur);
         }
       },
-      onLog: (line) => this.emit({ type: "log", deviceId, missionId: m.id, line, at: d.now() })
+      onLog: (line) => this.emit({ type: "log", deviceId, missionId: m.id, line, at: d.now() }),
+      onStats: (stats) => this.perf.set(deviceId, { stats, startedAt: d.now(), app: m.appLabel })
     });
     let result;
     try {
@@ -15539,6 +15930,31 @@ var HubEngine = class _HubEngine {
           const st = this.steps.get(v.id);
           return this.orchestrator.running(v.id) && st && now - st.at < 12e4 ? st.line : null;
         })(),
+        // The current (or last) run measured as it goes: the Current activity window's performance line.
+        perf: (() => {
+          const p = this.orchestrator.perf.get(v.id);
+          if (!p) return null;
+          const s2 = p.stats, ms2 = s2.planMs;
+          return {
+            running: !!this.orchestrator.running(v.id),
+            app: p.app,
+            minutes: Math.max(0, (this.orchestrator.running(v.id) || !s2.ms ? now - p.startedAt : s2.ms) / 6e4),
+            aiCalls: s2.aiCalls,
+            aiAvgMs: ms2.length ? Math.round(ms2.reduce((a, b) => a + b, 0) / ms2.length) : null,
+            aiMaxMs: ms2.length ? Math.max(...ms2) : null,
+            local: s2.local || 0,
+            burst: s2.burst || 0,
+            words: s2.words || 0,
+            adMs: s2.adMs || 0,
+            noEffect: s2.noEffect,
+            replans: s2.replans,
+            // (the phone's looks since the app started: their average time, how many took the window's video frame, and the UI dumps)
+            looks: (() => {
+              const l = (this.found.get(v.id)?.driver).looks;
+              return l && l.n ? { n: l.n, avgMs: Math.round(l.ms / l.n), video: l.video, dumps: l.dumps, dumpAvgMs: l.dumps ? Math.round(l.dumpMs / l.dumps) : null } : null;
+            })()
+          };
+        })(),
         teaching: this.teach?.deviceId === v.id ? { name: this.teach.session.rec.name, state: this.teach.session.state, elapsedMs: this.teach.session.elapsed(), kind: this.teach.kind, leftMs: this.teachStatus()?.leftMs ?? null } : null,
         sandbox: (() => {
           const r = this.sandbox?.live().find((x) => x.deviceId === v.id);
@@ -15870,6 +16286,8 @@ var ADB = {
   uiDump: (s2) => ["-s", s2, "exec-out", "uiautomator dump /dev/tty"],
   uiDumpFile: (s2) => ["-s", s2, "shell", "uiautomator dump /sdcard/falcor_ui.xml >/dev/null && cat /sdcard/falcor_ui.xml && rm /sdcard/falcor_ui.xml"],
   screencap: (s2) => ["-s", s2, "exec-out", "screencap -p"],
+  // The raw pixels (a short header, then RGBA): the phone sends them in a third of the time its own PNG takes.
+  screencapRaw: (s2) => ["-s", s2, "exec-out", "screencap"],
   packages: (s2) => ["-s", s2, "shell", "pm list packages -3"],
   packageInfo: (s2, pkg) => {
     if (!validPackage(pkg)) throw new ActionError("Invalid package.");
@@ -15958,6 +16376,8 @@ async function listDevices(exec) {
 }
 var INFO_MS = 500;
 var SURFACE_MS = 1e4;
+var STORE = /\bcom\.android\.vending\b/;
+var ENGINE_ACTIVITY = /com\.unity3d\.player\.|UnityPlayer(?:Game)?Activity\b|cocos2dx|com\.epicgames\.unreal|org\.godotengine|org\.libsdl\.app|\bAndroidApplication\b|\bNativeActivity\b|\bGameActivity\b/;
 function pictureOnly(nodes, w, h) {
   return !nodes || !nodes.length || drawnOnly({ nodes, width: w, height: h });
 }
@@ -16022,14 +16442,35 @@ var AdbDriver = class {
   // stillness that never comes: for SURFACE_MS after such a dump, looks at that app reuse it and read only the picture.
   surface = null;
   drawn = null;
+  // Game engine activities seen as a picture, by app, activity and rotation, for two minutes after the last dump.
+  surfaces = /* @__PURE__ */ new Map();
+  knownSurface(pkg, activity, rotation) {
+    const s2 = this.surfaces.get(pkg + "/" + activity + "/" + rotation);
+    if (!s2) return null;
+    if (this.now() >= s2.until) {
+      this.surfaces.delete(pkg + "/" + activity + "/" + rotation);
+      return null;
+    }
+    return s2;
+  }
   lastSurface = null;
   lastActivity = "";
+  fromAd = false;
   async dump(picture) {
+    const t0 = Date.now();
+    try {
+      return await this.dumpNow(picture);
+    } finally {
+      this.looks.dumps++;
+      this.looks.dumpMs += Date.now() - t0;
+    }
+  }
+  async dumpNow(picture) {
     let xml = "";
     for (let i = 0; i < (picture ? 1 : 3) && !/<hierarchy[\s>]/.test(xml); i++) {
       if (i) await new Promise((r) => setTimeout(r, 350));
       try {
-        xml = await this.sh(i === 1 ? ADB.uiDumpFile(this.serial) : ADB.uiDump(this.serial), picture ? 6e3 : 2e4);
+        xml = await this.sh(i === 1 ? ADB.uiDumpFile(this.serial) : ADB.uiDump(this.serial), picture ? 4e3 : 2e4);
       } catch (e) {
         if (e instanceof DeviceError && e.code !== "OFFLINE" && e.code !== "TIMEOUT") throw e;
       }
@@ -16037,35 +16478,77 @@ var AdbDriver = class {
     const start = xml.indexOf("<?xml") >= 0 ? xml.indexOf("<?xml") : xml.indexOf("<hierarchy"), end = xml.lastIndexOf("</hierarchy>");
     return start >= 0 && end > start ? parseUiXml(xml.slice(start, end + "</hierarchy>".length)) : null;
   }
+  // The window's decoded video frame, when the mirror runs (main.ts sets it): a look's picture in ~50 ms instead of a
+  // screen capture over USB (~0.75 s raw, ~2.1 s as the phone's own PNG on the CPH2513). Null when there is none.
+  frameSource = null;
+  // The picture a look needs, at most 540 wide (the planner reads a 480-wide copy and every local check reads fractions):
+  // the window's video frame, else the phone's raw pixels made a PNG here, else the phone's own PNG.
   async capture() {
+    const fast = this.frameSource ? await this.frameSource().catch(() => null) : null;
+    if (fast && fast.png.length > 100) {
+      this.looks.video++;
+      return fast;
+    }
+    return this.shoot(540);
+  }
+  // (a phone whose raw capture Falcor cannot read, once seen, gets its own PNG asked for straight away)
+  rawBad = false;
+  async shoot(maxW) {
+    if (!this.rawBad) try {
+      const raw = (await this.exec([...ADB.screencapRaw(this.serial)], { binary: true, timeoutMs: 2e4 })).stdout;
+      const r = rawToPng(raw, maxW);
+      if (r) return r;
+      this.rawBad = true;
+    } catch {
+    }
     try {
       const png = (await this.exec([...ADB.screencap(this.serial)], { binary: true, timeoutMs: 2e4 })).stdout;
-      return png.length > 1e3 && png.subarray(1, 4).toString() === "PNG" ? png : null;
+      return png.length > 1e3 && png.subarray(1, 4).toString() === "PNG" ? { png, width: png.readUInt32BE(16), height: png.readUInt32BE(20) } : null;
     } catch {
       return null;
     }
   }
+  // How the looks went since the app started, for the Current activity window's performance line: how many, their
+  // total time, how many took the window's video frame, and the UI dumps with their time.
+  looks = { n: 0, ms: 0, video: 0, dumps: 0, dumpMs: 0 };
   // The phone's state, its controls and its picture are read at the same time (one waits for the slowest, not all three).
   async observe(opts = {}) {
+    const t0 = Date.now();
+    try {
+      return await this.observeNow(opts);
+    } finally {
+      this.looks.n++;
+      this.looks.ms += Date.now() - t0;
+    }
+  }
+  async observeNow(opts = {}) {
     const sf = this.surface && this.now() < this.surface.until ? this.surface : null;
     if (!sf) this.surface = null;
     const infoP = this.info(), pngP = opts.frame ? this.capture() : Promise.resolve(null);
     const known = this.drawn && this.surface === null && this.lastSurface?.pkg === this.drawn.pkg ? this.lastSurface : null;
-    const dumpP = sf ? null : this.dump(!!known || AD_ACTIVITY.test(this.lastActivity));
-    dumpP?.catch(() => null);
     pngP.catch(() => null);
-    const info = await infoP;
+    let info = this.fromAd ? await infoP : null;
+    const pictureOnlyNow = (a) => AD_ACTIVITY.test(a) && !/gms\.ads/i.test(a) || this.fromAd && !/gms\.ads/i.test(a);
+    const act = (info ? info.activity : this.lastActivity) || "", adNow = AD_ACTIVITY.test(act);
+    const dumpP = sf ? null : pictureOnlyNow(act) ? Promise.resolve(null) : this.dump(!!known || adNow);
+    dumpP?.catch(() => null);
+    info ||= await infoP;
     this.lastActivity = info.activity || "";
+    this.fromAd = AD_ACTIVITY.test(this.lastActivity) || this.fromAd && STORE.test(this.lastActivity);
     if (!info.connected) throw new DeviceError("The phone is not connected.", "DISCONNECTED");
     if (!info.authorized) throw new DeviceError("USB debugging is not authorized.", "UNAUTHORIZED");
-    const nodes = dumpP ? await dumpP : sf && sf.pkg === info.foreground && sf.rotation === info.rotation ? sf.nodes : await this.dump(false);
-    if (dumpP || !sf || sf.pkg !== info.foreground || sf.rotation !== info.rotation) {
-      const pic = !!info.foreground && pictureOnly(nodes, this.lastW, this.lastH), seen = this.drawn;
+    const activity = info.activity || "", same = !!sf && sf.pkg === info.foreground && sf.rotation === info.rotation;
+    const back = !same || sf.activity !== activity ? this.knownSurface(info.foreground, activity, info.rotation) : null;
+    if (back) this.surface = back;
+    const nodes = pictureOnlyNow(activity) ? null : dumpP ? await dumpP : back ? back.nodes : same && sf.activity === activity ? sf.nodes : await this.dump(same);
+    if (dumpP || !same || sf.activity !== activity) {
+      const pic = !!info.foreground && pictureOnly(nodes, this.lastW, this.lastH), seen = this.drawn, engine = ENGINE_ACTIVITY.test(activity);
       this.drawn = pic ? seen && seen.pkg === info.foreground ? seen : { pkg: info.foreground, at: this.now() } : null;
-      const again = pic && this.lastSurface?.pkg === info.foreground ? Math.min(6e4, this.lastSurface.span * 2) : SURFACE_MS;
-      this.surface = pic && seen && seen.pkg === info.foreground && (this.now() - seen.at >= 2e3 || this.lastSurface?.pkg === info.foreground) ? { pkg: info.foreground, rotation: info.rotation, until: this.now() + again, nodes } : null;
+      const again = pic && this.lastSurface?.pkg === info.foreground ? Math.min(engine ? 12e4 : 6e4, this.lastSurface.span * 2) : engine ? 3e4 : SURFACE_MS;
+      this.surface = pic && (engine || seen && seen.pkg === info.foreground && (this.now() - seen.at >= 2e3 || this.lastSurface?.pkg === info.foreground)) ? { pkg: info.foreground, rotation: info.rotation, activity, until: this.now() + again, nodes } : null;
       if (this.surface) this.lastSurface = { pkg: info.foreground, span: again };
       else if (!pic || this.lastSurface?.pkg !== info.foreground) this.lastSurface = null;
+      if (this.surface && engine) this.surfaces.set(info.foreground + "/" + activity + "/" + info.rotation, { ...this.surface, until: this.now() + 12e4 });
     }
     let dims = nodes ? uiBounds(nodes) : null;
     if (!dims) {
@@ -16073,7 +16556,7 @@ var AdbDriver = class {
       dims = this.size && (info.rotation % 2 ? { w: this.size.h, h: this.size.w } : this.size);
     }
     const png = await pngP;
-    const frame = png ? { mime: "image/png", data: png.toString("base64"), width: dims?.w || 0, height: dims?.h || 0 } : null;
+    const frame = png ? { mime: "image/png", data: png.png.toString("base64"), width: png.width || dims?.w || 0, height: png.height || dims?.h || 0 } : null;
     const o = makeObservation({ id: this.deviceId + ":o" + ++this.seq + ":" + this.now().toString(36), deviceId: this.deviceId, at: this.now(), package: info.foreground, activity: info.activity || "", rotation: info.rotation & 3, width: dims?.w || 1080, height: dims?.h || 2340, locked: info.locked, nodes, frame });
     this.lastW = o.width;
     this.lastH = o.height;
@@ -16126,10 +16609,15 @@ var AdbDriver = class {
   }
   // Only the picture, for a live mirror (observe() also reads the screen's controls, which takes a second or more).
   // Return Android capture bytes, or null when no usable PNG was supplied.
+  // (full size: the picture mirror and Teach's pictures keep every pixel; made from the raw capture here, ~0.8 s)
   async screencap() {
-    const png = (await this.exec([...ADB.screencap(this.serial)], { binary: true, timeoutMs: 1e4 })).stdout;
-    if (png.length < 1e3 || png.subarray(1, 4).toString() !== "PNG") return null;
-    return { mime: "image/png", data: png, width: png.readUInt32BE(16), height: png.readUInt32BE(20) };
+    const r = await this.shoot(1e5);
+    return r ? { mime: "image/png", data: r.png, width: r.width, height: r.height } : null;
+  }
+  // A quick picture alone for the runner's glances (an ad's skip arrow): the video frame or a half-size capture.
+  async glimpse() {
+    const r = await this.capture();
+    return r ? { mime: "image/png", data: r.png, width: r.width, height: r.height } : null;
   }
   // The battery level in percent (read only), or null when the phone does not say.
   async battery() {
@@ -20537,7 +21025,7 @@ async function startVideo(o) {
 
 // src/main.ts
 var where = globalThis.falcorHub || { appRoot: (0, import_node_path8.join)(__dirname, ".."), packRoot: (0, import_node_path8.join)(__dirname, ".."), packVersion: null, installVersion: import_electron2.app.getVersion(), packsDir: (0, import_node_path8.join)(import_electron2.app.getPath("userData"), "packs") };
-var VERSION = "0.21.17";
+var VERSION = "0.21.22";
 var simulated = process.argv.includes("--simulated");
 if (!import_electron2.app.requestSingleInstanceLock()) {
   if (where.packVersion) {
@@ -20735,6 +21223,33 @@ function openWindow() {
     videos.clear();
   });
 }
+var frameReq = 0;
+var frameWaits = /* @__PURE__ */ new Map();
+import_electron2.ipcMain.on("frameTaken", (_e, a) => {
+  const r = a && typeof a === "object" ? a : null;
+  const done = r && frameWaits.get(Number(r.req));
+  if (!r || !done) return;
+  frameWaits.delete(Number(r.req));
+  const png = r.png instanceof ArrayBuffer ? Buffer.from(r.png) : r.png instanceof Uint8Array ? Buffer.from(r.png.buffer, r.png.byteOffset, r.png.byteLength) : null;
+  done(png && png.length > 100 ? { png, width: Number(r.width) || 0, height: Number(r.height) || 0, at: Number(r.at) || 0 } : null);
+});
+function windowFrame(deviceId) {
+  return new Promise((resolve) => {
+    if (!win || win.isDestroyed() || !videos.has(deviceId)) {
+      resolve(null);
+      return;
+    }
+    const req = ++frameReq, t = setTimeout(() => {
+      frameWaits.delete(req);
+      resolve(null);
+    }, 400);
+    frameWaits.set(req, (v) => {
+      clearTimeout(t);
+      resolve(v);
+    });
+    win.webContents.send("frameWanted", { req, deviceId });
+  });
+}
 var need = () => {
   if (!hub) throw new Error("Starting\u2026");
   return hub;
@@ -20835,6 +21350,7 @@ var handlers = {
     if (simulated || !drv.serial) throw new Error("The video mirror needs a real phone over USB.");
     if (!p.adb || !p.scrcpyServer) throw new Error("scrcpy is missing from this install.");
     videos.get(id)?.stop();
+    const src2 = () => windowFrame(id), hook = drv;
     const v = await startVideo({
       adbPath: p.adb,
       exec: adbExec(p.adb),
@@ -20847,11 +21363,13 @@ var handlers = {
       },
       onEnd: (why) => {
         if (videos.get(id) === v) videos.delete(id);
+        if (hook.frameSource === src2) hook.frameSource = null;
         win?.webContents.send("video", { deviceId: id, type: "end", error: why });
         push();
       }
     });
     videos.set(id, v);
+    if ("frameSource" in hook) hook.frameSource = src2;
     return true;
   },
   videoStop: (a) => {
