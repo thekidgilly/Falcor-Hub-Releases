@@ -114,7 +114,8 @@
       <section class="win" data-win="queue" aria-label="Today's queue">
         <header class="winbar"><span class="wintitle">// TODAY'S QUEUE</span><span class="winx muted qsum" id="qsum"></span></header>
         <div class="winbody fill"><div class="queue" id="queuepanel">
-          <div class="qbar"><div class="seg" id="qviews"><button data-v="today" class="on">Today</button><button data-v="tomorrow">Tomorrow</button><button data-v="upcoming">Upcoming</button><button data-v="history">History</button></div><span class="grow"></span><button class="small" id="qtoggle" title="The queue runs what you schedule (games, playbooks, creations) at its time, one after another. Pause holds everything until you resume."><span class="led"></span><span id="qtogglelabel">Pause queue</span></button><button class="small icon" id="qadd" title="Add an activity to the queue (a game, a task or a sequence)"><svg class="ico"><use href="#i-plus"></use></svg></button></div>
+          <div class="ticker" id="qticker" role="status" aria-live="polite"><span></span></div>
+          <div class="qbar"><div class="seg" id="qviews"><button data-v="today" class="on">Today</button><button data-v="tomorrow">Tomorrow</button><button data-v="upcoming">Upcoming</button><button data-v="history">History</button></div><button class="small" id="qtoggle" title="Scheduled runs (games, playbooks, creations) start by themselves at their time, one after another. Pause schedule stops them starting by themselves until you resume; Play now on a game still plays it."><span class="led"></span><span id="qtogglelabel">Pause schedule</span></button><button class="small icon" id="qadd" title="Add an activity to the queue (a game, a task or a sequence)"><svg class="ico"><use href="#i-plus"></use></svg></button></div>
           <ol class="qlist" id="qlist"></ol>
           <div class="qnotes" id="qnotes"></div>
         </div></div>

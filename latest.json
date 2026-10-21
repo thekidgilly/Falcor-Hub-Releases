@@ -1,17 +1,17 @@
 {
-  "version": "0.21.19",
-  "notes": "",
-  "publishedAt": "2026-10-21T18:45:32.401Z",
+  "version": "0.21.20",
+  "notes": "^Faster^ play:^ Falcor^ looks^ at^ the^ phone^ through^ the^ live^ video^ ^(a^ quarter^ of^ a^ second^ instead^ of^ two^),^ reads^ screens^ once,^ and^ dumps^ a^ game's^ controls^ far^ less^ often.^ Word^ Yatzy:^ ROLL^ between^ rounds,^ the^ Freecash^ pop-up,^ the^ round^ banner,^ matchmaking^ and^ the^ Spin^ Wheel^ are^ handled^ without^ the^ AI;^ an^ opponent^ who^ has^ not^ moved^ in^ a^ minute^ is^ left^ for^ another^ match;^ more^ ad^ end^ cards^ close^ by^ themselves;^ a^ Slow^ step^ line^ and^ a^ Look^ line^ in^ Current^ activity^ show^ where^ time^ goes.^",
+  "publishedAt": "2026-10-21T20:07:40.201Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "b84973438d76a4f614941782cf918ab04183a04afbbf3114cae4db934f02889a",
-      "size": 1140727
+      "sha256": "13b0565c616d53a3333f2326091a2096ca9ebbe2c267020de5c8a30b405fd466",
+      "size": 1154824
     },
     {
       "path": "dist/preload.js",
-      "sha256": "789106cc302a5e34e2dfe36f61b176036a97ce398a2cfec25f772d381b1604c2",
-      "size": 1724
+      "sha256": "0e77a3c0106647afa41b4dc68da1364f33c8507be9e0e4f23ea5ec96c4575187",
+      "size": 2033
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "c2e2f10372145a156993fae9f2a66814112b480cae1c6a892fe768ced3cf00d2",
-      "size": 137922
+      "sha256": "7b9fbcf0364ef7607c5c9f17d8e9c278a395a95336f9268fe7023990dd2592c5",
+      "size": 139344
     },
     {
       "path": "ui/app.png",
@@ -145,8 +145,8 @@
     },
     {
       "path": "ui/queue.js",
-      "sha256": "a2c0062ee1449dbc0c6c28bec115b00ba8c47080a5dcddfe29232091bc3b7fcc",
-      "size": 53266
+      "sha256": "0d34f9c7d22451d60a040904a0837894ff9867701b450c676c6641ca8febeebe",
+      "size": 53618
     },
     {
       "path": "ui/sandbox.js",
