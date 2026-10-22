@@ -942,7 +942,7 @@
     if (!force || !b.contains(document.activeElement)) SB.homeDrawn = SB.home; else return;
     if (SB.home === 'create') {
       newSheet(b);
-      b.insertAdjacentHTML('afterbegin', '<div class="sbabout"><p class="eyebrow">// THE SANDBOX</p><h2>Line up blocks, and Falcor plays them on the phone</h2><p class="muted">Taps, swipes, waits, apps and checks, one after another, through the same safety gate as everything Falcor does: never a price, a purchase or an ad, and you can stop it at any moment. Start blank, from the example or a preset, or press Teach in the editor and show it on the mirror.</p></div>');
+      // (the tab's own heading, // SANDBOX, introduces it: no second heading here)
     } else openSheet(b);
   }
   $('sbhometabs').onclick = e => { const t = e.target.closest('[data-home]'); if (t) goHome(t.dataset.home); };

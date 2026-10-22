@@ -45,9 +45,9 @@ numbers();
 const TABS = ['phone', 'games', 'sandbox', 'stats', 'settings'];
 const PAGES = [...TABS, 'tasks', 'falcor', 'knowledge'], LIT = {tasks: 'games'};
 let dockOpen = false; // the floating Falcor's small chat is open
-// An app's guide (Knowledge) has no tab of its own: it opens from its game, a task, the chat or Settings → Knowledge,
+// An app's guide (Knowledge) has no tab of its own: it opens from its game, a task or the chat,
 // lights the tab it came from, and Back returns there.
-let learnFrom = {tab: 'settings', sub: 'knowledge', pkg: null};
+let learnFrom = {tab: 'games', sub: null, pkg: null};
 function go(name, sub) {
   if (!PAGES.includes(name)) return;
   const changed = name !== tab;
@@ -125,7 +125,7 @@ function render() {
   if (tab === 'knowledge') renderLearn();
   if (tab === 'stats' && window.renderActivity) renderActivity();
   if (tab === 'tasks' && window.renderCreations) renderCreations();
-  if (tab === 'settings') { renderSettings(); renderKnowledgeList(); }
+  if (tab === 'settings') renderSettings();
 }
 function setLed(id, state) { const l = $(id); if (l) l.className = 'led' + (state ? ' ' + state : ''); }
 function setBadge(id, n) { const b = $(id); b.hidden = !n; text(b, n || ''); }
@@ -954,7 +954,14 @@ $('gpofferedit').onclick = () => { const o = (S.games.find(g => g.pkg === gamePk
 $('gpofferrefresh').onclick = () => { const o = (S.games.find(g => g.pkg === gamePkg)?.earning || [])[0]; if (o) void capStart(o.id); };
 $('gamegrid').onclick = e => { if (e.target.closest('[data-newgame]')) return openDrawer(); const t = e.target.closest('.gametile'); if (t && /^sequence:/.test(t.dataset.key || '')) { go('tasks'); if (window.crShow) crShow(t.dataset.key.slice(9)); return; } if (t) { gamePkg = t.dataset.key; renderGames(); $('gamepage').scrollIntoView({block: 'start'}); } };
 $('gamenew').onclick = () => openDrawer();
-$('gameback').onclick = () => { gamePkg = null; renderGames(); };
+$('gameback').onclick = () => { gamePkg = null; gpDrawer(false); renderGames(); };
+// A game's Options: the details that need not fill the page (reward ladder, earnings, tasks, notes, lessons, research),
+// in a drawer from the right. Close, Escape or a click beside it closes it.
+function gpDrawer(on) { $('gpdrawer').hidden = !on; if (on) { const g = (S.games || []).find(x => x.pkg === gamePkg); text($('gpdrawername'), g ? g.name : 'More about this game'); P.motion.enter($('gpdrawer').firstElementChild); } }
+$('gpoptions').onclick = () => gpDrawer($('gpdrawer').hidden);
+$('gpdrawerclose').onclick = () => gpDrawer(false);
+$('gpdrawer').addEventListener('click', e => { if (e.target === $('gpdrawer')) gpDrawer(false); });
+window.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('gpdrawer').hidden) gpDrawer(false); });
 $('gpopen').onclick = async () => { await call('openApp', {deviceId, pkg: gamePkg}); go('phone'); toast('Opened. You have control: play it on the mirror, or press Release when you are done.'); };
 $('gpteach').onclick = async () => {
   const g = S.games.find(x => x.pkg === gamePkg); if (!g) return;
@@ -1323,7 +1330,8 @@ $('msgs').addEventListener('click', async e => {
 });
 function followLink(t, ref) {
   if (t === 'knowledge') return openGuide(ref || null);
-  if (t === 'settings') return go('settings', ['updates', 'knowledge'].includes(ref) ? ref : undefined);
+  if (t === 'settings' && ref === 'knowledge') return go('games');   // (Knowledge lives on each game's page now)
+  if (t === 'settings') return go('settings', ref === 'updates' ? ref : undefined);
   go(t);
   if (t === 'tasks' && window.crShow) crShow(ref);
   if (t === 'tasks' && ref) setTimeout(() => { const n = document.querySelector('.task[data-key="' + ref + '"]'); if (n) { n.scrollIntoView({block: 'center'}); n.classList.remove('flash'); void n.offsetWidth; n.classList.add('flash'); } }, 80);
@@ -1362,34 +1370,21 @@ $('ctxbody').onclick = e => { const l = e.target.closest('[data-link]'); if (l) 
 let learnPkg = null, learnSig = '', L = null, editing = false;
 const SRC = v => '<span class="dot ' + (v === 'seen' ? 'seen' : 'ai') + '" title="' + (v === 'seen' ? 'Seen on screen' : 'Worked out by Falcor AI') + '"></span> ';
 const UNIT = u => /coin/i.test(u) ? 'coin' : /gem/i.test(u) ? 'gem' : /cash|usd|\$|dollar/i.test(u) ? 'cash' : /gift/i.test(u) ? 'gift' : 'reward';
-// Settings → Knowledge: every app Falcor learned; a card opens its guide.
-function renderKnowledgeList() {
-  const list = S.knowledge || [];
-  $('learnnone').hidden = list.length > 0;
-  keyed($('apps'), list, k => k.pkg, () => P.el('<button class="panel appcard"><span class="ai">' + icon('book') + '</span><div><b></b><div class="m"></div></div><div class="klevel"></div></button>'), (n, k) => {
-    text(n.querySelector('b'), k.name);
-    const game = (S.games || []).some(g => g.pkg === k.pkg);
-    text(n.querySelector('.m'), k.sessions + ' session' + (k.sessions === 1 ? '' : 's') + ' · last ' + new Date(k.lastSessionAt).toLocaleDateString() + (k.hasGuide ? '' : ' · no guide yet') + (game ? ' · in Games' : ''));
-    const lvl = Math.min(10, k.sessions * 2 + (k.hasGuide ? 3 : 0) + (k.by && k.by !== 'local' ? 2 : 0));
-    htmlOnce(n.querySelector('.klevel'), Array.from({length: 10}, (_, i) => '<i class="' + (i < lvl ? 'on' : '') + '"></i>').join(''));
-    n.title = 'Open the guide · knowledge level ' + lvl + ' of 10';
-  });
-}
-$('apps').onclick = e => { const c = e.target.closest('.appcard'); if (c) openGuide(c.dataset.key, {tab: 'settings', sub: 'knowledge', pkg: null}); };
-// An app's guide, opened from where the owner was (its game, a task, the chat or Settings).
+// An app's guide, opened from where the owner was (its game, a task or the chat). Every app Falcor learned has a card
+// in the Library, whose page shows What Falcor knows: there is no separate list of them.
 function openGuide(pkg, from) {
-  if (!pkg) { go('settings', 'knowledge'); return; }
+  if (!pkg) { go('games'); return; }
   if (tab !== 'knowledge') learnFrom = from || {tab: tab === 'games' ? 'games' : tab, sub: tab === 'settings' ? sub : null, pkg: tab === 'games' ? gamePkg : null};
   if (pkg !== learnPkg) { learnPkg = pkg; learnSig = ''; editing = false; }
   go('knowledge');
 }
-$('learnback').onclick = () => { const f = learnFrom; if (f.tab === 'games') gamePkg = f.pkg; go(f.tab || 'settings', f.sub || undefined); };
+$('learnback').onclick = () => { const f = learnFrom; if (f.tab === 'games') gamePkg = f.pkg; go(f.tab || 'games', f.sub || undefined); };
 function renderLearn() {
   const list = S.knowledge;
   if (learnPkg && !list.some(k => k.pkg === learnPkg)) learnPkg = null;
-  if (!learnPkg) { go(learnFrom.tab === 'games' ? 'games' : 'settings', learnFrom.tab === 'games' ? undefined : 'knowledge'); return; }
+  if (!learnPkg) { go(learnFrom.tab && learnFrom.tab !== 'settings' ? learnFrom.tab : 'games'); return; }
   const f = learnFrom, game = f.tab === 'games' && (S.games || []).find(g => g.pkg === f.pkg);
-  text($('learnbackname'), game ? 'Back to ' + game.name : f.tab === 'tasks' ? 'Back to Creations' : f.tab === 'falcor' ? 'Back to Falcor' : f.tab === 'phone' ? 'Back to Hub' : f.tab === 'sandbox' ? 'Back to Sandbox' : 'Back to Knowledge');
+  text($('learnbackname'), game ? 'Back to ' + game.name : f.tab === 'tasks' ? 'Back to Creations' : f.tab === 'falcor' ? 'Back to Falcor' : f.tab === 'phone' ? 'Back to Hub' : f.tab === 'sandbox' ? 'Back to Sandbox' : 'Back to Library');
   $('learnempty').hidden = true;
   const sig = JSON.stringify(list.find(k => k.pkg === learnPkg) || null);
   if (sig !== learnSig && !editing) { learnSig = sig; void loadApp(); }

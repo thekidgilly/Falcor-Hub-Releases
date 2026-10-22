@@ -20663,7 +20663,7 @@ Nothing here talks to a website. The phone is driven over USB from your computer
   - Only while you are there to watch: Falcor.Hub in front, the computer used in the last 5 minutes, or the phone app open. Otherwise the offer is passed by and the activity says why.\r
   - Ad networks and some games may treat ads started this way as invalid; that risk is yours for that game.\r
 - **Edit a task** with its pencil button in Other automations: what it does, the target level, the daily reset hour, the reward note and a signup's details. Changing what it does sends it back to Needs review.\r
-- **Knowledge (guides).** Open a guide from its game, its task (the book button), the chat, or **Settings \u2192 Knowledge**; **Back** returns where you were.\r
+- **Knowledge (guides).** Open a guide from its game's page in the Library (What Falcor knows \u2192 Read the guide), its task (the book button) or the chat; **Back** returns where you were.\r
   - Every app Falcor learned, with its guide: summary, objectives, reward tiers, screens, step-by-step recipes and watch-outs. Each part says **seen** or **AI**.\r
   - Press **Edit** to correct the guide, or delete pictures you don't want kept. Rename, Export or Delete each app.\r
   - Ask Falcor about a guide (the guide's chat button opens his chat focused on it). A task it drafts lands in Other automations as *Needs review*; nothing runs until you approve it.\r
@@ -21326,7 +21326,7 @@ async function startVideo(o) {
 
 // src/main.ts
 var where = globalThis.falcorHub || { appRoot: (0, import_node_path8.join)(__dirname, ".."), packRoot: (0, import_node_path8.join)(__dirname, ".."), packVersion: null, installVersion: import_electron2.app.getVersion(), packsDir: (0, import_node_path8.join)(import_electron2.app.getPath("userData"), "packs") };
-var VERSION = "0.21.30";
+var VERSION = "0.21.35";
 var simulated = process.argv.includes("--simulated");
 if (!import_electron2.app.requestSingleInstanceLock()) {
   if (where.packVersion) {

@@ -47,6 +47,7 @@
 <main>
   <!-- PHONE -->
   <section data-pane="phone" class="pane">
+    <div class="crhead pagehead"><div><p class="eyebrow">// HUB</p><h2>The Mainframe</h2></div></div>
     <div class="panel setup" id="setup" hidden>
       <p class="eyebrow">// PLUG IN</p>
       <h2>Plug in your phone</h2>
@@ -160,6 +161,7 @@
   <!-- SANDBOX -->
   <section data-pane="sandbox" class="pane sandbox" hidden>
     <div class="sbhome" id="sbhome" hidden>
+      <div class="crhead pagehead"><div><p class="eyebrow">// SANDBOX</p><h2>Build and teach your runs</h2><p class="muted small">Build runs from blocks, or press Teach and show Falcor on the phone.</p></div></div>
       <div class="sbhometop"><div class="seg" id="sbhometabs"><button data-home="create"><svg class="ico"><use href="#i-plus"></use></svg>Create</button><button data-home="mine"><svg class="ico"><use href="#i-sandbox"></use></svg>Drafts <span id="sbminecount"></span></button></div></div>
       <div class="sbhomebody" id="sbhomebody"></div>
     </div>
@@ -267,7 +269,7 @@
   <!-- GAMES -->
   <section data-pane="games" class="pane" hidden>
     <div id="gamesview">
-      <div class="toolrow"><div><p class="eyebrow">// LIBRARY</p><h2>Your games and apps</h2></div><span class="grow"></span><button class="primary" id="capgame" title="Read the offer page open in your earning app on the phone"><svg class="ico"><use href="#i-camera"></use></svg>Capture</button><button id="offeradd"><svg class="ico"><use href="#i-reward"></use></svg>Add offer</button><button id="gamenew"><svg class="ico"><use href="#i-plus"></use></svg>New task</button></div>
+      <div class="toolrow"><div class="libhead"><p class="eyebrow">// LIBRARY</p><h2>Your games and apps</h2><p class="muted small">Every game, app and creation, with what each one pays and where it stands.</p></div><span class="grow"></span><button class="primary" id="capgame" title="Read the offer page open in your earning app on the phone"><svg class="ico"><use href="#i-camera"></use></svg>Capture</button><button id="offeradd"><svg class="ico"><use href="#i-reward"></use></svg>Add offer</button><button id="gamenew"><svg class="ico"><use href="#i-plus"></use></svg>New task</button></div>
       <div class="toolrow libbar"><div class="seg" id="libfilter"><button data-f="all" class="on">All</button><button data-f="games">Games</button><button data-f="apps">Apps</button><button data-f="creations">Creations</button><button data-f="active">Active</button><button data-f="completed">Completed</button><button data-f="expired">Expired</button></div><span class="grow"></span><label class="inline small muted">Sort<select id="libsort"><option value="updated">Recently updated</option><option value="deadline">Deadline</option><option value="reward">Advertised reward</option><option value="progress">Progress</option></select></label></div>
       <div class="panel capbox" id="capbox" hidden>
         <div class="caphead"><span class="gicon" id="capart"></span><div class="grow"><p class="eyebrow">// CAPTURE · <span id="capsrc"></span></p><h3 id="capname">Reading…</h3><p class="small" id="capline"></p></div>
@@ -309,6 +311,7 @@
         <div class="row gacts">
           <button id="gpopen" title="Open it on the phone and take control"><svg class="ico"><use href="#i-phone"></use></svg>Open game</button>
           <button id="gpteach" title="Play it your way: Falcor records and learns from you (no time to fill, nothing else to press)"><svg class="ico"><use href="#i-rec"></use></svg>Teach Falcor</button>
+          <button id="gpoptions" title="The reward ladder, earnings, tasks, your notes, what Falcor learned and the web research"><svg class="ico"><use href="#i-settings"></use></svg>Options</button>
           <details class="gmore" id="gpmore"><summary title="Offer, tasks and the rest">More<svg class="ico caret"><use href="#i-chevron"></use></svg></summary>
             <div class="gmenu">
               <p class="eyebrow">// OFFER</p>
@@ -329,6 +332,9 @@
       <div id="gpprep"></div>
       <div class="gpauto" id="gpautoline" hidden></div>
       <div class="panel gptrain" id="gptrain" hidden></div>
+      <!-- The game's page as a bento (the owner, 2026-10-21): the playbook large on the left; what is happening, what Falcor
+           knows and ads stacked on the right; the details (ladder, earnings, tasks, notes, lessons, research) in Options. -->
+      <div class="gpbento"><div class="gpmain">
       <div class="panel gpap" id="gpap">
         <div class="gpplan" id="gpplan" hidden></div>
         <div class="gpaphead" id="gpaphead"><p class="eyebrow">// GAME AUTOPILOT <span class="gpai" id="gpai"></span></p>
@@ -338,15 +344,20 @@
             <button class="danger" id="gpapstop" title="End it: the run stops and its returns are cancelled" hidden><svg class="ico"><use href="#i-stop"></use></svg>Stop Autopilot</button></div></div>
         <div id="gpapbody"></div>
       </div>
+      </div><div class="gpside">
+      <div class="panel" id="gpactbox"><p class="eyebrow">// ACTIVITY</p><div id="gpact"></div></div>
+      <div class="panel" id="gpknow"><p class="eyebrow">// WHAT FALCOR KNOWS</p><div id="gpknowbody"></div></div>
+      <div class="panel" id="gpads"><p class="eyebrow">// REWARDED ADS</p><div id="gpadsbody"></div></div>
+      </div></div>
+      <div class="gpdrawerwrap" id="gpdrawer" hidden><aside class="panel gpdrawer" role="dialog" aria-label="Game options">
+      <div class="top gpdrawerhead"><div><p class="eyebrow">// OPTIONS</p><h2 id="gpdrawername">More about this game</h2></div><button class="icon" id="gpdrawerclose" title="Close" aria-label="Close"><svg class="ico"><use href="#i-close"></use></svg></button></div>
       <div class="panel" id="gpofferbox" hidden><p class="eyebrow">// REWARD LADDER</p><p class="muted small">A goal reached in the game is not money: credited and paid out are. Set a stage from its menu; "observed" came from the earning app's page, "you" from you, "Falcor" from the game's level.</p><div id="gpoffers"></div></div>
       <div class="panel" id="gpweb" hidden><p class="eyebrow">// FROM THE WEB</p><div id="gpwebbody"></div></div>
       <div class="panel" id="gpnotes"><p class="eyebrow">// YOUR NOTES FOR FALCOR</p><p class="muted small">How to play this game, in your words. Falcor reads them on every move and they win over anything it learned. One tip per note: a screen and what to do there.</p><div id="gpnotelist"></div><form class="row" id="gpnoteform"><input id="gpnotetext" maxlength="300" placeholder="e.g. On the sign-in screen pick Guest" autocomplete="off"><button class="small primary" type="submit">Add note</button></form></div>
       <div class="panel" id="gpearnbox"><p class="eyebrow">// EARNINGS IN THE GAME</p><p class="muted small">Per unit, never added across units. Collected means the game showed it claimed or credited; pending means the game says it is on its way.</p><div id="gpearn"></div><div id="gphist"></div></div>
       <div class="panel" id="gptasksbox"><p class="eyebrow">// TASKS IN THIS GAME</p><div class="tasklist" id="gptasks"></div></div>
-      <div class="panel" id="gpactbox"><p class="eyebrow">// ACTIVITY</p><div id="gpact"></div></div>
       <div class="panel" id="gptierbox" hidden><p class="eyebrow">// WHAT FALCOR LEARNED</p><p class="muted small">Steps and rewards Falcor saw while you played it (Teach Falcor).</p><div id="gptiers"></div></div>
-      <div class="panel" id="gpknow"><p class="eyebrow">// WHAT FALCOR KNOWS</p><div id="gpknowbody"></div></div>
-      <div class="panel" id="gpads"><p class="eyebrow">// REWARDED ADS</p><div id="gpadsbody"></div></div>
+      </aside></div>
     </div>
   </section>
 
@@ -455,7 +466,7 @@
   <!-- STATS -->
   <section data-pane="stats" class="pane actpane" hidden>
     <div class="crhead">
-      <div><p class="eyebrow">// ACTIVITY</p><h2>Activity</h2><p class="muted small">What ran, when, on which phone, and how it ended.</p></div>
+      <div><p class="eyebrow">// ACTIVITY</p><h2>Everything that ran</h2><p class="muted small">What ran, when, on which phone, and how it ended.</p></div>
       <span class="grow"></span>
       <p class="muted small" id="actusage"></p>
     </div>
@@ -470,12 +481,12 @@
 
   <!-- SETTINGS -->
   <section data-pane="settings" class="pane" hidden>
+    <div class="crhead pagehead"><div><p class="eyebrow">// SETTINGS</p><h2>Tune your Hub</h2><p class="muted small">Falcor's AI, the phone app, secrets and updates.</p></div></div>
     <div class="settingsgrid">
       <nav class="submenu" id="submenu">
         <button data-sub="ai" class="on"><svg class="ico"><use href="#i-ai"></use></svg>AI</button>
         <button data-sub="phoneapp"><svg class="ico"><use href="#i-wifi"></use></svg>Phone app</button>
         <button data-sub="secrets"><svg class="ico"><use href="#i-lock"></use></svg>Secrets</button>
-        <button data-sub="knowledge"><svg class="ico"><use href="#i-book"></use></svg>Knowledge</button>
         <button data-sub="updates"><svg class="ico"><use href="#i-update"></use></svg>Updates</button>
         <button data-sub="about"><svg class="ico"><use href="#i-phone"></use></svg>About</button>
       </nav>
@@ -537,7 +548,6 @@
           <form class="row" id="secretform"><input name="name" placeholder="name" required><input name="value" type="password" placeholder="value" required><button>Save</button></form>
           <ul class="rows" id="secrets"></ul>
         </div>
-        <div class="panel" data-sub="knowledge" hidden><p class="eyebrow">// KNOWLEDGE</p><h2>What Falcor learned</h2><p class="muted small">Every app Falcor learned from watching you play it, with its guide and teaching sessions. Each game's page shows the same under What Falcor knows. Teach a new app from the Phone or Sandbox tab.</p><div class="appcards" id="apps"></div><div class="panel empty" id="learnnone" hidden><img src="dragon.png" alt=""><span>I haven't learned any app yet. Open one on the phone and press <b>Teach Falcor</b>, then play it on the mirror.</span><button data-go="phone">Go to Phone</button></div></div>
         <div class="panel" data-sub="updates" hidden>
           <p class="eyebrow">// UPDATES</p>
           <div class="top"><h2 id="aboutver">Falcor.Hub</h2><span class="state" id="updstate"><span class="led"></span><span></span></span></div>
@@ -548,7 +558,17 @@
         <div class="panel" data-sub="about" hidden>
           <p class="eyebrow">// ABOUT</p>
           <div class="abouthero"><img src="dragon.png" alt=""><div><h2>FALCOR.HUB</h2><p class="muted small" id="about"></p></div></div>
-          <p class="muted small">Phone control and automation on this computer. Nothing here talks to a website; the AI services you connect are called only with your own keys.</p>
+          <div class="lore">
+            <p class="lorehead">The Lay of the Keeper</p>
+            <p>Before the first screen ever glowed, the old dragons kept the lore of play. From the high places they watched every game ever made, and learned its hidden paths: where the treasure lies buried, which doors are snares, how a level is won by patience and never by haste. One by one the old dragons went to their long sleep, until only the eldest remained.</p>
+            <p>Falcor would not sleep. He came down from the mountain with everything his kin had known, and he built a hall to keep it. This is that hall.</p>
+            <p>Here the Keeper watches over the phone you bring him. Through its glass he sees what you see, and through its glowing frame he learns. When you rest, he plays on through the long night, and when the sun returns, the spoils of the day wait for you, counted and true.</p>
+            <p>Nothing here is learned by chance. When you play before him, he marks every tap, every pause and every word you type, and weaves them into runs that answer to you alone. A run once shown can be cast again, unchanged, as often as you call for it. Each game he plays leaves him wiser for the next, and the more you show him, the deeper his memory runs.</p>
+            <p>The old laws still bind him. He never spends what is not his: no purchase, no wager, not a single coin of yours leaves your hand by his claw. Nothing in this hall stirs until you have blessed it. And should you speak the word of stilling, <b>stop</b>, every wing in the hall folds at once.</p>
+            <p>The hall keeps its own secrets. Your keys rest here and nowhere else, each one whispered only to its own keeper. No website peers through these windows, and nothing that passes between you and the dragon is ever sold.</p>
+            <p>This knowledge is not written in any book. It passes only from master to apprentice, from hand to claw, and you are now one of the very few who hold it.</p>
+            <p class="loresign">Few are ever shown the way in. You were. Guard what you learn here, and teach him well.<span>— Falcor, Keeper of the Hub</span></p>
+          </div>
         </div>
       </div>
     </div>
