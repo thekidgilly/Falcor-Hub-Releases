@@ -41,7 +41,7 @@
       if (!s || s.v !== 1) return d;
       for (const w of WINS) if (typeof (s.visible || {})[w.id] === 'boolean') d.visible[w.id] = !!w.fixed || s.visible[w.id];
       if (Array.isArray(s.z)) d.z = [...new Set([...s.z.filter(id => byId[id]), ...d.z])];
-      d.locked = s.locked === true; d.snap = s.snap !== false; d.maxed = byId[s.maxed] && d.visible[s.maxed] ? s.maxed : null;
+      d.locked = s.locked === true; d.snap = s.snap !== false; d.headV = s.headV === 1 ? 1 : 0; d.maxed = byId[s.maxed] && d.visible[s.maxed] ? s.maxed : null;
       for (const k of ['upright', 'sideways']) {
         const sl = (s.slots || {})[k]; if (!sl) continue;
         d.slots[k].preset = LAYOUTS[sl.preset] ? sl.preset : null;
@@ -81,7 +81,11 @@
     });
   }
   // Touching a window brings it to the front (only its stacking changes, so nothing inside it reloads or loses focus).
-  desk.addEventListener('pointerdown', e => { const el = e.target.closest('.win'); if (el && topShown() !== el.dataset.win) { raise(el.dataset.win); save(); } }, true);
+  desk.addEventListener('pointerdown', e => {
+    const el = e.target.closest('.win');
+    if (!el) { if (!unfocused) { unfocused = true; stackZ(); if (document.activeElement && desk.contains(document.activeElement)) document.activeElement.blur(); } return; }
+    if (topShown() !== el.dataset.win || unfocused) { raise(el.dataset.win); save(); }
+  }, true);
   new ResizeObserver(() => { if (!drag) apply(false); }).observe(desk);
 
   // ------------------------------------------------------------------ placing
@@ -106,7 +110,13 @@
     cls(desk, 'locked', D.locked); attr($('desklock'), 'aria-pressed', String(D.locked));
     if (desk.hidden || !W || !H) return false;
     const sl = D.slots[slot];
-    if (sl.preset) LAYOUTS[sl.preset].make(W, H);
+    // The desk runs up behind the tab's heading, so a window can be moved over it; a layout still as a preset starts
+    // below the heading (its windows are laid out in the height under it, then moved down by it).
+    const head = desk.parentElement && desk.parentElement.querySelector(':scope > .pagehead'), top = head && head.offsetHeight ? Math.min(H / 3, head.offsetHeight + GAP) : 0;
+    const under = rects => { for (const r of Object.values(rects)) { r.y = (r.y * (H - top) + top) / H; r.h = r.h * (H - top) / H; } };
+    // (once: an arrangement kept from before the desk ran up behind the heading moves down by it, so nothing jumps over it)
+    if (!D.headV && top) { for (const k of ['upright', 'sideways']) if (!D.slots[k].preset) under(D.slots[k].rects); D.headV = 1; save(); }
+    if (sl.preset) { LAYOUTS[sl.preset].make(W, H - top); if (top) under(sl.rects); }
     for (const id of shown()) if (!sl.rects[id]) place(id, W, H);
     if (anim && laid && !P.reduced()) { desk.classList.add('anim'); clearTimeout(animT); animT = setTimeout(() => desk.classList.remove('anim'), 340); }
     for (const id of shown()) { frame(id); put(id, D.maxed === id ? {x: 0, y: 0, w: W, h: H} : px(id, W, H)); }
@@ -120,8 +130,10 @@
     cls(wins[id], 'maxed', max); htmlOnce(b, icon(max ? 'restore' : 'max')); b.title = max ? 'Restore' : 'Maximize';
     wins[id].querySelector('.winbar').title = D.locked || max ? 'Double-click to ' + (max ? 'restore' : 'maximize') + (D.locked ? ' · the layout is locked' : '') : 'Drag to move · double-click to maximize';
   }
-  function stackZ() { const top = topShown(); for (const w of WINS) { wins[w.id].style.zIndex = String(D.maxed === w.id ? 60 : 10 + D.z.indexOf(w.id)); cls(wins[w.id], 'front', w.id === top); } }
-  function raise(id) { if (D.z[D.z.length - 1] !== id) D.z = [...D.z.filter(x => x !== id), id]; stackZ(); }
+  // (a click on the empty grid clears the highlight until a window is touched again; the stacking order is kept)
+  let unfocused = false;
+  function stackZ() { const top = topShown(); for (const w of WINS) { wins[w.id].style.zIndex = String(D.maxed === w.id ? 60 : 10 + D.z.indexOf(w.id)); cls(wins[w.id], 'front', !unfocused && w.id === top); } }
+  function raise(id) { unfocused = false; if (D.z[D.z.length - 1] !== id) D.z = [...D.z.filter(x => x !== id), id]; stackZ(); }
   // A window shown in an arranged layout goes where nothing else is, at its usual size, else its smallest. With no room
   // left it goes where it covers the least, at its usual size; covering the phone's screen counts four times over.
   function place(id, W, H) {

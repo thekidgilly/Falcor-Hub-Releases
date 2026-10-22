@@ -1,11 +1,11 @@
 {
-  "version": "0.21.36",
-  "notes": "Falcor.Hub 0.21.36: every page heading in capitals, Activity's included",
-  "publishedAt": "2026-10-22T02:43:07.630Z",
+  "version": "0.21.37",
+  "notes": "Falcor.Hub 0.21.37: on the Hub, windows can be moved over the heading; the layouts still start below it",
+  "publishedAt": "2026-10-22T02:48:03.088Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "ed703f68406711b13bb0955ec2a498eef06bc4313b9a16513884be01a7dbd510",
+      "sha256": "786409b8e8e69186a99a290b81f9f787780f969b545065441f9b2b2452ccd028",
       "size": 1176346
     },
     {
@@ -100,8 +100,8 @@
     },
     {
       "path": "ui/desk.js",
-      "sha256": "21052f5de10478494af7e1b2bd46e086c5e6c74638d0441d9bb05d712087d29e",
-      "size": 44993
+      "sha256": "782eae09f06105c4edcba88bf5d356e607cce91f65c97c6e6d884b2bbd33b3ab",
+      "size": 45855
     },
     {
       "path": "ui/dragon.png",
@@ -155,8 +155,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "d9c0d6efb4431149ac7e0584ab43acebf8d246028c11369a1a8b06a5067d0cc3",
-      "size": 115186
+      "sha256": "0d06be4d57dde3a4ed28020aa3c23bd8da0e7877182a696082d11742fca97ef2",
+      "size": 115505
     },
     {
       "path": "ui/tokens.css",
