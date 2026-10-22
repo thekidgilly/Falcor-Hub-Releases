@@ -1,11 +1,11 @@
 {
-  "version": "0.21.35",
-  "notes": "Falcor.Hub 0.21.35: phone Studio full screen (pinch zoom, side panels, live HUD, floating Teach, no banner); no Stop button and one connection light on the phone app; game pages as a bento with a compact title and an Options drawer; HUB The Mainframe heading; all tabs and heading titles in capitals",
-  "publishedAt": "2026-10-22T02:39:59.505Z",
+  "version": "0.21.36",
+  "notes": "Falcor.Hub 0.21.36: every page heading in capitals, Activity's included",
+  "publishedAt": "2026-10-22T02:43:07.630Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "1f9584aeb74e24a6fc7b9183b0f6973c75396226dc4ce8f81d0482bb197dd91e",
+      "sha256": "ed703f68406711b13bb0955ec2a498eef06bc4313b9a16513884be01a7dbd510",
       "size": 1176346
     },
     {
@@ -155,8 +155,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "2fec0fc763d5ecec1abe41eb79b4da69f64fbb69e81330b35df1156404b2e580",
-      "size": 115043
+      "sha256": "d9c0d6efb4431149ac7e0584ab43acebf8d246028c11369a1a8b06a5067d0cc3",
+      "size": 115186
     },
     {
       "path": "ui/tokens.css",
