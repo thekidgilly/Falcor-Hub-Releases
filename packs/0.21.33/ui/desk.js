@@ -9,7 +9,7 @@
   const KEY = 'falcor.desk.v1', GAP = 12, SNAP = 10, STEP = 8;
   const WINS = [
     {id: 'mirror', name: 'Phone screen', about: 'The live mirror and its tools (always shown)', core: true, fixed: true, min: [240, 300]},
-    {id: 'device', name: 'Device', about: 'The phone, Autopilot and Run Ready', core: true, min: [220, 140]},
+    {id: 'device', name: 'Device', about: 'The phone plugged into this computer', core: true, min: [220, 140]},
     {id: 'current', name: 'Current activity', about: 'What runs now and what comes next', core: true, min: [220, 110], weight: 1},
     {id: 'queue', name: 'Today\'s queue', about: 'Everything planned for today', core: true, min: [240, 150], weight: 1.7},
     {id: 'log', name: 'Activity log', about: 'What Falcor and you did, line by line', core: true, min: [220, 110], weight: 1.1},

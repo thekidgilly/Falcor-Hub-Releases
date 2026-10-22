@@ -5527,7 +5527,7 @@ function validateAction(raw) {
 }
 var MAX_OBSERVATION_AGE = 6e3;
 var SYSTEM_PACKAGES = /^(?:android|com\.android\.systemui|com\.android\.launcher\d?|com\.google\.android\.apps\.nexuslauncher|com\.sec\.android\.app\.launcher|com\.google\.android\.permissioncontroller|com\.android\.permissioncontroller|com\.miui\.home|com\.oneplus\.launcher|ai\.falcor\.sim\.launcher)$/;
-function checkAction(env, obs, { allowedPackages, now }) {
+function checkAction(env, obs, { allowedPackages, now, human = false }) {
   if (env.observationId !== obs.id) throw new ActionError("Planned from an older look at the screen.", "STALE");
   if (ageOf(obs, now) > MAX_OBSERVATION_AGE) throw new ActionError("The screen was last seen " + Math.round(ageOf(obs, now) / 1e3) + " s ago; looking again first.", "STALE");
   if (env.expiresAt < now) throw new ActionError("The action expired before it reached the phone.", "EXPIRED");
@@ -5547,7 +5547,7 @@ function checkAction(env, obs, { allowedPackages, now }) {
     return { x: (p.bounds.l + p.bounds.r) / 2 / obs.width, y: (p.bounds.t + p.bounds.b) / 2 / obs.height, node: p };
   }
   if (a.kind === "type") {
-    if (obs.nodes && !obs.nodes.some((n) => n.focused && n.editable)) throw new ActionError("No text box is focused; tap the box first.", "NO_FOCUS");
+    if (!human && obs.nodes && !obs.nodes.some((n) => n.focused && n.editable)) throw new ActionError("No text box is focused; tap the box first.", "NO_FOCUS");
     return {};
   }
   if (a.kind === "tap" || a.kind === "long_press") return { x: a.x, y: a.y };
@@ -5781,7 +5781,7 @@ var GuardedDriver = class {
     if (!obs) return { id: env.id, ok: false, error: "Look at the screen before acting.", code: "STALE", at: now };
     let at;
     try {
-      at = env.action.kind === "wait" || env.action.kind === "screenshot" ? {} : checkAction(env, obs, { allowedPackages: allowedPackages === "*" ? [obs.package, ...env.action.kind === "launch" ? [env.action.package] : []] : allowedPackages, now });
+      at = env.action.kind === "wait" || env.action.kind === "screenshot" ? {} : checkAction(env, obs, { allowedPackages: allowedPackages === "*" ? [obs.package, ...env.action.kind === "launch" ? [env.action.package] : []] : allowedPackages, now, human: auth.lease.kind === "human" });
     } catch (e) {
       return { id: env.id, ok: false, error: e instanceof Error ? e.message : "Refused.", code: e instanceof ActionError ? e.code : "INVALID", at: now };
     }
@@ -8644,11 +8644,12 @@ var TeachSession = class {
   // A touch that already reached the phone, with the screen it was made on.
   touch(action, before) {
     if (this.state !== "recording") return Promise.resolve(null);
+    const madeAt = this.d.now();
     return this.queue(async () => {
       const on = readScreen(before).visual && this.current && !this.current.paused && this.current.pkg === before.package && !teachPause(before) ? this.current : await this.screenOf(before, false);
       this.enter(on);
       const a = action, kind = String(a.kind || "");
-      const t = { n: this.rec.touches.length + 1, at: this.d.now(), screen: on.id, kind, hit: null, after: null, changed: "" };
+      const t = { n: this.rec.touches.length + 1, at: madeAt, screen: on.id, kind, hit: null, after: null, changed: "" };
       if (!on.paused) {
         const r = (v) => typeof v === "number" ? Math.round(v * 1e3) / 10 : void 0;
         Object.assign(t, { x: r(a.x), y: r(a.y), toX: r(a.toX), toY: r(a.toY), ms: typeof a.ms === "number" ? a.ms : void 0, key: typeof a.key === "string" ? a.key : void 0, direction: typeof a.direction === "string" ? a.direction : void 0 });
@@ -8656,7 +8657,8 @@ var TeachSession = class {
         if (kind === "type") t.text = (before.nodes || []).some((n) => n.password && n.focused) ? "[hidden]" : clip(String(a.text || ""), 120);
       }
       for (const k of Object.keys(t)) if (t[k] === void 0) delete t[k];
-      const settled = await this.settled(before);
+      const typing = kind === "type" || kind === "key" && a.key === "DEL";
+      const settled = typing ? { obs: before, ms: 0 } : await this.settled(before);
       const afterObs = settled.obs;
       if (settled.ms) t.settleMs = settled.ms;
       if (t.kind === "swipe" && t.y !== void 0 && t.toY !== void 0 && t.x !== void 0 && t.toX !== void 0) t.direction = Math.abs(t.toY - t.y) >= Math.abs(t.toX - t.x) ? t.toY < t.y ? "down" : "up" : t.toX < t.x ? "right" : "left";
@@ -8667,7 +8669,7 @@ var TeachSession = class {
         else if (afterObs.package !== before.package) t.changed = "opened " + afterObs.package;
         else {
           const dd = diff(readScreen(before).texts, readScreen(afterObs).texts);
-          t.changed = [after.id !== on.id ? "now " + after.id : "", dd.added.length ? "+" + dd.added.slice(0, 4).map((x) => '"' + x.slice(0, 40) + '"').join(" ") : "", dd.removed.length ? "-" + dd.removed.slice(0, 3).map((x) => '"' + x.slice(0, 40) + '"').join(" ") : ""].filter(Boolean).join(" ") || "no visible change";
+          t.changed = [after.id !== on.id ? "now " + after.id : "", dd.added.length ? "+" + dd.added.slice(0, 4).map((x) => '"' + x.slice(0, 40) + '"').join(" ") : "", dd.removed.length ? "-" + dd.removed.slice(0, 3).map((x) => '"' + x.slice(0, 40) + '"').join(" ") : ""].filter(Boolean).join(" ") || (typing ? "typed" : "no visible change");
         }
         this.rec.touches.push(t);
         this.touchesAtLook = this.rec.touches.length;
@@ -8773,7 +8775,7 @@ var removed = (t) => {
   return m ? [...m[1].matchAll(/"([^"]*)"/g)].map((x) => x[1]) : [];
 };
 var sigOf = (sc) => sc && !sc.visual && sc.kind === "screen" ? sc.key.split("|")[1] || "" : "";
-var backish = (t) => t.kind === "key" || BACKISH.test((t.hit?.label || "").trim());
+var backish = (t) => t.kind === "key" ? /^(?:BACK|HOME)$/.test(String(t.key || "")) : BACKISH.test((t.hit?.label || "").trim());
 var num = (v) => Number(v.replace(/,/g, ""));
 function analyze(rec, o = {}) {
   const screens = new Map(rec.screens.map((s2) => [s2.id, s2]));
@@ -8970,7 +8972,7 @@ function routineOf(rec, avoidAlready = []) {
   const nothing = (t) => t.changed === "no visible change" || !t.changed;
   while (list.length > 1) {
     const t = list[list.length - 1];
-    if (t.kind === "key" || backish(t) || nothing(t)) list.pop();
+    if (backish(t) || nothing(t)) list.pop();
     else break;
   }
   const f = (v) => v === void 0 ? void 0 : Math.round(v * 10) / 1e3;
@@ -9334,7 +9336,7 @@ var Views = class {
       if (info.mode !== "run") continue;
       last.set(r.sequence_id, { ...info, status: r.status, endedAt: r.ended_at });
     }
-    return seqs.map((s2) => {
+    return seqs.filter((s2) => s2.published).map((s2) => {
       const d = s2.deviceId ? devices.find((x) => x.id === s2.deviceId) : devices[0], l = last.get(s2.id), lv = live.find((x) => x.sequenceId === s2.id && x.mode === "run");
       const device = !d ? { label: s2.deviceId ? "A phone not connected now" : "No phone yet", state: "none", why: s2.deviceId ? "Plug in its phone to run it." : "Choose a phone in Sandbox." } : !d.connected || !d.authorized ? { label: d.label, state: "offline", why: !d.connected ? "The phone is not connected." : "Allow USB debugging on the phone." } : d.locked ? { label: d.label, state: "offline", why: "Unlock the phone." } : d.running || d.sandbox ? { label: d.label, state: "busy", why: "Something else is running on the phone." } : { label: d.label, state: "ready", why: "" };
       const outcome = l ? SEQ_OUTCOME[l.status] || "failed" : null;
@@ -11191,7 +11193,10 @@ var SandboxRunner = class {
       case "tap": {
         const a = p.anchor;
         if (a && a.mode !== "off") {
-          const o = await this.look(), n = this.findControl(o, a.text, a.id);
+          const o = await this.look(), found = this.findControl(o, a.text, a.id), pt2 = p.point;
+          const far = !!found && !!pt2 && a.mode === "prefer" && Math.hypot((found.bounds.l + found.bounds.r) / 2 / o.width - pt2[0], (found.bounds.t + found.bounds.b) / 2 / o.height - pt2[1]) > 0.25;
+          if (far) this.d.event({ at: this.d.now(), stepId: s2.id, type: "info", text: '"' + (a.text || a.id) + '" is far from where this step points; tapping the point instead.' });
+          const n = far ? null : found;
           if (n) {
             await this.act({ kind: "tap_node", selector: this.selectorFor(n) }, "navigate", 'Tapped "' + (a.text || a.id) + '"');
             return;
@@ -11364,6 +11369,7 @@ var SkipStep = class extends Error {
 
 // src/sandbox/index.ts
 var OWNER = "owner";
+var isPublished = (m, steps) => m.published === void 0 ? steps > 0 : !!m.published;
 var CHECKS = /* @__PURE__ */ new Set(["verifyText", "waitUntil", "waitForApp", "repeatUntil"]);
 var sentenceOf = (s2) => {
   const t = String(s2 || "").trim();
@@ -11502,6 +11508,7 @@ var Sandbox = class {
         folder: meta2.folder || "",
         favorite: !!meta2.favorite,
         task: !!meta2.task,
+        published: isPublished(meta2, def ? countSteps(def.steps) : 0),
         deviceId: r.device_id,
         steps: def ? countSteps(def.steps) : 0,
         estimateMs: est.ms,
@@ -11553,7 +11560,7 @@ var Sandbox = class {
     if (title) def.title = title;
     if (deviceId) def.target.deviceId = deviceId;
     const now = this.d.now(), id = this.id("sq");
-    this.w("INSERT INTO sandbox_sequences(id,owner_id,title,json,current_revision_id,device_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)", [id, OWNER, def.title, JSON.stringify({ folder: "", favorite: false }), null, def.target.deviceId, now, now], false);
+    this.w("INSERT INTO sandbox_sequences(id,owner_id,title,json,current_revision_id,device_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)", [id, OWNER, def.title, JSON.stringify({ folder: "", favorite: false, published: false }), null, def.target.deviceId, now, now], false);
     const rev = this.addRevision(id, def, 1);
     this.d.say('Sandbox: created "' + def.title + '".', "YOU");
     this.d.changed();
@@ -11583,6 +11590,30 @@ var Sandbox = class {
     this.w("UPDATE sandbox_sequences SET json=? WHERE id=?", [JSON.stringify(m), id]);
     this.d.changed();
     return m;
+  }
+  // Drafts and the Library: a draft can be edited, tested, previewed and run by hand; only a published sequence is in
+  // the Library and can be scheduled or put in the queue. Unpublishing turns its schedules off.
+  published(id) {
+    const r = this.row(id), rev = r.current_revision_id ? this.revision(r.current_revision_id) : null;
+    return isPublished(JSON.parse(r.json), rev ? countSteps(rev.def.steps) : 0);
+  }
+  publish(id) {
+    const r = this.row(id), m = JSON.parse(r.json);
+    if (!countSteps(this.current(id).def.steps)) throw new SequenceError("Add at least one step before publishing it to the Library.");
+    m.published = this.d.now();
+    this.w("UPDATE sandbox_sequences SET json=? WHERE id=?", [JSON.stringify(m), id]);
+    this.d.say('Sandbox: published "' + r.title + '" to the Library.', "YOU");
+    this.d.changed();
+    return { published: true };
+  }
+  unpublish(id) {
+    const r = this.row(id), m = JSON.parse(r.json);
+    m.published = false;
+    this.w("UPDATE sandbox_sequences SET json=? WHERE id=?", [JSON.stringify(m), id]);
+    this.queue?.gone(id, "Its sequence went back to Drafts.");
+    this.d.say('Sandbox: "' + r.title + '" is a draft again (out of the Library, its schedules off).', "YOU");
+    this.d.changed();
+    return { published: false };
   }
   clone(id, title) {
     const cur = this.current(id), def = JSON.parse(JSON.stringify(cur.def));
@@ -11944,18 +11975,46 @@ var Sandbox = class {
 };
 
 // src/sandbox/teach-bridge.ts
+var COUNT = { tap: "taps", long_press: "holds", swipe: "swipes", scroll: "scrolls", type: "typed", key: "keys" };
+function mergeTyping(steps) {
+  const out = [];
+  for (const st of steps) {
+    const prev = out[out.length - 1], prevEnd = prev ? prev.end ?? prev.at : void 0;
+    if (st.kind === "type" && prev?.kind === "type" && st.at !== void 0 && prevEnd !== void 0 && st.at - prevEnd <= 5e3) {
+      prev.text = (prev.text || "") + (st.text || "");
+      prev.end = st.at;
+      continue;
+    }
+    if (st.kind === "key" && st.key === "DEL" && prev?.kind === "type" && prev.text) {
+      prev.text = prev.text.slice(0, -1);
+      prev.end = st.at ?? prev.end;
+      continue;
+    }
+    out.push({ ...st, end: st.at });
+  }
+  return out;
+}
 function stepsFromTeach(rec, o, id, avoid = []) {
-  if (!rec.pkg) return { steps: [], skipped: [] };
+  const found = { app: rec.name || "", taps: 0, holds: 0, swipes: 0, scrolls: 0, typed: 0, keys: 0, waits: 0, waitedMs: 0, check: false };
+  if (!rec.pkg) return { steps: [], skipped: [], found };
   const r = routineOf(rec, avoid), out = [];
   const pt2 = (x, y) => [Math.min(1, Math.max(0, x ?? 0.5)), Math.min(1, Math.max(0, y ?? 0.5))];
-  if (o.launch) out.push({ id: id(), type: "launchApp", params: { packageName: rec.pkg } }, { id: id(), type: "waitForApp", params: { packageName: rec.pkg, timeoutMs: 15e3 } });
+  const name = (rec.name || "").slice(0, 60);
+  if (o.launch && rec.entry?.fromHome) out.push({ id: id(), type: "key", params: { key: "HOME" }, label: "Start from the home screen" });
+  if (o.launch) out.push({ id: id(), type: "launchApp", params: { packageName: rec.pkg }, ...name ? { label: "Open " + name } : {} }, { id: id(), type: "waitForApp", params: { packageName: rec.pkg, timeoutMs: 15e3 }, ...name ? { label: "Wait for " + name } : {} });
   let last = null;
-  for (const st of r.steps) {
+  for (const st of mergeTyping(r.steps)) {
     if (o.waits && last !== null && st.at !== void 0) {
       const gap = Math.round((st.at - last) / 100) * 100;
-      if (gap >= 1200) out.push({ id: id(), type: "wait", params: { durationMs: Math.min(3e4, gap) }, label: "Pause as you did" });
+      if (gap >= 1200) {
+        const ms2 = Math.min(3e4, gap);
+        out.push({ id: id(), type: "wait", params: { durationMs: ms2 }, label: "Pause as you did" });
+        found.waits++;
+        found.waitedMs += ms2;
+      }
     }
-    if (st.at !== void 0) last = st.at;
+    if (st.end !== void 0) last = st.end;
+    const n = out.length;
     switch (st.kind) {
       case "tap":
         out.push({ id: id(), type: "tap", params: { point: pt2(st.x, st.y), ...st.label || st.id ? { anchor: { text: st.label, id: st.id, mode: "prefer" } } : {} } });
@@ -11976,9 +12035,14 @@ function stepsFromTeach(rec, o, id, avoid = []) {
         if (KEYS2.includes(String(st.key))) out.push({ id: id(), type: "key", params: { key: st.key } });
         break;
     }
+    const k = COUNT[st.kind];
+    if (out.length > n && k) found[k]++;
   }
-  if (o.check && r.done[0]) out.push({ id: id(), type: "verifyText", params: { text: r.done[0].slice(0, 120), timeoutMs: 8e3 }, onError: "skip", label: "Check it ended like you showed" });
-  return { steps: out, skipped: r.skipped };
+  if (o.check && r.done[0]) {
+    out.push({ id: id(), type: "verifyText", params: { text: r.done[0].slice(0, 120), timeoutMs: 8e3 }, onError: "skip", label: "Check it ended like you showed" });
+    found.check = true;
+  }
+  return { steps: out, skipped: r.skipped, found };
 }
 
 // src/queue/index.ts
@@ -12215,6 +12279,7 @@ var DailyQueue = class {
     const all = this.schedules();
     checkDeps(all.map((s2) => ({ id: s2.id, name: s2.name, deps: s2.deps })), id || "new", p.deps);
     if (p.target.type === "sequence" && p.revisionId && !this.e.sandbox.hasRevision(p.target.id, p.revisionId)) throw new QueueError("That version belongs to another sequence.");
+    if (p.target.type === "sequence" && !this.e.sandbox.published(p.target.id)) throw new QueueError('"' + (info?.name || "This sequence") + '" is a draft. Publish it to the Library first, then it can be scheduled or added to the queue.');
     return p;
   }
   async create(raw) {
@@ -12263,10 +12328,10 @@ var DailyQueue = class {
     return true;
   }
   // A removed task or a deleted sequence: its schedules turn off (and say why).
-  targetGone(t) {
+  targetGone(t, why) {
     for (const s2 of this.schedules()) if (s2.target.type === t.type && s2.target.id === t.id && (s2.enabled || s2.adhoc)) {
       s2.enabled = false;
-      s2.lastError = t.type === "mission" ? "Its task was removed." : "Its sequence was deleted.";
+      s2.lastError = why || (t.type === "mission" ? "Its task was removed." : "Its sequence was deleted.");
       this.dropPending(s2.id, s2.lastError);
       this.put(s2);
     }
@@ -13359,7 +13424,7 @@ var DailyQueue = class {
         if (!sess?.runId) throw new QueueError("It did not start.");
         return this.e.sandbox.run(sess.runId);
       },
-      gone: (id) => this.targetGone({ type: "sequence", id }),
+      gone: (id, why) => this.targetGone({ type: "sequence", id }, why),
       next: (id) => this.schedules().filter((s2) => s2.enabled && s2.target.type === "sequence" && s2.target.id === id).map((s2) => this.nextOf(s2)).filter((t) => !!t).sort((a, b) => a - b)[0] || null,
       count: () => this.schedules().filter((s2) => s2.enabled && s2.target.type === "sequence" && !s2.adhoc).length
     };
@@ -14803,12 +14868,21 @@ var HubEngine = class _HubEngine {
     if (this.sandbox.busy(id)) throw new Error("A Sandbox sequence is running on this phone. Stop it first.");
     const into = sandboxRecord(o.sandbox);
     if (into) this.sandbox.get(into.sequenceId);
+    let tookFirst = false;
+    if (o.home) {
+      if (this.leases.current(id, this.now())?.kind !== "human") {
+        this.takeControl(id);
+        tookFirst = true;
+      }
+      await this.input(id, { kind: "key", key: "HOME" });
+      await this.sleep(800);
+    }
     v.info = await f.driver.info();
     const target = this.teachTarget(id);
     if (how.pkg && target.pkg !== how.pkg) throw new Error(this.labelOf(how.pkg) + " is not in front on the phone any more.");
     const fromHome = !target.pkg || HOME_SCREEN.test(target.pkg);
     const pkg = fromHome ? "" : target.pkg, name = fromHome ? "" : target.name;
-    let lease = this.leases.current(id, this.now()), tookControl = how.took;
+    let lease = this.leases.current(id, this.now()), tookControl = how.took || tookFirst;
     if (lease?.kind !== "human") {
       this.takeControl(id);
       lease = this.leases.current(id, this.now());
@@ -14872,7 +14946,7 @@ var HubEngine = class _HubEngine {
     const t = this.teach;
     if (!t) return null;
     const r = t.session.rec;
-    return { id: r.id, deviceId: t.deviceId, pkg: r.pkg, name: r.name, intent: r.intent, state: t.session.state, auto: t.auto, kind: t.kind, leftMs: null, creditedMs: null, custom: !!t.custom, elapsedMs: t.session.elapsed(), screens: r.screens.length, touches: r.touches.length, marks: r.marks.length, shots: t.session.shots.size, recent: r.timeline.slice(-8).map((m) => m.line) };
+    return { id: r.id, deviceId: t.deviceId, pkg: r.pkg, name: r.name, intent: r.intent, state: t.session.state, auto: t.auto, kind: t.kind, sandbox: !!t.sandbox, leftMs: null, creditedMs: null, custom: !!t.custom, elapsedMs: t.session.elapsed(), screens: r.screens.length, touches: r.touches.length, marks: r.marks.length, shots: t.session.shots.size, recent: r.timeline.slice(-8).map((m) => m.line) };
   }
   teachPause(on) {
     const t = this.teach;
@@ -14889,12 +14963,26 @@ var HubEngine = class _HubEngine {
     this.changed();
     return m;
   }
+  // How far the last Stop has got (the Sandbox's End Teach shows it as a progress bar): real stages, not a timer.
+  teachWork = null;
+  work(stage, pct2) {
+    this.teachWork = { stage, pct: pct2, at: this.now() };
+  }
   async teachStop(why = "stopped by you") {
     const t = this.teach;
     if (!t) throw new Error("Nothing is being recorded.");
     this.teach = null;
     clearInterval(t.timer);
+    this.work("Stopping the recording", 8);
+    try {
+      return await this.teachStopWork(t, why);
+    } finally {
+      this.work("Done", 100);
+    }
+  }
+  async teachStopWork(t, why) {
     const rec = await t.session.stop();
+    this.work("Reading your touches, taps and typing", 30);
     this.footage.get(t.deviceId)?.close(this.now());
     if (t.custom?.home && rec.pkg && !HOME_SCREEN.test(this.views.get(t.deviceId)?.info?.foreground || "")) await this.input(t.deviceId, { kind: "key", key: "HOME" }).catch(() => null);
     if (t.tookControl) {
@@ -14919,8 +15007,10 @@ var HubEngine = class _HubEngine {
       input: rec.touches.some((x) => x.kind !== "key") ? (rec.inferred || []).some((x) => x.label) ? "both" : "mirror" : (rec.inferred || []).length ? "phone" : "none"
     });
     this.o.onTeachEnd?.(rec, t.session.shots, { auto: t.auto, why, kind: t.kind, coachId: t.coachId });
+    this.work("Learning the screens of " + rec.name, 55);
     const taught = await this.learnFromTeach(rec, t.kind === "coach" ? "on_demand_teach" : null);
     await this.afterTraining(t, rec, taught);
+    this.work("Building the steps", 82);
     if (taught) this.say("Teach Falcor: " + taught.learned.summary + (taught.count ? " Autopilot presses " + taught.count + " step" + (taught.count === 1 ? "" : "s") + " there without asking." : ""));
     const custom = t.custom ? await this.saveCustom(rec, t.custom).catch((e) => {
       this.say("Teach Falcor: the custom task was not saved: " + (e instanceof Error ? e.message : String(e)));
@@ -15103,19 +15193,20 @@ var HubEngine = class _HubEngine {
   }
   // What the owner showed, added to a Sandbox sequence as blocks (a new version; nothing runs until the owner presses Start).
   teachToSandbox(rec, o) {
-    let skipped = [];
+    let skipped = [], found = null;
     try {
       const r = this.sandbox.append(o.sequenceId, (ids) => {
         const b = stepsFromTeach(rec, o, ids, this.o.avoid?.(rec.pkg) || []);
         skipped = b.skipped;
+        found = b.found;
         return b.steps;
       });
       this.say("Sandbox: added " + r.added + " block" + (r.added === 1 ? "" : "s") + " from what you showed" + (r.added ? " (version " + r.revision + ")" : "") + "." + (skipped.length ? " Left out: " + skipped.join(", ") + "." : ""));
-      return { sequenceId: o.sequenceId, added: r.added, skipped, revision: r.revision, error: null };
+      return { sequenceId: o.sequenceId, added: r.added, skipped, revision: r.revision, error: null, found, ms: rec.activeMs };
     } catch (e) {
       const error = e instanceof Error ? e.message : String(e);
       this.say("Sandbox: the recorded blocks were not added: " + error);
-      return { sequenceId: o.sequenceId, added: 0, skipped, revision: null, error };
+      return { sequenceId: o.sequenceId, added: 0, skipped, revision: null, error, found, ms: rec.activeMs };
     }
   }
   // What the owner showed, saved as a custom task (it lands in Tasks as Needs review: nothing runs before approval).
@@ -16044,7 +16135,7 @@ var HubEngine = class _HubEngine {
             })()
           };
         })(),
-        teaching: this.teach?.deviceId === v.id ? { name: this.teach.session.rec.name, state: this.teach.session.state, elapsedMs: this.teach.session.elapsed(), kind: this.teach.kind, leftMs: this.teachStatus()?.leftMs ?? null } : null,
+        teaching: this.teach?.deviceId === v.id ? { name: this.teach.session.rec.name, state: this.teach.session.state, elapsedMs: this.teach.session.elapsed(), kind: this.teach.kind, sandbox: !!this.teach.sandbox, leftMs: this.teachStatus()?.leftMs ?? null } : null,
         sandbox: (() => {
           const r = this.sandbox?.live().find((x) => x.deviceId === v.id);
           return r ? { runId: r.id, sequenceId: r.sequenceId, title: r.title, status: r.status, step: r.stepWords, stepId: r.stepId, path: r.path, actions: r.actions, elapsedMs: r.elapsedMs, mode: r.mode, reason: r.reason } : null;
@@ -17480,6 +17571,8 @@ function lanAddress(nets = import_node_os2.default.networkInterfaces()) {
 var RemoteServer = class _RemoteServer {
   // The gaming and chat models by name and status (ai/library.ts#active): never a key or a provider setting.
   ai = null;
+  // The window's live video frame as a JPEG (main.ts), for the phone app's Sandbox mirror; null without video.
+  liveFrame = null;
   engine;
   server = null;
   pair = null;
@@ -17570,7 +17663,7 @@ var RemoteServer = class _RemoteServer {
     if (!who) return { status: 401, json: { error: "This phone is not paired with Falcor.Hub. Pair it again." } };
     const phone = { client: "phone:" + who.id, name: who.name };
     this.activeAt = e.now();
-    if (method === "GET" && path2 === "/api/status") return { status: 200, json: { devices: e.devices().map(({ installed, installedNames, ...d }) => (void installed, void installedNames, d)), tasks: await e.tasks(), games: await e.games(), stats: await e.stats(), activity: e.lines.slice(-30), ai: this.ai?.active() ?? null, unread: this.conductor?.unread(phone) ?? 0, notices: this.conductor?.notices() ?? { unread: 0, list: [] }, sandbox: e.sandbox.status(), at: e.now() } };
+    if (method === "GET" && path2 === "/api/status") return { status: 200, json: { devices: e.devices().map(({ installed, installedNames, ...d }) => (void installed, void installedNames, d)), tasks: await e.tasks(), games: await e.games(), stats: await e.stats(), activity: e.lines.slice(-30), ai: this.ai?.active() ?? null, unread: this.conductor?.unread(phone) ?? 0, notices: this.conductor?.notices() ?? { unread: 0, list: [] }, sandbox: e.sandbox.status(), queue: await e.queue.status(), at: e.now() } };
     const ap = /^\/api\/tasks\/([\w-]{1,80})\/approve$/.exec(path2);
     if (method === "POST" && ap) {
       const m = await e.approveTask(ap[1], { rulesAllow: body.rulesAllow === true, zeroCostConfirmed: body.zeroCostConfirmed === true, approvals: Array.isArray(body.approvals) ? body.approvals.map(String) : [] });
@@ -17621,8 +17714,33 @@ var RemoteServer = class _RemoteServer {
     }
     if (method === "GET" && path2 === "/api/screen") {
       const id = String(query.get("deviceId") || "");
-      const cached = e.lastFrame(id), f = cached && e.now() - cached.at < 2500 ? cached : await e.frame(id);
+      if (query.get("live") === "1") {
+        const v = await this.liveFrame?.(id).catch(() => null);
+        if (v) return { status: 200, image: v };
+      }
+      const cached = e.lastFrame(id), f = cached && e.now() - cached.at < (query.get("live") === "1" ? 400 : 2500) ? cached : await e.frame(id);
       return { status: 200, image: { mime: f.mime, data: Buffer.from(f.data, "base64") } };
+    }
+    if (method === "POST" && path2 === "/api/control") {
+      const id = String(body.deviceId || "");
+      if (body.on === true) {
+        const l = e.leases.current(id, e.now());
+        if (l?.kind === "human") e.leases.renew(l.leaseId, e.now());
+        else {
+          e.takeControl(id);
+          e.say("Control taken from " + who.name + ".", "YOU");
+        }
+        return { status: 200, json: { on: true } };
+      }
+      if (!e.teachStatus()) e.releaseControl(id);
+      return { status: 200, json: { on: false } };
+    }
+    if (method === "POST" && path2 === "/api/input") {
+      const a = body.action || {}, k = String(a.kind || ""), n = (v) => Math.min(1, Math.max(0, Number(v)));
+      const action = k === "tap" ? { kind: "tap", x: n(a.x), y: n(a.y) } : k === "long_press" ? { kind: "long_press", x: n(a.x), y: n(a.y), ms: Math.min(3e3, Math.max(400, Number(a.ms) || 800)) } : k === "swipe" ? { kind: "swipe", x: n(a.x), y: n(a.y), toX: n(a.toX), toY: n(a.toY), ms: Math.min(2e3, Math.max(120, Number(a.ms) || 300)) } : k === "key" && ["BACK", "HOME", "APP_SWITCH", "ENTER", "DEL"].includes(String(a.key)) ? { kind: "key", key: String(a.key) } : k === "type" && typeof a.text === "string" && a.text.length ? { kind: "type", text: a.text.slice(0, 500) } : null;
+      if (!action) return { status: 400, json: { error: "That is not a touch Falcor knows." } };
+      await e.input(String(body.deviceId || ""), action);
+      return { status: 200, json: { ok: true } };
     }
     if (method === "GET" && path2 === "/api/icon") {
       const i = e.gameIcon(String(query.get("pkg") || "").slice(0, 200));
@@ -17699,13 +17817,28 @@ var RemoteServer = class _RemoteServer {
   }
   async sandbox(method, path2, query, body, from) {
     const sb = this.engine.sandbox, ok = (json) => ({ status: 200, json }), get = method === "GET", post = method === "POST";
+    if (path2 === "/api/sandbox/teach") {
+      const e = this.engine;
+      if (get) return ok({ teaching: e.teachStatus(), work: e.teachWork });
+      if (post && body.op === "start") {
+        const deviceId = String(body.deviceId || "");
+        let id = typeof body.sequenceId === "string" && /^sq\w{2,40}$/.test(body.sequenceId) ? body.sequenceId : "";
+        if (!id) id = sb.create({ title: "Taught run " + new Date(e.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), deviceId, template: "blank" }).id;
+        const st = await e.teachStart(deviceId, { home: body.home !== false, sandbox: { sequenceId: id, launch: body.home !== false, waits: true, check: true } });
+        e.say("Teach started from " + from + ".", "YOU");
+        return ok({ sequenceId: id, teaching: st });
+      }
+      if (post && body.op === "stop") return ok(await e.teachStop("ended from " + from));
+    }
     if (get && path2 === "/api/sandbox") return ok({ sequences: sb.list(), schedules: sb.scheduleList(), runs: sb.runs(void 0, 30), live: sb.live() });
     if (get && path2 === "/api/sandbox/catalog") return ok(sb.catalog());
     if (post && path2 === "/api/sandbox/sequences") return ok(sb.create({ title: body.title, deviceId: body.deviceId, template: body.template, definition: body.definition }));
     if (post && path2 === "/api/sandbox/schedules") return ok(await sb.createSchedule(body.schedule));
     if (post && path2 === "/api/sandbox/schedules/preview") return ok(sb.previewSchedule(body.schedule));
-    let m = /^\/api\/sandbox\/sequences\/(sq\w{2,40})(?:\/(start|runs|delete|clone))?$/.exec(path2);
+    let m = /^\/api\/sandbox\/sequences\/(sq\w{2,40})(?:\/(start|runs|delete|clone|publish|unpublish))?$/.exec(path2);
     if (m && get && !m[2]) return ok(sb.get(m[1]));
+    if (m && post && m[2] === "publish") return ok(sb.publish(m[1]));
+    if (m && post && m[2] === "unpublish") return ok(sb.unpublish(m[1]));
     if (m && post && m[2] === "delete") {
       sb.remove(m[1]);
       return ok({ ok: true });
@@ -20530,7 +20663,7 @@ Nothing here talks to a website. The phone is driven over USB from your computer
   - Only while you are there to watch: Falcor.Hub in front, the computer used in the last 5 minutes, or the phone app open. Otherwise the offer is passed by and the activity says why.\r
   - Ad networks and some games may treat ads started this way as invalid; that risk is yours for that game.\r
 - **Edit a task** with its pencil button in Other automations: what it does, the target level, the daily reset hour, the reward note and a signup's details. Changing what it does sends it back to Needs review.\r
-- **Knowledge (guides).** Open a guide from its game, its task (the book button), the chat, or **Settings \u2192 Knowledge**; **Back** returns where you were.\r
+- **Knowledge (guides).** Open a guide from its game's page in the Library (What Falcor knows \u2192 Read the guide), its task (the book button) or the chat; **Back** returns where you were.\r
   - Every app Falcor learned, with its guide: summary, objectives, reward tiers, screens, step-by-step recipes and watch-outs. Each part says **seen** or **AI**.\r
   - Press **Edit** to correct the guide, or delete pictures you don't want kept. Rename, Export or Delete each app.\r
   - Ask Falcor about a guide (the guide's chat button opens his chat focused on it). A task it drafts lands in Other automations as *Needs review*; nothing runs until you approve it.\r
@@ -21193,7 +21326,7 @@ async function startVideo(o) {
 
 // src/main.ts
 var where = globalThis.falcorHub || { appRoot: (0, import_node_path8.join)(__dirname, ".."), packRoot: (0, import_node_path8.join)(__dirname, ".."), packVersion: null, installVersion: import_electron2.app.getVersion(), packsDir: (0, import_node_path8.join)(import_electron2.app.getPath("userData"), "packs") };
-var VERSION = "0.21.28";
+var VERSION = "0.21.33";
 var simulated = process.argv.includes("--simulated");
 if (!import_electron2.app.requestSingleInstanceLock()) {
   if (where.packVersion) {
@@ -21356,6 +21489,10 @@ async function boot() {
     hub.store.set("whats_new", JSON.stringify({ ...w, seen: true }));
     hub.store.set("whats_new_history", JSON.stringify([{ version: w.version, notes: w.notes }, ...notesHistory().filter((x) => x.version !== w.version)].slice(0, 8)));
   }
+  hub.remote.liveFrame = async (id) => {
+    const f = await windowFrame(id, "image/jpeg");
+    return f ? { mime: "image/jpeg", data: f.png } : null;
+  };
   await hub.remote.start().catch((e) => hub.engine.say("The phone app connection could not start: " + (e instanceof Error ? e.message : String(e))));
   if (!p.adb) hub.engine.say("Android platform tools (adb) are missing from this install.");
 }
@@ -21400,7 +21537,7 @@ import_electron2.ipcMain.on("frameTaken", (_e, a) => {
   const png = r.png instanceof ArrayBuffer ? Buffer.from(r.png) : r.png instanceof Uint8Array ? Buffer.from(r.png.buffer, r.png.byteOffset, r.png.byteLength) : null;
   done(png && png.length > 100 ? { png, width: Number(r.width) || 0, height: Number(r.height) || 0, at: Number(r.at) || 0 } : null);
 });
-function windowFrame(deviceId) {
+function windowFrame(deviceId, mime = "image/png") {
   return new Promise((resolve) => {
     if (!win || win.isDestroyed() || !videos.has(deviceId)) {
       resolve(null);
@@ -21414,7 +21551,7 @@ function windowFrame(deviceId) {
       clearTimeout(t);
       resolve(v);
     });
-    win.webContents.send("frameWanted", { req, deviceId });
+    win.webContents.send("frameWanted", { req, deviceId, mime });
   });
 }
 var KEYS3 = { BACK: 4, HOME: 3, APP_SWITCH: 187, ENTER: 66, DEL: 67, TAB: 61, ESCAPE: 111 };
@@ -21568,10 +21705,11 @@ var handlers = {
   },
   // Teach Falcor and what it learned.
   teachTarget: (a) => need().engine.teachTarget(String(a.deviceId)),
-  teachStart: (a) => need().engine.teachStart(String(a.deviceId), { name: String(a.name || ""), intent: String(a.intent || ""), custom: a.custom || void 0, sandbox: a.sandbox || void 0 }),
+  teachStart: (a) => need().engine.teachStart(String(a.deviceId), { name: String(a.name || ""), intent: String(a.intent || ""), custom: a.custom || void 0, sandbox: a.sandbox || void 0, home: a.home === true }),
   teachPause: (a) => need().engine.teachPause(a.on === true),
   teachMark: (a) => need().engine.teachMark(String(a.note || "")),
   teachStop: () => need().engine.teachStop(),
+  teachProgress: () => need().engine.teachWork,
   teachEstimate: (a) => need().knowledge.estimate(String(a.pkg), String(a.id)),
   teachWrite: (a) => need().knowledge.writeGuide(String(a.pkg), String(a.id), a.mode === "text" ? "text" : a.mode === "local" ? "local" : "full", a.overLimit === true),
   learned: (a) => {
@@ -21710,6 +21848,10 @@ var handlers = {
         return sb.restore(id, String(a.revisionId || ""));
       case "remove":
         return sb.remove(id);
+      case "publish":
+        return sb.publish(id);
+      case "unpublish":
+        return sb.unpublish(id);
       case "presetSave":
         return sb.savePreset(a);
       case "presetRemove":

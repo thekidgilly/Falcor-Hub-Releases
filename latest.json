@@ -1,12 +1,12 @@
 {
-  "version": "0.21.32",
-  "notes": "Falcor.Hub 0.21.32: Settings - About: The Lay of the Keeper, Falcor's longer legend",
-  "publishedAt": "2026-10-22T02:08:25.013Z",
+  "version": "0.21.33",
+  "notes": "Falcor.Hub 0.21.33: Settings no longer has a Knowledge list: every app Falcor learned has its card in the Library, whose page shows What Falcor knows and opens the guide",
+  "publishedAt": "2026-10-22T02:15:15.517Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "3889ce011480ad5ab9317d075e9dfe951193996221060c2d0b0cf097875f7db8",
-      "size": 1176314
+      "sha256": "2ee7b30b946f39dc44c9705779d2ec55d0f74c1cfb0a544d590eadeaa57b4262",
+      "size": 1176346
     },
     {
       "path": "dist/preload.js",
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "db078ee9f4cfe36ed8a2a64989ae5261a7c038dc8b3238e8cc2d78612e11a410",
-      "size": 150230
+      "sha256": "ee2af895cfa48cdbfef0149325a547f6b05ae4edc65f757582b0498c5d6b0a94",
+      "size": 149131
     },
     {
       "path": "ui/app.png",
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "43eb55ff928a085d4134657b50e6e5b254355f52be65def021045e48342d26ce",
-      "size": 59289
+      "sha256": "83fec6078ca0c82410c07baae4ea70ad2dbd483d99e457124dab2caf434bfcbf",
+      "size": 58532
     },
     {
       "path": "ui/motion.css",
@@ -155,8 +155,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "a8d90fafba64d285015dd102572e7491668ed2c2ee22dfd11e9791c58689d246",
-      "size": 113370
+      "sha256": "e188c5186fa12aba4edafb81a8ba10b0ebf8741c3805da74c8c51d2bb0bb24dc",
+      "size": 112440
     },
     {
       "path": "ui/tokens.css",
