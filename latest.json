@@ -1,12 +1,12 @@
 {
-  "version": "0.21.43",
-  "notes": "The Sandbox opens on a start box over the workspace grid: a quick tour, Teach Falcor, the example, your drafts, or a blank workspace.",
-  "publishedAt": "2026-10-22T04:29:14.575Z",
+  "version": "0.21.44",
+  "notes": "Phone app: one Studio menu that follows your finger, with a settings wheel (edge, position, width); new widgets (Teach & Stop, Player, Phone controls) and the Wizard's Kit; zoom and a layout lock in the corner; the Hub is customizable with an Autopilot switch and live mirror; Teach no longer times out. Every mirror glows white at rest, red while teaching, green while Falcor plays. Easier Recent/Home/Back taps. The firewall rule adds itself.",
+  "publishedAt": "2026-10-22T05:35:08.210Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "4c5dadadc4b46280764af2f9e5233f3c4749a8da427c5ae4232b839ebc22e4fa",
-      "size": 1181030
+      "sha256": "2f92182876e04fd376fb6fc089c049fd509f8bdbeb8b0b38be98f98fdcda6d51",
+      "size": 1181809
     },
     {
       "path": "dist/preload.js",
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-BWOgLpMa.css",
-      "sha256": "bd139b4aaf3cb7db0dfb5fce0e71a529a60c1a5ef83853edb966bf805206f139",
-      "size": 84850
+      "path": "remote-ui/assets/index-B-oN97M9.css",
+      "sha256": "1eae815172c4629194651075a24ec293f5c99cbe4ebdbd5544e2ff7fef3e1b96",
+      "size": 88463
     },
     {
-      "path": "remote-ui/assets/index-CLInnvMm.js",
-      "sha256": "a955c1bb0cb8ffcc5deace9d76a039eb05b6b92f9a4dcc1e8a30a8bc6dce6e3c",
-      "size": 257209
+      "path": "remote-ui/assets/index-RTjYr2Xc.js",
+      "sha256": "5627636484f03bb19f0aa3fdaf86483d97173751eb4544d0d7b5b8c6f20c233c",
+      "size": 263867
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,8 +65,8 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "f78891f393ae5556298d89596415a7dac41c052ce15dc97b2f75904b64ec935b",
-      "size": 3845
+      "sha256": "06d59552ec53a3b8608ed1cd128ed56e0340786311e2c5632b970ff314c13117",
+      "size": 3678
     },
     {
       "path": "ui/ai.js",
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "3cffcc10334a1c0c8e61b54f53d744bcb3f5eaeebfa030e9e4857e77c0a1375c",
-      "size": 150517
+      "sha256": "96469b77b3616bf91e7c9700bc72cb52b9413b30aaac9bb45daae97c53d0673c",
+      "size": 151455
     },
     {
       "path": "ui/app.png",
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "480c156df24574435f4c71c9a7d4f414f2c0fa5e8383db4b8505d4c1009c4110",
-      "size": 64287
+      "sha256": "7208cd1a5314f3508ce5fbbe5e1be033d514170f01be23aa25900b73befe8872",
+      "size": 64521
     },
     {
       "path": "ui/popout.js",
@@ -165,8 +165,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "e506bcbeb3dd6c3b6a03566a17b7daa5e533f92aa87d2edb6ce131dac74c7a15",
-      "size": 136956
+      "sha256": "037e315197da65581b58ccf2e33a88317f29844db71c32c6e53bad88216654e0",
+      "size": 137542
     },
     {
       "path": "ui/tokens.css",

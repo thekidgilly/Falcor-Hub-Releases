@@ -40,16 +40,18 @@ function numbers(root = document) {
 numbers();
 
 // ------------------------------------------------------------------ tabs, keys, intro
-// The tab bar (keys 1–5): Hub (internal id phone), Library (games), Sandbox, Activity (stats), Settings. Creations (tasks)
+// The tab bar (keys 1–5): Profile, Hub (internal id phone, where Falcor.Hub opens), Library (games), Sandbox, Settings (Activity is a page in Settings). Creations (tasks)
 // and the full-page Falcor chat (falcor) are pages without a tab: Creations opens from a creation's card in the Library
 // and lights Library; the chat opens from the floating Falcor's Full page button.
-const TABS = ['phone', 'games', 'sandbox', 'stats', 'settings'];
-const PAGES = [...TABS, 'tasks', 'falcor', 'knowledge'], LIT = {tasks: 'games'};
+const TABS = ['profile', 'phone', 'games', 'sandbox', 'settings'];
+const PAGES = [...TABS, 'stats', 'tasks', 'falcor', 'knowledge'], LIT = {tasks: 'games'};
 let dockOpen = false; // the floating Falcor's small chat is open
 // An app's guide (Knowledge) has no tab of its own: it opens from its game, a task or the chat,
 // lights the tab it came from, and Back returns there.
 let learnFrom = {tab: 'games', sub: null, pkg: null};
 function go(name, sub) {
+  // (Activity lives in Settings, the owner 2026-10-21: its own page there, no tab)
+  if (name === 'stats') { name = 'settings'; sub = 'activity'; }
   if (!PAGES.includes(name)) return;
   const changed = name !== tab;
   tab = name;
@@ -65,6 +67,7 @@ function go(name, sub) {
   if (changed) P.motion.enter(document.querySelector('[data-pane="' + tab + '"]'));
   document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tab === lit)));
   if (tab === 'falcor') openChat();
+  if (tab === 'profile' && window.renderProfile) renderProfile(); else if (window.profileLeave) profileLeave();
 }
 function placeTabline() { const b = document.querySelector('.tabs button.on'); $('tabline').hidden = !b; if (b) { $('tabline').style.width = b.offsetWidth + 'px'; $('tabline').style.transform = 'translateX(' + b.offsetLeft + 'px)'; } }
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => go(b.dataset.tab));
@@ -124,7 +127,8 @@ function render() {
   if (tab === 'tasks') renderTasks();
   if (chatShown()) renderChatMeta();
   if (tab === 'knowledge') renderLearn();
-  if (tab === 'stats' && window.renderActivity) renderActivity();
+  if (tab === 'settings' && sub === 'activity' && window.renderActivity) renderActivity();
+  if (tab === 'profile' && window.renderProfile) renderProfile();
   if (tab === 'tasks' && window.renderCreations) renderCreations();
   if (tab === 'settings') renderSettings();
 }
@@ -214,6 +218,8 @@ function renderPhone(d) {
   // The device frame: control (sand), recording (red), Falcor acting (brackets pulse).
   const devEl = $('device');
   cls(devEl, 'control', controlling && !S.teaching); cls(devEl, 'recording', !!S.teaching); cls(devEl, 'falcor-acting', !!(d.control && d.control.kind === 'agent'));
+  // The state glow (the owner, 2026-10-21), the same on the Hub, the Sandbox and the phone app: white at rest, red while Teach records, green while Falcor plays.
+  cls(devEl, 'automating', !S.teaching && !!(d.running || d.sandbox || (d.control && d.control.kind === 'agent')));
   $('devtag').hidden = !(controlling || S.teaching); text($('devtag'), S.teaching ? '● REC' : 'YOU HAVE CONTROL');
   renderEyes(d);
   // The current activity (the queue's, a task run when due, or a Sandbox run) and Today's Queue (queue.js).
@@ -398,6 +404,10 @@ let down = null;
 const fast = () => vid.on && vid.control && !S.teaching && !!window.hub.touch;
 const touch = (kind, p, extra) => window.hub.touch({deviceId, kind, ...(p ? {x: p.x, y: p.y} : {}), ...(extra || {})});
 let moveAt = 0;
+// The navigation bar helper (the owner, 2026-10-21): a short tap anywhere in the bottom strip of an upright phone presses
+// the nearest of Recent, Home and Back as a key (the small buttons are easy to miss); a swipe from there stays a swipe.
+const NAV_Y = 0.935, navKey = x => x < 0.37 ? 'APP_SWITCH' : x > 0.63 ? 'BACK' : 'HOME';
+const inNav = p => p.y >= NAV_Y && !document.body.classList.contains('phone-landscape');
 for (const surface of [$('mirror'), canvas]) {
   // The Sandbox's pointer modes (view, pick a target or a gesture, a run playing) take the mouse; Control and Teach touch.
   surface.addEventListener('pointermove', e => {
@@ -408,7 +418,7 @@ for (const surface of [$('mirror'), canvas]) {
   surface.addEventListener('pointerdown', e => {
     if (window.sbPointer && tab === 'sandbox' && sbPointer('down', at(e), e)) return;
     if (!controlling) { toast('Take Control first to touch the phone.', 'warn'); return; }
-    down = {...at(e), t: Date.now(), fast: fast()}; surface.setPointerCapture(e.pointerId);
+    const p0 = at(e); down = {...p0, t: Date.now(), fast: fast() && !inNav(p0), nav: inNav(p0)}; surface.setPointerCapture(e.pointerId);
     if (down.fast) touch('down', down);
   });
   surface.addEventListener('pointercancel', () => { if (down && down.fast) touch('up', down); down = null; });
@@ -420,6 +430,7 @@ for (const surface of [$('mirror'), canvas]) {
       lastTouch = {x: down.x * 100, y: down.y * 100}; down = null; return;
     }
     if (!down) return; const up = at(e), ms = Date.now() - down.t, moved = Math.hypot(up.x - down.x, up.y - down.y);
+    if (down.nav && moved <= 0.03 && ms <= 600) { P.tapMark($('overlay'), down.x * 100, down.y * 100, false); const key = navKey(down.x); down = null; void send({kind: 'key', key}); return; }
     const a = moved > 0.03 ? {kind: 'swipe', x: down.x, y: down.y, toX: up.x, toY: up.y, ms: Math.min(2000, Math.max(120, ms))} : ms > 600 ? {kind: 'long_press', x: down.x, y: down.y, ms: Math.min(3000, ms)} : {kind: 'tap', x: down.x, y: down.y};
     if (a.kind === 'swipe') P.trail($('overlay'), down.x * 100, down.y * 100, up.x * 100, up.y * 100); else P.tapMark($('overlay'), down.x * 100, down.y * 100, false);
     lastTouch = {x: down.x * 100, y: down.y * 100};
@@ -1477,7 +1488,7 @@ $('sessions').addEventListener('click', e => { const w = e.target.closest('[data
 
 // ------------------------------------------------------------------ settings
 let sub = 'ai';
-function setSub(name) { sub = name; document.querySelectorAll('#submenu button').forEach(b => cls(b, 'on', b.dataset.sub === sub)); document.querySelectorAll('.settingsgrid .panel[data-sub]').forEach(p => { p.hidden = p.dataset.sub !== sub; }); }
+function setSub(name) { sub = name; document.querySelectorAll('#submenu button').forEach(b => cls(b, 'on', b.dataset.sub === sub)); document.querySelectorAll('.settingsgrid .panel[data-sub]').forEach(p => { p.hidden = p.dataset.sub !== sub; }); if (sub === 'activity' && window.renderActivity) renderActivity(); }
 document.querySelectorAll('#submenu button').forEach(b => b.onclick = () => setSub(b.dataset.sub));
 let prevPhones = null;
 function renderSettings() {

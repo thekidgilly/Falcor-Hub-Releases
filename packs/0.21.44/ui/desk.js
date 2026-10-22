@@ -18,6 +18,14 @@
     {id: 'creations', name: 'Creations', about: 'Run or stop your Sandbox sequences', min: [240, 140], size: [320, 300], weight: 1.1},
     {id: 'today', name: 'Today', about: 'How today went, what is next, AI spending', min: [220, 130], size: [300, 270], weight: 1},
     {id: 'link', name: 'Connection', about: 'The cable, the mirror, the tools and paired phones', min: [220, 140], size: [300, 290], weight: 1},
+    {id: 'clock', name: 'Clock', about: 'The time, the date and the queue\'s next start', min: [200, 110], size: [300, 160], weight: .7},
+    {id: 'spend', name: 'AI meter', about: 'This month\'s AI spending and the last seven days', min: [220, 150], size: [300, 230], weight: 1},
+    {id: 'vitals', name: 'Phone vitals', about: 'Battery, screen, control and the paired phones', min: [220, 150], size: [300, 230], weight: 1},
+    // (decor, the owner 2026-10-21: a cyber workspace; widgets.js draws them only while they are seen)
+    {id: 'ticker', name: 'LED sign', about: 'Your own message scrolling across in lights', min: [240, 90], size: [420, 120], weight: .6, decor: true},
+    {id: 'rain', name: 'Data rain', about: 'Falling glyphs in Falcor green', min: [180, 140], size: [260, 260], weight: 1, decor: true},
+    {id: 'radar', name: 'Radar', about: 'A sweep with a blip for every phone Falcor knows', min: [180, 180], size: [260, 260], weight: 1, decor: true},
+    {id: 'scope', name: 'Signal', about: 'The Hub\'s pulse as a scope line', min: [200, 100], size: [320, 150], weight: .7, decor: true},
   ];
   const byId = Object.fromEntries(WINS.map(w => [w.id, w]));
   const LAYOUTS = {
@@ -26,7 +34,7 @@
     grid: {name: 'Grid', about: 'The phone on the left, panels in an even grid', make: grid},
   };
   // Classic's two columns: where each panel goes, before the columns are evened out.
-  const LEFT = ['device', 'current', 'needs', 'today', 'link'], RIGHT = ['queue', 'log', 'creations', 'apps'];
+  const LEFT = ['device', 'current', 'needs', 'today', 'link', 'clock', 'vitals', 'radar', 'rain'], RIGHT = ['queue', 'log', 'creations', 'apps', 'spend', 'ticker', 'scope'];
   const blank = () => ({v: 1, visible: Object.fromEntries(WINS.map(w => [w.id, !!w.core])), z: [...WINS.map(w => w.id).filter(id => id !== 'mirror'), 'mirror'], locked: false, snap: false, snapV: 1, maxed: null,
     slots: {upright: {preset: 'classic', rects: {}}, sideways: {preset: 'focus', rects: {}}}});
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -391,7 +399,7 @@
     const group = (label, items) => '<div role="group" aria-label="' + esc(label) + '"><p class="eyebrow" aria-hidden="true">// ' + esc(label.toUpperCase()) + '</p>' + items + '</div>';
     if (menu.kind === 'wins') {
       const item = w => '<button type="button" role="menuitemcheckbox" data-k="w:' + w.id + '" aria-checked="' + !!D.visible[w.id] + '"' + (w.fixed ? ' disabled' : '') + '>' + box + line(w.name, w.about) + '</button>';
-      pop.innerHTML = group('Windows', WINS.filter(w => w.core).map(item).join('')) + '<hr>' + group('More windows', WINS.filter(w => !w.core).map(item).join(''))
+      pop.innerHTML = group('Windows', WINS.filter(w => w.core).map(item).join('')) + '<hr>' + group('More windows', WINS.filter(w => !w.core && !w.decor).map(item).join('')) + '<hr>' + group('Decor', WINS.filter(w => w.decor).map(item).join(''))
         + '<hr><div class="duo" role="group" aria-label="Show"><button type="button" role="menuitem" data-k="all">' + line('Show all') + '</button><button type="button" role="menuitem" data-k="usual">' + line('Only the usual five') + '</button></div>';
     } else {
       const cur = D.slots[slot].preset;

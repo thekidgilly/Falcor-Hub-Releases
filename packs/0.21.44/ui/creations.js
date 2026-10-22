@@ -168,7 +168,7 @@
       AC.rows = more ? [...AC.rows, ...r.rows.filter(x => !AC.rows.some(y => y.key === x.key))] : r.rows; AC.next = r.next; AC.pages = more ? AC.pages + 1 : 1; AC.error = ''; AC.loaded = true;
       text($('actnote'), r.retention + ' Dates are in ' + r.tz + '.');
     } catch (e) { if (mine === AC.seq) AC.error = errText(e); }
-    finally { AC.busy = false; AC.at = Date.now(); if (tab === 'stats') drawActivity(); }
+    finally { AC.busy = false; AC.at = Date.now(); if (tab === 'settings' && sub === 'activity') drawActivity(); }
   }
   function drawActivity() {
     const box = $('actlist');
