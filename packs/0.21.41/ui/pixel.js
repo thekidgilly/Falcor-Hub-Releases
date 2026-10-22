@@ -503,15 +503,6 @@
     + (r.watchOuts && r.watchOuts.length ? '<p class="eyebrow">// WATCH OUT</p><ul class="tips warn">' + r.watchOuts.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>' : '')
     + (r.screenshots && r.screenshots.length ? '<p class="muted small">Screenshots found: ' + r.screenshots.map((u, i) => '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + (i + 1) + '</a>').join(' · ') + '</p>' : '')
     + '<p class="muted small">Looked up ' + new Date(r.at).toLocaleDateString() + (r.sources && r.sources.length ? ' · ' + r.sources.map(u => { let h = u; try { h = new URL(u).hostname.replace(/^www\./, ''); } catch { /* keep */ } return esc(h); }).join(' · ') : '') + '</p></div>';
-  const editFeedback = (() => {
-    const modes = ['Off', 'Haptic', 'Sound', 'Both']; let context, last = 0;
-    const mode = () => { try { const m = localStorage.getItem('sb.feedback'); return modes.includes(m) ? m : 'Off'; } catch { return 'Off'; } };
-    const cycle = () => { try { localStorage.setItem('sb.feedback', modes[(modes.indexOf(mode()) + 1) % modes.length]); } catch {} };
-    const pulse = () => { const m = mode(), now = Date.now(); if (m === 'Off' || now - last < 100) return; last = now;
-      if (m === 'Haptic' || m === 'Both') { try { navigator.vibrate?.(10); } catch {} }
-      if (m === 'Sound' || m === 'Both') { try { context ||= new AudioContext(); if (context.state === 'suspended') void context.resume(); const o = context.createOscillator(), g = context.createGain(); o.frequency.value = 700; g.gain.setValueAtTime(.025, context.currentTime); g.gain.exponentialRampToValueAtTime(.001, context.currentTime + .025); o.connect(g); g.connect(context.destination); o.start(); o.stop(context.currentTime + .03); } catch {} }
-    }; return {mode, cycle, pulse};
-  })();
   // Smart Playbook, the premium panel (both apps): what the milestones left are worth, glowing; ONE start button (no
   // choices: the plan follows its own schedule); the milestone path; the session calendar; the fine print folded away.
   // gate: {ok, why} whether it may start now (phone, Emergency Stop, install, training). Buttons carry data-pb.
@@ -550,5 +541,5 @@
       + '<details class="pbmore"><summary>Details</summary><p><em>Deadline</em> ' + (p.deadline.at ? esc(new Date(p.deadline.at).toLocaleString()) + ' · ' + esc(p.deadline.source) : 'unknown') + '</p><p><em>Time per level</em> ' + (p.estimate.minPerLevel ? '≈ ' + p.estimate.minPerLevel + ' min' : 'unknown') + ' · ' + esc(p.estimate.note) + '</p>'
       + p.notes.map(n => '<p>' + esc(n) + '</p>').join('') + p.unknowns.map(n => '<p class="sand">' + esc(n) + '</p>').join('') + '<p>' + esc(v.note) + ' It never buys anything and never taps inside an ad.</p></details></div>';
   };
-  window.Pixel = {playbookHtml, editFeedback, MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced, monogram, num, unitIcon, earnLine, offersHtml, prepHtml, rewardsHtml, historyHtml, tiersHtml, progressHtml, motion, money, cardHtml, library, earnTiles, ladderHtml, activityHtml, MSTATE, noticesHtml, ago, setDragon, dragonSrc, avatarHtml, introHtml, INTRO, normIcon, researchHtml, trainHtml};
+  window.Pixel = {playbookHtml, MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced, monogram, num, unitIcon, earnLine, offersHtml, prepHtml, rewardsHtml, historyHtml, tiersHtml, progressHtml, motion, money, cardHtml, library, earnTiles, ladderHtml, activityHtml, MSTATE, noticesHtml, ago, setDragon, dragonSrc, avatarHtml, introHtml, INTRO, normIcon, researchHtml, trainHtml};
 })();

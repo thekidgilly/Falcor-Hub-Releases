@@ -1,11 +1,11 @@
 {
-  "version": "0.21.40",
-  "notes": "New Hub windows in the Windows menu: Clock, AI meter, Phone vitals, and under Decor an LED sign with your own message, Data rain, Radar and Signal. Every Sandbox panel (Blocks, Phone stage, Step settings, Timeline) pops out and leaves its space to the grid. The app icon is Falcor on plain black. Haptics moved to the phone app's Settings.",
-  "publishedAt": "2026-10-22T03:32:56.369Z",
+  "version": "0.21.41",
+  "notes": "The Hub's Clock shows Minnesota time on a 12-hour face.",
+  "publishedAt": "2026-10-22T03:37:32.372Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "d1623d63976b6f4c9ce44a907ba636dc3287ec129de8ce8b0654d1d6af68754e",
+      "sha256": "9f6ce84575cc2547b9321ceb883e5d1d5c05d921e68e30147f0dde5e6b38dd11",
       "size": 1177697
     },
     {
@@ -170,8 +170,8 @@
     },
     {
       "path": "ui/widgets.js",
-      "sha256": "4d209abb04f8fcf3df8d29071fe2afbd39c1db9f6c2fc21a0c316f7dbbcaf7f8",
-      "size": 13596
+      "sha256": "4fc9bfdb10ecb8417612e9fef02716e912fd2f1c2c7ac1c2fde10aee4ae2c1e5",
+      "size": 13655
     }
   ]
 }

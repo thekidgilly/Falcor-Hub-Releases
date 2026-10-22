@@ -3,7 +3,8 @@
 // so animations never replay, and scroll and focus stay where they are.
 const P = window.Pixel; P.sprite();
 let polling = false, statusSeq = 0;   // the status poll: one at a time, and older answers dropped
-const $ = id => document.getElementById(id);
+// (a panel popped out into its own window (popout.js) is still found by its id)
+const $ = id => document.getElementById(id) || (window.__popFind ? window.__popFind(id) : null);
 const {esc, text, attr, cls, keyed, htmlOnce, roll, icon} = P;
 const time = at => new Date(at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
 const when = at => { if (!at) return ''; const m = Math.round((at - Date.now()) / 60000); return m <= 0 ? 'now' : m < 60 ? 'in ' + m + ' min' : m < 36 * 60 ? 'in ' + Math.round(m / 60) + ' h' : new Date(at).toLocaleDateString(); };
