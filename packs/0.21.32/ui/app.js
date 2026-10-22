@@ -105,7 +105,8 @@ function render() {
   if (em && !wasEmergency) { document.body.classList.remove('glitch'); void document.body.offsetWidth; document.body.classList.add('glitch'); $('ebar').classList.add('stepin'); }
   wasEmergency = em; $('ebar').hidden = !em;
   // Badges.
-  setBadge('badge-tasks', waiting + ((S.sandbox && S.sandbox.live) || []).filter(l => l.status === 'NEEDS_ATTENTION' && l.mode === 'run').length); setBadge('badge-falcor', S.chat.unread && !chatShown() ? S.chat.unread : 0);
+  // (what waits on the owner goes to the bell, never a count on a tab)
+  setBadge('badge-falcor', S.chat.unread && !chatShown() ? S.chat.unread : 0);
   renderBell();
   renderStatusbar(d);
   renderTeach();
@@ -197,7 +198,8 @@ function renderPhone(d) {
   $('devpick').hidden = S.devices.length < 2;
   if (S.devices.length > 1) htmlOnce($('devpick'), S.devices.map(x => '<option value="' + esc(x.id) + '"' + (x.id === d.id ? ' selected' : '') + '>' + esc(x.label) + '</option>').join(''));
   text($('devname'), d.label);
-  const st = d.emergency ? ['bad', 'Emergency Stop'] : d.teaching ? ['rec', 'Teaching'] : d.control && d.control.kind === 'human' ? ['warn', 'You have control'] : d.running ? ['active', 'Running a task'] : d.autopilot ? ['active', 'Autopilot on'] : ['', 'Ready'];
+  // (the plugged-in phone only, never the owner's daily phone: green when it is ready for Falcor)
+  const st = d.emergency ? ['bad', 'Emergency Stop'] : !d.connected ? ['bad', 'Not connected'] : !d.authorized ? ['warn', 'Allow USB debugging'] : d.locked ? ['warn', 'Locked'] : d.teaching ? ['rec', 'Teaching'] : d.control && d.control.kind === 'human' ? ['warn', 'You have control'] : d.running ? ['active', 'Running a task'] : d.autopilot ? ['active', 'Autopilot on'] : ['on', 'Ready'];
   $('devstate').firstElementChild.className = 'led ' + st[0]; text($('devstate').lastElementChild, st[1]);
   text($('d-model'), d.model || '—'); text($('d-android'), d.androidVersion || '—');
   htmlOnce($('d-app'), d.foreground ? esc(d.foregroundName || d.foreground) + '<small>' + esc(d.foreground) + '</small>' : '—');
@@ -240,9 +242,13 @@ async function send(action) {
   if (!controlling) { toast('Take Control first.', 'warn'); return; }
   // (the Back, Home and Apps buttons and the typing box: straight to the phone when the fast channel is up)
   if (typeof fast === 'function' && fast() && (action.kind === 'key' || action.kind === 'type' && action.text)) { touch(action.kind === 'key' ? 'key' : 'text', null, action.kind === 'key' ? {key: action.key} : {text: action.text}); return; }
-  await call('input', {deviceId, action}).catch(() => {});
+  // One at a time, in the order pressed: typed letters sent side by side could reach the phone out of order ("hlelo").
+  const mine = sendChain.then(() => call('input', {deviceId, action}).catch(() => {}));
+  sendChain = mine;
+  await mine;
   nextFrame(0);
 }
+let sendChain = Promise.resolve();
 // Falcor's eyes: the element Falcor is about to tap, as a pixel bracket box with its label; verified flashes green.
 let lastTarget = '';
 function renderEyes(d) {
@@ -298,9 +304,10 @@ function setAspect(w, h) {
 function fitDevice() {
   const host = $('device').parentElement;
   if (!host || !host.clientHeight || !host.clientWidth) return;
-  const wide = aspect > 1, padX = wide ? 44 : 24, padY = wide ? 24 : 40;
-  let dh = host.clientHeight - 4, dw = (dh - padY) * aspect + padX;
-  if (dw > host.clientWidth - 4) { dw = host.clientWidth - 4; dh = (dw - padX) / aspect + padY; }
+  // (a margin on every side: the corner marks stand off the frame and its glow shows, all inside the window)
+  const wide = aspect > 1, padX = wide ? 44 : 24, padY = wide ? 24 : 40, M = 40;
+  let dh = host.clientHeight - M, dw = (dh - padY) * aspect + padX;
+  if (dw > host.clientWidth - M) { dw = host.clientWidth - M; dh = (dw - padX) / aspect + padY; }
   $('device').style.setProperty('--devw', Math.max(60, Math.round(dw)) + 'px'); $('device').style.setProperty('--devh', Math.max(60, Math.round(dh)) + 'px');
   if (host.id === 'sbstage' && window.sbPins) sbPins();
 }
@@ -359,7 +366,8 @@ if (window.hub.onFrameWanted) window.hub.onFrameWanted(async p => {
     if (!shotCanvas) shotCanvas = new OffscreenCanvas(w, h);
     if (shotCanvas.width !== w || shotCanvas.height !== h) { shotCanvas.width = w; shotCanvas.height = h; }
     shotCanvas.getContext('2d').drawImage(canvas, 0, 0, w, h);
-    const blob = await shotCanvas.convertToBlob({type: 'image/png'});
+    // (the phone app's live mirror asks for a JPEG: a tenth of the size, so it can follow the screen over Wi-Fi)
+    const blob = await shotCanvas.convertToBlob(p.mime === 'image/jpeg' ? {type: 'image/jpeg', quality: 0.72} : {type: 'image/png'});
     reply({png: await blob.arrayBuffer(), width: w, height: h, at: frameAt});
   } catch { reply({png: null}); }
 });
@@ -474,7 +482,7 @@ $('markform').onsubmit = async e => {
   const f = P.el('<div class="flagdrop">' + icon('flag') + '</div>'); f.style.left = lastTouch.x + '%'; f.style.top = lastTouch.y + '%'; $('overlay').appendChild(f); setTimeout(() => f.remove(), 1500);
   toast('Marked.');
 };
-$('recstop').onclick = async () => { const r = await call('teachStop'); if (r.sandbox && window.sbAfterTeach) sbAfterTeach(r.sandbox); if (!r.pkg) { toast('No app was opened, so nothing was recorded.', 'warn'); return; } if (r.customTask) toast('Saved as a custom task. Approve it in Tasks to let Falcor run it.'); if (!r.auto) showAfter(r.pkg, r.id, r.name, r.screens, r.learned); };
+$('recstop').onclick = async () => { if (S.teaching && S.teaching.sandbox && window.sbEndTeach) { go('sandbox'); return sbEndTeach(); } const r = await call('teachStop'); if (r.sandbox && window.sbAfterTeach) sbAfterTeach(r.sandbox); if (!r.pkg) { toast('No app was opened, so nothing was recorded.', 'warn'); return; } if (r.customTask) toast('Saved as a custom task. Approve it in Tasks to let Falcor run it.'); if (!r.auto) showAfter(r.pkg, r.id, r.name, r.screens, r.learned); };
 async function showAfter(pkg, id, name, screens, learned) {
   after = {pkg, id, screens}; $('after').hidden = false; text($('aftername'), name); text($('afterest'), 'Working out what it costs…');
   // What Falcor already worked out from the session on this computer (free, no AI): Autopilot uses it from now on.

@@ -5527,7 +5527,7 @@ function validateAction(raw) {
 }
 var MAX_OBSERVATION_AGE = 6e3;
 var SYSTEM_PACKAGES = /^(?:android|com\.android\.systemui|com\.android\.launcher\d?|com\.google\.android\.apps\.nexuslauncher|com\.sec\.android\.app\.launcher|com\.google\.android\.permissioncontroller|com\.android\.permissioncontroller|com\.miui\.home|com\.oneplus\.launcher|ai\.falcor\.sim\.launcher)$/;
-function checkAction(env, obs, { allowedPackages, now }) {
+function checkAction(env, obs, { allowedPackages, now, human = false }) {
   if (env.observationId !== obs.id) throw new ActionError("Planned from an older look at the screen.", "STALE");
   if (ageOf(obs, now) > MAX_OBSERVATION_AGE) throw new ActionError("The screen was last seen " + Math.round(ageOf(obs, now) / 1e3) + " s ago; looking again first.", "STALE");
   if (env.expiresAt < now) throw new ActionError("The action expired before it reached the phone.", "EXPIRED");
@@ -5547,7 +5547,7 @@ function checkAction(env, obs, { allowedPackages, now }) {
     return { x: (p.bounds.l + p.bounds.r) / 2 / obs.width, y: (p.bounds.t + p.bounds.b) / 2 / obs.height, node: p };
   }
   if (a.kind === "type") {
-    if (obs.nodes && !obs.nodes.some((n) => n.focused && n.editable)) throw new ActionError("No text box is focused; tap the box first.", "NO_FOCUS");
+    if (!human && obs.nodes && !obs.nodes.some((n) => n.focused && n.editable)) throw new ActionError("No text box is focused; tap the box first.", "NO_FOCUS");
     return {};
   }
   if (a.kind === "tap" || a.kind === "long_press") return { x: a.x, y: a.y };
@@ -5781,7 +5781,7 @@ var GuardedDriver = class {
     if (!obs) return { id: env.id, ok: false, error: "Look at the screen before acting.", code: "STALE", at: now };
     let at;
     try {
-      at = env.action.kind === "wait" || env.action.kind === "screenshot" ? {} : checkAction(env, obs, { allowedPackages: allowedPackages === "*" ? [obs.package, ...env.action.kind === "launch" ? [env.action.package] : []] : allowedPackages, now });
+      at = env.action.kind === "wait" || env.action.kind === "screenshot" ? {} : checkAction(env, obs, { allowedPackages: allowedPackages === "*" ? [obs.package, ...env.action.kind === "launch" ? [env.action.package] : []] : allowedPackages, now, human: auth.lease.kind === "human" });
     } catch (e) {
       return { id: env.id, ok: false, error: e instanceof Error ? e.message : "Refused.", code: e instanceof ActionError ? e.code : "INVALID", at: now };
     }
@@ -8644,11 +8644,12 @@ var TeachSession = class {
   // A touch that already reached the phone, with the screen it was made on.
   touch(action, before) {
     if (this.state !== "recording") return Promise.resolve(null);
+    const madeAt = this.d.now();
     return this.queue(async () => {
       const on = readScreen(before).visual && this.current && !this.current.paused && this.current.pkg === before.package && !teachPause(before) ? this.current : await this.screenOf(before, false);
       this.enter(on);
       const a = action, kind = String(a.kind || "");
-      const t = { n: this.rec.touches.length + 1, at: this.d.now(), screen: on.id, kind, hit: null, after: null, changed: "" };
+      const t = { n: this.rec.touches.length + 1, at: madeAt, screen: on.id, kind, hit: null, after: null, changed: "" };
       if (!on.paused) {
         const r = (v) => typeof v === "number" ? Math.round(v * 1e3) / 10 : void 0;
         Object.assign(t, { x: r(a.x), y: r(a.y), toX: r(a.toX), toY: r(a.toY), ms: typeof a.ms === "number" ? a.ms : void 0, key: typeof a.key === "string" ? a.key : void 0, direction: typeof a.direction === "string" ? a.direction : void 0 });
@@ -8656,7 +8657,8 @@ var TeachSession = class {
         if (kind === "type") t.text = (before.nodes || []).some((n) => n.password && n.focused) ? "[hidden]" : clip(String(a.text || ""), 120);
       }
       for (const k of Object.keys(t)) if (t[k] === void 0) delete t[k];
-      const settled = await this.settled(before);
+      const typing = kind === "type" || kind === "key" && a.key === "DEL";
+      const settled = typing ? { obs: before, ms: 0 } : await this.settled(before);
       const afterObs = settled.obs;
       if (settled.ms) t.settleMs = settled.ms;
       if (t.kind === "swipe" && t.y !== void 0 && t.toY !== void 0 && t.x !== void 0 && t.toX !== void 0) t.direction = Math.abs(t.toY - t.y) >= Math.abs(t.toX - t.x) ? t.toY < t.y ? "down" : "up" : t.toX < t.x ? "right" : "left";
@@ -8667,7 +8669,7 @@ var TeachSession = class {
         else if (afterObs.package !== before.package) t.changed = "opened " + afterObs.package;
         else {
           const dd = diff(readScreen(before).texts, readScreen(afterObs).texts);
-          t.changed = [after.id !== on.id ? "now " + after.id : "", dd.added.length ? "+" + dd.added.slice(0, 4).map((x) => '"' + x.slice(0, 40) + '"').join(" ") : "", dd.removed.length ? "-" + dd.removed.slice(0, 3).map((x) => '"' + x.slice(0, 40) + '"').join(" ") : ""].filter(Boolean).join(" ") || "no visible change";
+          t.changed = [after.id !== on.id ? "now " + after.id : "", dd.added.length ? "+" + dd.added.slice(0, 4).map((x) => '"' + x.slice(0, 40) + '"').join(" ") : "", dd.removed.length ? "-" + dd.removed.slice(0, 3).map((x) => '"' + x.slice(0, 40) + '"').join(" ") : ""].filter(Boolean).join(" ") || (typing ? "typed" : "no visible change");
         }
         this.rec.touches.push(t);
         this.touchesAtLook = this.rec.touches.length;
@@ -8773,7 +8775,7 @@ var removed = (t) => {
   return m ? [...m[1].matchAll(/"([^"]*)"/g)].map((x) => x[1]) : [];
 };
 var sigOf = (sc) => sc && !sc.visual && sc.kind === "screen" ? sc.key.split("|")[1] || "" : "";
-var backish = (t) => t.kind === "key" || BACKISH.test((t.hit?.label || "").trim());
+var backish = (t) => t.kind === "key" ? /^(?:BACK|HOME)$/.test(String(t.key || "")) : BACKISH.test((t.hit?.label || "").trim());
 var num = (v) => Number(v.replace(/,/g, ""));
 function analyze(rec, o = {}) {
   const screens = new Map(rec.screens.map((s2) => [s2.id, s2]));
@@ -8970,7 +8972,7 @@ function routineOf(rec, avoidAlready = []) {
   const nothing = (t) => t.changed === "no visible change" || !t.changed;
   while (list.length > 1) {
     const t = list[list.length - 1];
-    if (t.kind === "key" || backish(t) || nothing(t)) list.pop();
+    if (backish(t) || nothing(t)) list.pop();
     else break;
   }
   const f = (v) => v === void 0 ? void 0 : Math.round(v * 10) / 1e3;
@@ -9305,7 +9307,7 @@ function overlaps(items) {
 var OUTCOME_LABEL = { completed: "Completed", attention: "Needs attention", failed: "Failed", stopped: "Stopped", interrupted: "Interrupted", waiting: "Waiting", running: "Running", skipped: "Did not run" };
 var SEQ_OUTCOME = { COMPLETED: "completed", NEEDS_ATTENTION: "attention", FAILED: "failed", STOPPED: "stopped", MISSED_SCHEDULE: "skipped", RUNNING: "running", STARTING: "running", PAUSED: "waiting", QUEUED: "waiting", WAITING_FOR_DEVICE: "waiting" };
 var MISSION_OUTCOME = { ACTION_VERIFIED: "completed", CREDIT_PENDING: "completed", REWARD_VERIFIED: "completed", NO_CHANGE: "completed", NEEDS_ATTENTION: "attention", BLOCKED: "attention", FAILED: "failed", STOPPED: "stopped", MISSED: "skipped", EXPIRED: "skipped", RUNNING: "running" };
-var MISSION_NOTE = { ACTION_VERIFIED: "The action was seen on the screen (a reward is only counted in Games).", CREDIT_PENDING: "The action was seen; the reward is still pending.", REWARD_VERIFIED: "The reward was seen on the screen.", NO_CHANGE: "Nothing needed doing." };
+var MISSION_NOTE = { ACTION_VERIFIED: "The action was seen on the screen (a reward is only counted in the Library).", CREDIT_PENDING: "The action was seen; the reward is still pending.", REWARD_VERIFIED: "The reward was seen on the screen.", NO_CHANGE: "Nothing needed doing." };
 var SESSION_OUTCOME = { COMPLETED: "completed", FAILED: "failed", INTERRUPTED: "interrupted", CANCELLED: "stopped", SKIPPED: "skipped", MISSED: "skipped", WAITING_FOR_USER: "attention", BLOCKED: "attention", RUNNING: "running", PAUSED: "waiting", READY: "waiting", SCHEDULED: "waiting" };
 var TRIGGER = { autopilot: "Autopilot", ready: "Run Ready", auto: "Automatic Start", now: "Run now (queue)", manual: "Run now" };
 var PAGE_MAX = 100;
@@ -9334,7 +9336,7 @@ var Views = class {
       if (info.mode !== "run") continue;
       last.set(r.sequence_id, { ...info, status: r.status, endedAt: r.ended_at });
     }
-    return seqs.map((s2) => {
+    return seqs.filter((s2) => s2.published).map((s2) => {
       const d = s2.deviceId ? devices.find((x) => x.id === s2.deviceId) : devices[0], l = last.get(s2.id), lv = live.find((x) => x.sequenceId === s2.id && x.mode === "run");
       const device = !d ? { label: s2.deviceId ? "A phone not connected now" : "No phone yet", state: "none", why: s2.deviceId ? "Plug in its phone to run it." : "Choose a phone in Sandbox." } : !d.connected || !d.authorized ? { label: d.label, state: "offline", why: !d.connected ? "The phone is not connected." : "Allow USB debugging on the phone." } : d.locked ? { label: d.label, state: "offline", why: "Unlock the phone." } : d.running || d.sandbox ? { label: d.label, state: "busy", why: "Something else is running on the phone." } : { label: d.label, state: "ready", why: "" };
       const outcome = l ? SEQ_OUTCOME[l.status] || "failed" : null;
@@ -11191,7 +11193,10 @@ var SandboxRunner = class {
       case "tap": {
         const a = p.anchor;
         if (a && a.mode !== "off") {
-          const o = await this.look(), n = this.findControl(o, a.text, a.id);
+          const o = await this.look(), found = this.findControl(o, a.text, a.id), pt2 = p.point;
+          const far = !!found && !!pt2 && a.mode === "prefer" && Math.hypot((found.bounds.l + found.bounds.r) / 2 / o.width - pt2[0], (found.bounds.t + found.bounds.b) / 2 / o.height - pt2[1]) > 0.25;
+          if (far) this.d.event({ at: this.d.now(), stepId: s2.id, type: "info", text: '"' + (a.text || a.id) + '" is far from where this step points; tapping the point instead.' });
+          const n = far ? null : found;
           if (n) {
             await this.act({ kind: "tap_node", selector: this.selectorFor(n) }, "navigate", 'Tapped "' + (a.text || a.id) + '"');
             return;
@@ -11364,6 +11369,7 @@ var SkipStep = class extends Error {
 
 // src/sandbox/index.ts
 var OWNER = "owner";
+var isPublished = (m, steps) => m.published === void 0 ? steps > 0 : !!m.published;
 var CHECKS = /* @__PURE__ */ new Set(["verifyText", "waitUntil", "waitForApp", "repeatUntil"]);
 var sentenceOf = (s2) => {
   const t = String(s2 || "").trim();
@@ -11502,6 +11508,7 @@ var Sandbox = class {
         folder: meta2.folder || "",
         favorite: !!meta2.favorite,
         task: !!meta2.task,
+        published: isPublished(meta2, def ? countSteps(def.steps) : 0),
         deviceId: r.device_id,
         steps: def ? countSteps(def.steps) : 0,
         estimateMs: est.ms,
@@ -11553,7 +11560,7 @@ var Sandbox = class {
     if (title) def.title = title;
     if (deviceId) def.target.deviceId = deviceId;
     const now = this.d.now(), id = this.id("sq");
-    this.w("INSERT INTO sandbox_sequences(id,owner_id,title,json,current_revision_id,device_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)", [id, OWNER, def.title, JSON.stringify({ folder: "", favorite: false }), null, def.target.deviceId, now, now], false);
+    this.w("INSERT INTO sandbox_sequences(id,owner_id,title,json,current_revision_id,device_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)", [id, OWNER, def.title, JSON.stringify({ folder: "", favorite: false, published: false }), null, def.target.deviceId, now, now], false);
     const rev = this.addRevision(id, def, 1);
     this.d.say('Sandbox: created "' + def.title + '".', "YOU");
     this.d.changed();
@@ -11583,6 +11590,30 @@ var Sandbox = class {
     this.w("UPDATE sandbox_sequences SET json=? WHERE id=?", [JSON.stringify(m), id]);
     this.d.changed();
     return m;
+  }
+  // Drafts and the Library: a draft can be edited, tested, previewed and run by hand; only a published sequence is in
+  // the Library and can be scheduled or put in the queue. Unpublishing turns its schedules off.
+  published(id) {
+    const r = this.row(id), rev = r.current_revision_id ? this.revision(r.current_revision_id) : null;
+    return isPublished(JSON.parse(r.json), rev ? countSteps(rev.def.steps) : 0);
+  }
+  publish(id) {
+    const r = this.row(id), m = JSON.parse(r.json);
+    if (!countSteps(this.current(id).def.steps)) throw new SequenceError("Add at least one step before publishing it to the Library.");
+    m.published = this.d.now();
+    this.w("UPDATE sandbox_sequences SET json=? WHERE id=?", [JSON.stringify(m), id]);
+    this.d.say('Sandbox: published "' + r.title + '" to the Library.', "YOU");
+    this.d.changed();
+    return { published: true };
+  }
+  unpublish(id) {
+    const r = this.row(id), m = JSON.parse(r.json);
+    m.published = false;
+    this.w("UPDATE sandbox_sequences SET json=? WHERE id=?", [JSON.stringify(m), id]);
+    this.queue?.gone(id, "Its sequence went back to Drafts.");
+    this.d.say('Sandbox: "' + r.title + '" is a draft again (out of the Library, its schedules off).', "YOU");
+    this.d.changed();
+    return { published: false };
   }
   clone(id, title) {
     const cur = this.current(id), def = JSON.parse(JSON.stringify(cur.def));
@@ -11944,18 +11975,46 @@ var Sandbox = class {
 };
 
 // src/sandbox/teach-bridge.ts
+var COUNT = { tap: "taps", long_press: "holds", swipe: "swipes", scroll: "scrolls", type: "typed", key: "keys" };
+function mergeTyping(steps) {
+  const out = [];
+  for (const st of steps) {
+    const prev = out[out.length - 1], prevEnd = prev ? prev.end ?? prev.at : void 0;
+    if (st.kind === "type" && prev?.kind === "type" && st.at !== void 0 && prevEnd !== void 0 && st.at - prevEnd <= 5e3) {
+      prev.text = (prev.text || "") + (st.text || "");
+      prev.end = st.at;
+      continue;
+    }
+    if (st.kind === "key" && st.key === "DEL" && prev?.kind === "type" && prev.text) {
+      prev.text = prev.text.slice(0, -1);
+      prev.end = st.at ?? prev.end;
+      continue;
+    }
+    out.push({ ...st, end: st.at });
+  }
+  return out;
+}
 function stepsFromTeach(rec, o, id, avoid = []) {
-  if (!rec.pkg) return { steps: [], skipped: [] };
+  const found = { app: rec.name || "", taps: 0, holds: 0, swipes: 0, scrolls: 0, typed: 0, keys: 0, waits: 0, waitedMs: 0, check: false };
+  if (!rec.pkg) return { steps: [], skipped: [], found };
   const r = routineOf(rec, avoid), out = [];
   const pt2 = (x, y) => [Math.min(1, Math.max(0, x ?? 0.5)), Math.min(1, Math.max(0, y ?? 0.5))];
-  if (o.launch) out.push({ id: id(), type: "launchApp", params: { packageName: rec.pkg } }, { id: id(), type: "waitForApp", params: { packageName: rec.pkg, timeoutMs: 15e3 } });
+  const name = (rec.name || "").slice(0, 60);
+  if (o.launch && rec.entry?.fromHome) out.push({ id: id(), type: "key", params: { key: "HOME" }, label: "Start from the home screen" });
+  if (o.launch) out.push({ id: id(), type: "launchApp", params: { packageName: rec.pkg }, ...name ? { label: "Open " + name } : {} }, { id: id(), type: "waitForApp", params: { packageName: rec.pkg, timeoutMs: 15e3 }, ...name ? { label: "Wait for " + name } : {} });
   let last = null;
-  for (const st of r.steps) {
+  for (const st of mergeTyping(r.steps)) {
     if (o.waits && last !== null && st.at !== void 0) {
       const gap = Math.round((st.at - last) / 100) * 100;
-      if (gap >= 1200) out.push({ id: id(), type: "wait", params: { durationMs: Math.min(3e4, gap) }, label: "Pause as you did" });
+      if (gap >= 1200) {
+        const ms2 = Math.min(3e4, gap);
+        out.push({ id: id(), type: "wait", params: { durationMs: ms2 }, label: "Pause as you did" });
+        found.waits++;
+        found.waitedMs += ms2;
+      }
     }
-    if (st.at !== void 0) last = st.at;
+    if (st.end !== void 0) last = st.end;
+    const n = out.length;
     switch (st.kind) {
       case "tap":
         out.push({ id: id(), type: "tap", params: { point: pt2(st.x, st.y), ...st.label || st.id ? { anchor: { text: st.label, id: st.id, mode: "prefer" } } : {} } });
@@ -11976,9 +12035,14 @@ function stepsFromTeach(rec, o, id, avoid = []) {
         if (KEYS2.includes(String(st.key))) out.push({ id: id(), type: "key", params: { key: st.key } });
         break;
     }
+    const k = COUNT[st.kind];
+    if (out.length > n && k) found[k]++;
   }
-  if (o.check && r.done[0]) out.push({ id: id(), type: "verifyText", params: { text: r.done[0].slice(0, 120), timeoutMs: 8e3 }, onError: "skip", label: "Check it ended like you showed" });
-  return { steps: out, skipped: r.skipped };
+  if (o.check && r.done[0]) {
+    out.push({ id: id(), type: "verifyText", params: { text: r.done[0].slice(0, 120), timeoutMs: 8e3 }, onError: "skip", label: "Check it ended like you showed" });
+    found.check = true;
+  }
+  return { steps: out, skipped: r.skipped, found };
 }
 
 // src/queue/index.ts
@@ -12215,6 +12279,7 @@ var DailyQueue = class {
     const all = this.schedules();
     checkDeps(all.map((s2) => ({ id: s2.id, name: s2.name, deps: s2.deps })), id || "new", p.deps);
     if (p.target.type === "sequence" && p.revisionId && !this.e.sandbox.hasRevision(p.target.id, p.revisionId)) throw new QueueError("That version belongs to another sequence.");
+    if (p.target.type === "sequence" && !this.e.sandbox.published(p.target.id)) throw new QueueError('"' + (info?.name || "This sequence") + '" is a draft. Publish it to the Library first, then it can be scheduled or added to the queue.');
     return p;
   }
   async create(raw) {
@@ -12263,10 +12328,10 @@ var DailyQueue = class {
     return true;
   }
   // A removed task or a deleted sequence: its schedules turn off (and say why).
-  targetGone(t) {
+  targetGone(t, why) {
     for (const s2 of this.schedules()) if (s2.target.type === t.type && s2.target.id === t.id && (s2.enabled || s2.adhoc)) {
       s2.enabled = false;
-      s2.lastError = t.type === "mission" ? "Its task was removed." : "Its sequence was deleted.";
+      s2.lastError = why || (t.type === "mission" ? "Its task was removed." : "Its sequence was deleted.");
       this.dropPending(s2.id, s2.lastError);
       this.put(s2);
     }
@@ -13359,7 +13424,7 @@ var DailyQueue = class {
         if (!sess?.runId) throw new QueueError("It did not start.");
         return this.e.sandbox.run(sess.runId);
       },
-      gone: (id) => this.targetGone({ type: "sequence", id }),
+      gone: (id, why) => this.targetGone({ type: "sequence", id }, why),
       next: (id) => this.schedules().filter((s2) => s2.enabled && s2.target.type === "sequence" && s2.target.id === id).map((s2) => this.nextOf(s2)).filter((t) => !!t).sort((a, b) => a - b)[0] || null,
       count: () => this.schedules().filter((s2) => s2.enabled && s2.target.type === "sequence" && !s2.adhoc).length
     };
@@ -14803,12 +14868,21 @@ var HubEngine = class _HubEngine {
     if (this.sandbox.busy(id)) throw new Error("A Sandbox sequence is running on this phone. Stop it first.");
     const into = sandboxRecord(o.sandbox);
     if (into) this.sandbox.get(into.sequenceId);
+    let tookFirst = false;
+    if (o.home) {
+      if (this.leases.current(id, this.now())?.kind !== "human") {
+        this.takeControl(id);
+        tookFirst = true;
+      }
+      await this.input(id, { kind: "key", key: "HOME" });
+      await this.sleep(800);
+    }
     v.info = await f.driver.info();
     const target = this.teachTarget(id);
     if (how.pkg && target.pkg !== how.pkg) throw new Error(this.labelOf(how.pkg) + " is not in front on the phone any more.");
     const fromHome = !target.pkg || HOME_SCREEN.test(target.pkg);
     const pkg = fromHome ? "" : target.pkg, name = fromHome ? "" : target.name;
-    let lease = this.leases.current(id, this.now()), tookControl = how.took;
+    let lease = this.leases.current(id, this.now()), tookControl = how.took || tookFirst;
     if (lease?.kind !== "human") {
       this.takeControl(id);
       lease = this.leases.current(id, this.now());
@@ -14872,7 +14946,7 @@ var HubEngine = class _HubEngine {
     const t = this.teach;
     if (!t) return null;
     const r = t.session.rec;
-    return { id: r.id, deviceId: t.deviceId, pkg: r.pkg, name: r.name, intent: r.intent, state: t.session.state, auto: t.auto, kind: t.kind, leftMs: null, creditedMs: null, custom: !!t.custom, elapsedMs: t.session.elapsed(), screens: r.screens.length, touches: r.touches.length, marks: r.marks.length, shots: t.session.shots.size, recent: r.timeline.slice(-8).map((m) => m.line) };
+    return { id: r.id, deviceId: t.deviceId, pkg: r.pkg, name: r.name, intent: r.intent, state: t.session.state, auto: t.auto, kind: t.kind, sandbox: !!t.sandbox, leftMs: null, creditedMs: null, custom: !!t.custom, elapsedMs: t.session.elapsed(), screens: r.screens.length, touches: r.touches.length, marks: r.marks.length, shots: t.session.shots.size, recent: r.timeline.slice(-8).map((m) => m.line) };
   }
   teachPause(on) {
     const t = this.teach;
@@ -14889,12 +14963,26 @@ var HubEngine = class _HubEngine {
     this.changed();
     return m;
   }
+  // How far the last Stop has got (the Sandbox's End Teach shows it as a progress bar): real stages, not a timer.
+  teachWork = null;
+  work(stage, pct2) {
+    this.teachWork = { stage, pct: pct2, at: this.now() };
+  }
   async teachStop(why = "stopped by you") {
     const t = this.teach;
     if (!t) throw new Error("Nothing is being recorded.");
     this.teach = null;
     clearInterval(t.timer);
+    this.work("Stopping the recording", 8);
+    try {
+      return await this.teachStopWork(t, why);
+    } finally {
+      this.work("Done", 100);
+    }
+  }
+  async teachStopWork(t, why) {
     const rec = await t.session.stop();
+    this.work("Reading your touches, taps and typing", 30);
     this.footage.get(t.deviceId)?.close(this.now());
     if (t.custom?.home && rec.pkg && !HOME_SCREEN.test(this.views.get(t.deviceId)?.info?.foreground || "")) await this.input(t.deviceId, { kind: "key", key: "HOME" }).catch(() => null);
     if (t.tookControl) {
@@ -14919,8 +15007,10 @@ var HubEngine = class _HubEngine {
       input: rec.touches.some((x) => x.kind !== "key") ? (rec.inferred || []).some((x) => x.label) ? "both" : "mirror" : (rec.inferred || []).length ? "phone" : "none"
     });
     this.o.onTeachEnd?.(rec, t.session.shots, { auto: t.auto, why, kind: t.kind, coachId: t.coachId });
+    this.work("Learning the screens of " + rec.name, 55);
     const taught = await this.learnFromTeach(rec, t.kind === "coach" ? "on_demand_teach" : null);
     await this.afterTraining(t, rec, taught);
+    this.work("Building the steps", 82);
     if (taught) this.say("Teach Falcor: " + taught.learned.summary + (taught.count ? " Autopilot presses " + taught.count + " step" + (taught.count === 1 ? "" : "s") + " there without asking." : ""));
     const custom = t.custom ? await this.saveCustom(rec, t.custom).catch((e) => {
       this.say("Teach Falcor: the custom task was not saved: " + (e instanceof Error ? e.message : String(e)));
@@ -15103,19 +15193,20 @@ var HubEngine = class _HubEngine {
   }
   // What the owner showed, added to a Sandbox sequence as blocks (a new version; nothing runs until the owner presses Start).
   teachToSandbox(rec, o) {
-    let skipped = [];
+    let skipped = [], found = null;
     try {
       const r = this.sandbox.append(o.sequenceId, (ids) => {
         const b = stepsFromTeach(rec, o, ids, this.o.avoid?.(rec.pkg) || []);
         skipped = b.skipped;
+        found = b.found;
         return b.steps;
       });
       this.say("Sandbox: added " + r.added + " block" + (r.added === 1 ? "" : "s") + " from what you showed" + (r.added ? " (version " + r.revision + ")" : "") + "." + (skipped.length ? " Left out: " + skipped.join(", ") + "." : ""));
-      return { sequenceId: o.sequenceId, added: r.added, skipped, revision: r.revision, error: null };
+      return { sequenceId: o.sequenceId, added: r.added, skipped, revision: r.revision, error: null, found, ms: rec.activeMs };
     } catch (e) {
       const error = e instanceof Error ? e.message : String(e);
       this.say("Sandbox: the recorded blocks were not added: " + error);
-      return { sequenceId: o.sequenceId, added: 0, skipped, revision: null, error };
+      return { sequenceId: o.sequenceId, added: 0, skipped, revision: null, error, found, ms: rec.activeMs };
     }
   }
   // What the owner showed, saved as a custom task (it lands in Tasks as Needs review: nothing runs before approval).
@@ -15580,7 +15671,7 @@ var HubEngine = class _HubEngine {
   async autoTeach(m) {
     const id = m.deviceId || "", pkg = m.appPackage, f = this.found.get(id), v = this.views.get(id);
     const skip = (why) => {
-      this.say("Teach Falcor did not start for " + m.appLabel + ": " + why + ". Press Teach Falcor on the Phone tab when you are ready.");
+      this.say("Teach Falcor did not start for " + m.appLabel + ": " + why + ". Press Teach Falcor on the Hub tab when you are ready.");
       return null;
     };
     if (m.type === "free_signup" || this.o.learned?.().some((k) => k.pkg === pkg && k.sessions > 0)) return null;
@@ -16044,7 +16135,7 @@ var HubEngine = class _HubEngine {
             })()
           };
         })(),
-        teaching: this.teach?.deviceId === v.id ? { name: this.teach.session.rec.name, state: this.teach.session.state, elapsedMs: this.teach.session.elapsed(), kind: this.teach.kind, leftMs: this.teachStatus()?.leftMs ?? null } : null,
+        teaching: this.teach?.deviceId === v.id ? { name: this.teach.session.rec.name, state: this.teach.session.state, elapsedMs: this.teach.session.elapsed(), kind: this.teach.kind, sandbox: !!this.teach.sandbox, leftMs: this.teachStatus()?.leftMs ?? null } : null,
         sandbox: (() => {
           const r = this.sandbox?.live().find((x) => x.deviceId === v.id);
           return r ? { runId: r.id, sequenceId: r.sequenceId, title: r.title, status: r.status, step: r.stepWords, stepId: r.stepId, path: r.path, actions: r.actions, elapsedMs: r.elapsedMs, mode: r.mode, reason: r.reason } : null;
@@ -17480,6 +17571,8 @@ function lanAddress(nets = import_node_os2.default.networkInterfaces()) {
 var RemoteServer = class _RemoteServer {
   // The gaming and chat models by name and status (ai/library.ts#active): never a key or a provider setting.
   ai = null;
+  // The window's live video frame as a JPEG (main.ts), for the phone app's Sandbox mirror; null without video.
+  liveFrame = null;
   engine;
   server = null;
   pair = null;
@@ -17570,7 +17663,7 @@ var RemoteServer = class _RemoteServer {
     if (!who) return { status: 401, json: { error: "This phone is not paired with Falcor.Hub. Pair it again." } };
     const phone = { client: "phone:" + who.id, name: who.name };
     this.activeAt = e.now();
-    if (method === "GET" && path2 === "/api/status") return { status: 200, json: { devices: e.devices().map(({ installed, installedNames, ...d }) => (void installed, void installedNames, d)), tasks: await e.tasks(), games: await e.games(), stats: await e.stats(), activity: e.lines.slice(-30), ai: this.ai?.active() ?? null, unread: this.conductor?.unread(phone) ?? 0, notices: this.conductor?.notices() ?? { unread: 0, list: [] }, sandbox: e.sandbox.status(), at: e.now() } };
+    if (method === "GET" && path2 === "/api/status") return { status: 200, json: { devices: e.devices().map(({ installed, installedNames, ...d }) => (void installed, void installedNames, d)), tasks: await e.tasks(), games: await e.games(), stats: await e.stats(), activity: e.lines.slice(-30), ai: this.ai?.active() ?? null, unread: this.conductor?.unread(phone) ?? 0, notices: this.conductor?.notices() ?? { unread: 0, list: [] }, sandbox: e.sandbox.status(), queue: await e.queue.status(), at: e.now() } };
     const ap = /^\/api\/tasks\/([\w-]{1,80})\/approve$/.exec(path2);
     if (method === "POST" && ap) {
       const m = await e.approveTask(ap[1], { rulesAllow: body.rulesAllow === true, zeroCostConfirmed: body.zeroCostConfirmed === true, approvals: Array.isArray(body.approvals) ? body.approvals.map(String) : [] });
@@ -17621,8 +17714,33 @@ var RemoteServer = class _RemoteServer {
     }
     if (method === "GET" && path2 === "/api/screen") {
       const id = String(query.get("deviceId") || "");
-      const cached = e.lastFrame(id), f = cached && e.now() - cached.at < 2500 ? cached : await e.frame(id);
+      if (query.get("live") === "1") {
+        const v = await this.liveFrame?.(id).catch(() => null);
+        if (v) return { status: 200, image: v };
+      }
+      const cached = e.lastFrame(id), f = cached && e.now() - cached.at < (query.get("live") === "1" ? 400 : 2500) ? cached : await e.frame(id);
       return { status: 200, image: { mime: f.mime, data: Buffer.from(f.data, "base64") } };
+    }
+    if (method === "POST" && path2 === "/api/control") {
+      const id = String(body.deviceId || "");
+      if (body.on === true) {
+        const l = e.leases.current(id, e.now());
+        if (l?.kind === "human") e.leases.renew(l.leaseId, e.now());
+        else {
+          e.takeControl(id);
+          e.say("Control taken from " + who.name + ".", "YOU");
+        }
+        return { status: 200, json: { on: true } };
+      }
+      if (!e.teachStatus()) e.releaseControl(id);
+      return { status: 200, json: { on: false } };
+    }
+    if (method === "POST" && path2 === "/api/input") {
+      const a = body.action || {}, k = String(a.kind || ""), n = (v) => Math.min(1, Math.max(0, Number(v)));
+      const action = k === "tap" ? { kind: "tap", x: n(a.x), y: n(a.y) } : k === "long_press" ? { kind: "long_press", x: n(a.x), y: n(a.y), ms: Math.min(3e3, Math.max(400, Number(a.ms) || 800)) } : k === "swipe" ? { kind: "swipe", x: n(a.x), y: n(a.y), toX: n(a.toX), toY: n(a.toY), ms: Math.min(2e3, Math.max(120, Number(a.ms) || 300)) } : k === "key" && ["BACK", "HOME", "APP_SWITCH", "ENTER", "DEL"].includes(String(a.key)) ? { kind: "key", key: String(a.key) } : k === "type" && typeof a.text === "string" && a.text.length ? { kind: "type", text: a.text.slice(0, 500) } : null;
+      if (!action) return { status: 400, json: { error: "That is not a touch Falcor knows." } };
+      await e.input(String(body.deviceId || ""), action);
+      return { status: 200, json: { ok: true } };
     }
     if (method === "GET" && path2 === "/api/icon") {
       const i = e.gameIcon(String(query.get("pkg") || "").slice(0, 200));
@@ -17699,13 +17817,28 @@ var RemoteServer = class _RemoteServer {
   }
   async sandbox(method, path2, query, body, from) {
     const sb = this.engine.sandbox, ok = (json) => ({ status: 200, json }), get = method === "GET", post = method === "POST";
+    if (path2 === "/api/sandbox/teach") {
+      const e = this.engine;
+      if (get) return ok({ teaching: e.teachStatus(), work: e.teachWork });
+      if (post && body.op === "start") {
+        const deviceId = String(body.deviceId || "");
+        let id = typeof body.sequenceId === "string" && /^sq\w{2,40}$/.test(body.sequenceId) ? body.sequenceId : "";
+        if (!id) id = sb.create({ title: "Taught run " + new Date(e.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), deviceId, template: "blank" }).id;
+        const st = await e.teachStart(deviceId, { home: body.home !== false, sandbox: { sequenceId: id, launch: body.home !== false, waits: true, check: true } });
+        e.say("Teach started from " + from + ".", "YOU");
+        return ok({ sequenceId: id, teaching: st });
+      }
+      if (post && body.op === "stop") return ok(await e.teachStop("ended from " + from));
+    }
     if (get && path2 === "/api/sandbox") return ok({ sequences: sb.list(), schedules: sb.scheduleList(), runs: sb.runs(void 0, 30), live: sb.live() });
     if (get && path2 === "/api/sandbox/catalog") return ok(sb.catalog());
     if (post && path2 === "/api/sandbox/sequences") return ok(sb.create({ title: body.title, deviceId: body.deviceId, template: body.template, definition: body.definition }));
     if (post && path2 === "/api/sandbox/schedules") return ok(await sb.createSchedule(body.schedule));
     if (post && path2 === "/api/sandbox/schedules/preview") return ok(sb.previewSchedule(body.schedule));
-    let m = /^\/api\/sandbox\/sequences\/(sq\w{2,40})(?:\/(start|runs|delete|clone))?$/.exec(path2);
+    let m = /^\/api\/sandbox\/sequences\/(sq\w{2,40})(?:\/(start|runs|delete|clone|publish|unpublish))?$/.exec(path2);
     if (m && get && !m[2]) return ok(sb.get(m[1]));
+    if (m && post && m[2] === "publish") return ok(sb.publish(m[1]));
+    if (m && post && m[2] === "unpublish") return ok(sb.unpublish(m[1]));
     if (m && post && m[2] === "delete") {
       sb.remove(m[1]);
       return ok({ ok: true });
@@ -20438,7 +20571,7 @@ Nothing here talks to a website. The phone is driven over USB from your computer
    - Turn on **USB debugging**: Settings \u2192 About phone \u2192 Software information \u2192 tap Build number 7 times, then Developer options \u2192 USB debugging.\r
    - Plug it in with a data cable and tap **Allow** (tick *Always allow from this computer*).\r
    - On Samsung, turn **Auto Blocker** off: Settings \u2192 Security and privacy.\r
-   - The Phone tab ticks off each step.\r
+   - The Hub tab ticks off each step.\r
 3. **AI.** Settings \u2192 AI \u2192 Providers \u2192 Add provider \u2192 pick it (for example Google Gemini) \u2192 paste its key \u2192 Save and test. Then Intelligent Routing \u2192 pick a model under Primary Gaming AI \u2192 Use for Gaming.\r
 4. **Your everyday phone.**\r
    - Install \`Falcor.Hub-Remote-0.2.0.apk\`.\r
@@ -20447,10 +20580,10 @@ Nothing here talks to a website. The phone is driven over USB from your computer
 \r
 ## Using it\r
 \r
-- **Phone tab.**\r
-  - Live mirror of the phone (about 1\u20133 pictures a second; **Full-speed window** opens scrcpy for 30 fps).\r
-  - **Windows you arrange.** Every panel on the Phone tab is a window, the phone's screen too: drag its title to move it (it snaps to the edges and to the other windows; hold Alt to move it freely), drag an edge or a corner to resize it, double-click its title to maximize it, \xD7 to hide it. **Windows** (by the tabs) shows and hides them, with five more: **Needs you** (approvals and anything waiting on you), **Apps** (open any app on the phone), **Creations** (run or stop a sequence), **Today** (how the day went, what is next, Kimi spending) and **Connection** (the cable, the mirror, the tools, paired phones). **Layout** arranges them (Classic, Focus, Grid) and **Reset** brings back the usual five; the lock keeps them where they are. Your arrangement is kept, with its own for games played sideways.\r
-  - **Capture Game**: when a game's offer page is open on the phone, the button under the mirror turns blue ("Ready to capture"). One press opens Games and reads the whole offer into the review. An offer you already saved shows **Refresh offer** instead. Falcor only looks at the screen's words while the Phone tab is open and the phone is free; nothing is saved until you press Save.\r
+- **Hub tab (key 1).**\r
+  - Live mirror of the phone at full speed (live video; with Take Control your taps reach the phone in a fraction of a second). The phone-with-plus button opens a **second display** of the phone in its own window you can drag anywhere.\r
+  - **Windows you arrange.** Every panel on the Hub tab is a window, the phone's screen too: drag its title to move it (it snaps to the edges and to the other windows; hold Alt to move it freely), drag an edge or a corner to resize it, double-click its title to maximize it, \xD7 to hide it. **Windows** (by the tabs) shows and hides them, with five more: **Needs you** (approvals and anything waiting on you), **Apps** (open any app on the phone), **Creations** (run or stop a sequence), **Today** (how the day went, what is next, Kimi spending) and **Connection** (the cable, the mirror, the tools, paired phones). **Layout** arranges them (Classic, Focus, Grid) and **Reset** brings back the usual five; the lock keeps them where they are. Your arrangement is kept, with its own for games played sideways.\r
+  - **Capture**: open a game's offer page on the phone and press **Capture** under the mirror. It opens the Library and reads the whole offer into the review. An offer you already saved becomes **Refresh offer** instead. Falcor reads the phone only when you press it; nothing is saved until you press Save.\r
   - **Take Control**: click to tap, drag to swipe, hold to long-press, wheel to scroll, type in the box. Back / Home / Apps buttons.\r
   - **Start / Stop Autopilot.**\r
   - **Today's Queue**: every game, task and Sandbox sequence you scheduled, in one list per phone, in the order they will run (time, priority, what each one waits for), with its status (Scheduled, Ready, Running, Paused, Waiting for you, Completed, Failed, Skipped, Missed, Cancelled, Interrupted). TOMORROW, UPCOMING and HISTORY show the days ahead and what happened.\r
@@ -20458,7 +20591,7 @@ Nothing here talks to a website. The phone is driven over USB from your computer
     - **Current activity** shows what runs, for how long, and Pause, Skip and Stop. Each row's menu: View details, Run now, Edit schedule, Change priority, Skip today, Remove from queue (today's only), Disable schedule, View history.\r
     - One controller per phone: Play now while the queue runs asks **Pause queue and run game**, **Add to queue** or **Cancel**. Taking control, Emergency Stop, a pulled cable or a locked phone stops the activity safely; it is recorded as interrupted and comes back only when that is safe.\r
   - **Schedules** (the same editor from the queue's **+**, a game, a task or a sequence): once, daily, weekdays, weekly or custom days; a time, an earliest and latest start, a duration, the time zone, a priority (1\u20135), attempts and retries, what it waits for (no loops), and what to do when it was missed (skip, run when the phone is available, or ask first; skip is the default). A schedule adds the activity to the Daily Queue; it starts by itself at its time (while this computer is on, Falcor.Hub is open and the phone is plugged in and unlocked).\r
-- **Sandbox tab (key 2): build your own routines from blocks.**\r
+- **Sandbox tab (key 3): build your own routines from blocks.**\r
   - It opens on **Create** (what the Sandbox is; start Blank, from the Example or a preset, or Import a .json) or **My sequences** (search, sort, folders, and Run, Edit, Schedule, Duplicate and Delete for each). **Edit** opens the editor as its own page; **\u2039 My sequences** goes back.\r
   - The mirror sits in the middle; the **block library** is on the left (Touch and gesture, App and device, Time and flow, Screen aware, presets and your own presets; greyed blocks say why the phone link cannot do them), the **step's settings** on the right, the **timeline** at the bottom (Flow or Tree; drag to reorder, Ctrl+G to group, Ctrl+Z / Ctrl+Y, copy and paste).\r
   - **Pick target**: click the mirror to set a tap's point (the button under it becomes its anchor, so a moved button is still found). **Pick gesture**: drag to draw a swipe (a curve becomes a path). Picking never touches the phone. Pins show every point; drag a pin to move it.\r
@@ -20467,11 +20600,11 @@ Nothing here talks to a website. The phone is driven over USB from your computer
   - Every save is a version (History restores one); a run plays the version it started with. Unsaved changes are kept as a draft.\r
   - **Save sequence**, **Save as task**, **Run now**, **Add to queue** (today, when the phone is free) and **Set schedule** (the Daily Queue's editor). On your phone, a schedule still runs by itself only with **Run it while I am away** ticked.\r
   - Export and import a sequence as a .json file. **?** shows the shortcuts and a five-step walkthrough.\r
-- **Games tab: your game library.** Every game with a challenge you accepted, an offer from an earning app, or a guide, as a card: its picture (the app's own icon from the phone, else the artwork read from its offer page, else a pixel letter), name, earning app, what it can pay, what was credited or paid out, goals reached as blocks, status (Active, Completed, Expired) and time left. Filter by All, Active, Completed or Expired; sort by recently updated, deadline, advertised reward or progress.\r
-  - **Capture game**: open the game's offer page in your earning app on the phone and press it. Falcor reads the screen (the game, its picture, the total, the deadline, each milestone and its reward), then the next one after you scroll (or press **Scroll for me**: one swipe, under your control), until a screen shows nothing new. Overlaps are read once and the order is kept, so a 60-milestone offer comes out as 60 milestones. Check it, fix anything, **Save**; nothing is kept before that.\r
+- **Library tab (key 2): your games, apps and creations.** Every game with a challenge you accepted, an offer from an earning app, or a guide; every app you collect rewards from on a schedule (for example FireFaucet, every 30 minutes); and every creation you built in Sandbox, each as a card: its picture (the app's own icon from the phone, else the artwork read from its offer page, else a pixel letter), name, earning app, what it can pay, what was credited or paid out, goals reached as blocks, status (Active, Completed, Expired) and time left. Filter by All, Games, Apps, Creations, Active, Completed or Expired; sort by recently updated, deadline, advertised reward or progress.\r
+  - **Capture**: open the game's offer page in your earning app on the phone and press it. Falcor reads the screen (the game, its picture, the total, the deadline, each milestone and its reward), then the next one after you scroll (or press **Scroll for me**: one swipe, under your control), until a screen shows nothing new. Overlaps are read once and the order is kept, so a 60-milestone offer comes out as 60 milestones. Check it, fix anything, **Save**; nothing is kept before that.\r
   - Amounts are read as the page writes them ($1.50, 1.50 USD, \u20AC2, 2 \u20AC, 500 pts, 1.5K): a bonus on its own line belongs to the milestone above it and is counted once; a crossed-out amount followed by a new one keeps the new one and asks you to check; a milestone that needs a purchase is marked as yours to decide, never a sure reward; one without a reward stays unknown; when the advertised total and the milestones' sum differ, the game page says so. Each unit stays separate.\r
   - A deadline is either a date ("Expires in 7 days") or a time after you start ("Complete within 14 days"): the second counts down only once you say when you started (**I started it today**).\r
-  - **Auto-capture game details** (the blue button): with the offer page open on the phone, Falcor scrolls to its top, reads down to the bottom with a progress bar, then opens the review. Capture game no longer looks the game up online: you onboard each game yourself (Teach Falcor and its owner notes). Saving an offer gives Falcor short starter notes from the offer page, marking what the page says apart from what is only guessed, which Autopilot reads until it knows the game better. Tips kept from earlier versions stay on the game's page (READY TO PLAY) and are still read before every move, and what each session learns is added to the game's playbook, so it plays better each time. There is no app to pick: the offer links to the game by itself once you install it on the phone. A button those tips warn about by name (\u201Cnever press Begin again\u201D) is never pressed, and the tips follow the game's name if you correct it before saving.\r
+  - **Auto-capture game details** (the blue button): with the offer page open on the phone, Falcor scrolls to its top, reads down to the bottom with a progress bar, then opens the review. Capture no longer looks the game up online: you onboard each game yourself (Teach Falcor and its owner notes). Saving an offer gives Falcor short starter notes from the offer page, marking what the page says apart from what is only guessed, which Autopilot reads until it knows the game better. Tips kept from earlier versions stay on the game's page (READY TO PLAY) and are still read before every move, and what each session learns is added to the game's playbook, so it plays better each time. There is no app to pick: the offer links to the game by itself once you install it on the phone. A button those tips warn about by name (\u201Cnever press Begin again\u201D) is never pressed, and the tips follow the game's name if you correct it before saving.\r
   - Click a game: its **profile** shows the platform, status, the most it can pay, verified earnings and time left, with **Open game**, **Run available activity** (Play now), **Schedule**, **Edit offer** and **Refresh offer**. The **reward ladder** lists every milestone with its reward and stage: Not started, In progress, Goal reached, Provider confirmed, Pending credit, Credited, Paid out or Expired, and who said so (observed on the page, you, or Falcor seeing the game's level). A goal reached is not money: only credited and paid out are earnings; pending is the earning app saying it is on its way. Set a stage from its menu, on the computer or the phone.\r
   - **Game Autopilot** (on the profile, and the same on your phone): pick a goal (the next level, the next offer milestone that is a level, a level you type, or one of the game's tasks) and press **Start Autopilot**. A new task for it shows its rules and needs your tick first. It plays through the Daily Queue (the same "one controller" question), also with Autopilot off, then comes back by itself with one return in the queue for that game (about 30 minutes after progress, else 1, 2, 4 hours, or when the game's own timer ends) until the goal is verified, you press **Pause** or **Stop Autopilot**, the offer ends, or three sessions in a row make no measured progress. The panel shows the goal, the verified level, what it is doing now, inputs the phone accepted in the last session and the next return; after every session Falcor keeps a short review (what worked, what failed, what to try next), which the next session's planning reads and Falcor chat can tell you about. Emergency Stop pauses every game on Game Autopilot.\r
   - A plan Falcor AI takes long to make is never acted on blind: the screen is looked at again just before the tap, and if it moved, Falcor plans again. A counter ("Balls 23") or a locked feature ("\u{1F512} Lv 17") is never taken for the level, and anything that could cost money is refused.\r
@@ -20481,19 +20614,19 @@ Nothing here talks to a website. The phone is driven over USB from your computer
 - **A newly captured game is ready to play at once.** After you save a new game's offer, its Smart Playbook and Game Autopilot are there right away: no recording to sit through first. Falcor plays from the game's online research, what you tell it about the game, and Falcor AI; it never signs in, creates an account or accepts terms: those come to you.\r
   - To show Falcor something (the way in, a tricky screen, a better way to play), press **Teach Falcor** on the game's page whenever you like and play it your way; what it learns is used from the next run.\r
 - **Teach Falcor on a game's page** (both apps), whenever Falcor plays it too slowly or gets confused: one press, then play it your way. It records only that game (another app in front is not recorded); that game's own run gives you the phone first, anything else is never taken over. Leave the game or press **Finish & Learn**: what you showed becomes steps Falcor presses on the next run (a new skill version), or it says "No actionable change detected". A lesson that makes the next two runs worse than before is rolled back by itself. Each lesson can be deleted (what it taught stays).\r
-- **New games are learned by themselves.** When you create a game or daily task (in Tasks, in chat or from your phone) for an app Falcor has not learned yet, Falcor opens it on the phone and starts **Teach Falcor**: play it on the mirror while it records the name, the challenge, the screens and their text, and your taps.\r
-  - When you leave the game (Home, or another app), recording stops by itself and Falcor writes the guide (Falcor AI with your Kimi key; on this computer without AI when there is no key or the monthly limit is reached). The game then shows in Games with its icon and guide.\r
+- **New games are learned by themselves.** When you create a game or daily task (in Other automations, in chat or from your phone) for an app Falcor has not learned yet, Falcor opens it on the phone and starts **Teach Falcor**: play it on the mirror while it records the name, the challenge, the screens and their text, and your taps.\r
+  - When you leave the game (Home, or another app), recording stops by itself and Falcor writes the guide (Falcor AI with your Kimi key; on this computer without AI when there is no key or the monthly limit is reached). The game then shows in the Library with its icon and guide.\r
   - If nothing was played (nobody touched it, or 5 minutes pass without a touch), nothing is kept. Signups are not taught: they are Falcor's to do.\r
-- **Creations tab (key 4): your custom automations, built in Sandbox.** Every saved sequence is a card: its steps, version, phone, next schedule and last result, with **Run now** (through the Daily Queue: it asks before taking the phone from something else), **Schedule**, **History** and **Edit in Sandbox**. Search, and filter by Favorites, Scheduled or Needs attention. An empty sequence says Needs setup and cannot run. **Other automations** holds the tasks below. The phone app's fifth tab is the same.\r
-- **Activity tab (key 6).** What ran, when, on which phone, for how long and how it ended (Completed, Needs attention, Failed, Stopped, Interrupted), newest first and grouped by day, with filters, Load more and each run's steps while they are kept. Previews and tests show only when you tick them. Completed is not money: rewards stay in Games.\r
-- **Other automations (in Creations; once the Tasks tab).**\r
+- **Creations: your custom automations, built in Sandbox.** Each one has a card in the Library; click it to open the Creations page (**Library** takes you back). Every saved sequence is a card there: its steps, version, phone, next schedule and last result, with **Run now** (through the Daily Queue: it asks before taking the phone from something else), **Schedule**, **History** and **Edit in Sandbox**. Search, and filter by Favorites, Scheduled or Needs attention. An empty sequence says Needs setup and cannot run. **Other automations** holds the tasks below. The phone app's fifth tab is the same.\r
+- **Activity tab (key 4).** What ran, when, on which phone, for how long and how it ended (Completed, Needs attention, Failed, Stopped, Interrupted), newest first and grouped by day, with filters, Load more and each run's steps while they are kept. Previews and tests show only when you tick them. Completed is not money: rewards stay in the Library.\r
+- **Other automations (on the Creations page).**\r
   - Create a task: a daily check-in, a game to a level, a free signup or a reward balance check, on an app installed on the phone.\r
   - **Approve it.** A signup also needs the $0 confirmation and your consent.\r
-  - Autopilot then runs it when it is due, or press **Run now**. **Schedule** puts it in the Daily Queue at a time; a scheduled task runs at its queue time.\r
-- **Stats tab.** Today's runs and verified results, rewards per unit (never added across units), and recent runs.\r
+  - A custom task can repeat once, every day, or every N minutes (15 to 1440, 30 by default). **Schedule** puts it in the Daily Queue at a time; a scheduled task runs at its queue time.\r
+- **Settings tab (key 5):** the AI, the phone app, Knowledge and the rest. Rewards per unit (never added across units) are on each card in the Library; what ran is in Activity.\r
 - **On your phone (Remote):** **Sandbox** (**Create**: blank, the example or a preset; **My sequences**: your sequences with Edit, Duplicate, Delete, with a big Start / Stop and their schedule switches; a full-screen editor: tap the screenshot to place a step, Blocks and Step drawers, the steps along the bottom, Run / Pause / Stop at your thumb), Home (the phone's state, today's stats, a live screen thumbnail you can open full screen, activity, and Start/Stop Autopilot at the bottom), **Games** (the same library cards, filters and game profiles: the reward ladder with its stage menus, earnings and activity; **Open game** opens the game on the plugged-in phone and gives control straight back; **Run available activity** asks the same one-controller question), **Falcor** (the same chat, like a mobile chat app: the message box stays at the bottom, past chats slide out from the side and can be deleted, and it opens on a new chat) and **Tasks** (Run now, Pause, Resume and the approval gate). Stop and the notification bell are always in the header.\r
 - **Stop** is always in the header (Ctrl+Shift+X). It stops every phone and turns Autopilot off; a red bar shows until you press Clear. It also works from the Remote.\r
-- **Teach Falcor** (in the Sandbox; the Phone tab's Teach opens it there).\r
+- **Teach Falcor** (in the Sandbox; the Hub tab's Teach opens it there).\r
   - Open the app on the phone, press **Teach Falcor**, name it and say what you will show. Or press it on the phone's home screen and then open the app: Falcor learns how you open it too.\r
   - Play it on the mirror. The mirror is live video inside the window; every touch goes through Falcor and is recorded, with where it landed and the screen it led to once that screen has finished loading.\r
   - Show the task from its start (how you get there), do it once, and mark the moment that matters. Peeking at a shop and going Back is fine: Falcor leaves detours out.\r
@@ -20503,21 +20636,21 @@ Nothing here talks to a website. The phone is driven over USB from your computer
   - Falcor keeps one small picture (about 480 px) of each distinct screen and drops ads, loading screens and near-duplicates. It never records password, card, ID or code screens.\r
 - **Custom tasks: teach a routine once, Falcor repeats it.** In the Teach Falcor form, tick **Save it as a custom task**, then choose:\r
   - how many **rounds** to repeat it (1\u201350);\r
-  - whether it **runs** once or every day;\r
+  - whether it **runs** once, every day, or every N minutes;\r
   - optional words that end it early ("No energy left");\r
   - whether to go back to the phone's **home screen** when done (on by default).\r
 \r
-  Do the task once on the mirror and press Stop. The phone goes back to its home screen, and the task lands in Tasks as *Needs review* with its steps in plain words (tap "Bounties" \u2192 tap "Accept" \u2192 tap "Gather" \xD73 \u2192 tap "Turn in") and the words that showed it was done ("Bounty complete! +20 gold").\r
+  Do the task once on the mirror and press Stop. The phone goes back to its home screen, and the task lands in Other automations as *Needs review* with its steps in plain words (tap "Bounties" \u2192 tap "Accept" \u2192 tap "Gather" \xD73 \u2192 tap "Turn in") and the words that showed it was done ("Bounty complete! +20 gold").\r
   - Detours, buttons to avoid, the way out at the end and any password are left out, and Falcor says what it left out.\r
   - Once you approve it, Autopilot presses the same buttons in order, round after round. It finds each button by what it says, so a moved button is still found.\r
   - It closes a pop-up the app shows in the way with the pop-up's own Not now or Close, never Rate us or Buy. It finds its place again when the app skips a screen.\r
   - After the last round it goes Home. If the end you showed does not appear, the task comes back to you.\r
   - Edit a custom task's rounds, stop words, Home and repeat with its pencil button. Changing how it repeats sends it back to review. The Remote lists its steps too.\r
-- **Falcor tab: chat with Falcor** (also on your phone, the same conversation). Ctrl+K opens it from anywhere.\r
+- **Falcor: chat with him** (also on your phone, the same conversation). Falcor is the glowing square with his picture: drag it anywhere, press it for a small chat (New chat, **Full page**, Close). Ctrl+K opens it from anywhere. **Full page** shows the whole chat with your past chats; its button brings back the small chat.\r
   - It opens on a new chat with Falcor's greeting; a chat is kept only once you send something. Past chats are on the left, grouped by day, with search.\r
   - Ask about your games, tasks, what Falcor learned, stats, rewards, Autopilot, or how Falcor.Hub works.\r
   - Tell it what to do: start or stop Autopilot, run, pause or resume a task, create or edit a task, fix a guide, start a teaching session.\r
-  - Anything that creates, edits or removes something shows a card; nothing changes until you tap **Confirm**. Approving a task shows the same ticks as the Tasks tab; only your taps approve it.\r
+  - Anything that creates, edits or removes something shows a card; nothing changes until you tap **Confirm**. Approving a task shows the same ticks as Other automations; only your taps approve it.\r
   - Say **stop** at any time: everything stops at once, even with no internet.\r
 - **How Falcor works out what to do on a screen**, cheapest first:\r
   - the task's own logic: claim buttons ("Claim", "Claim Day 3", "Collect 50 coins"), signup forms, balances, and the screens every game has (loading, Play, Next, Continue, Retry, free Collect, Skip ad, upgrades paid with the game's own coins);\r
@@ -20529,11 +20662,11 @@ Nothing here talks to a website. The phone is driven over USB from your computer
 - **Rewarded ads** are on for every game. When a game offers a reward for an ad ("Double coins (watch ad)", "Free spin: watch ad"), Falcor plays it, waits out its countdown, closes it once the reward is granted and carries on. It never taps inside the ad and never buys anything; at most 10 ads per run.\r
   - Only while you are there to watch: Falcor.Hub in front, the computer used in the last 5 minutes, or the phone app open. Otherwise the offer is passed by and the activity says why.\r
   - Ad networks and some games may treat ads started this way as invalid; that risk is yours for that game.\r
-- **Edit a task** with its pencil button in Tasks: what it does, the target level, the daily reset hour, the reward note and a signup's details. Changing what it does sends it back to Needs review.\r
+- **Edit a task** with its pencil button in Other automations: what it does, the target level, the daily reset hour, the reward note and a signup's details. Changing what it does sends it back to Needs review.\r
 - **Knowledge (guides).** Open a guide from its game, its task (the book button), the chat, or **Settings \u2192 Knowledge**; **Back** returns where you were.\r
   - Every app Falcor learned, with its guide: summary, objectives, reward tiers, screens, step-by-step recipes and watch-outs. Each part says **seen** or **AI**.\r
   - Press **Edit** to correct the guide, or delete pictures you don't want kept. Rename, Export or Delete each app.\r
-  - Ask Falcor about a guide from the Falcor tab (the guide's chat button focuses on it). A task it drafts lands in Tasks as *Needs review*; nothing runs until you approve it.\r
+  - Ask Falcor about a guide (the guide's chat button opens his chat focused on it). A task it drafts lands in Other automations as *Needs review*; nothing runs until you approve it.\r
   - Teaching the same app again updates its guide and lists what changed. Autopilot uses the guide when it runs a task on that app.\r
   - **What you show is applied straight away**, also a game's first-time intro that Falcor records by itself: on each screen, the button you pressed there becomes a step Autopilot presses on that screen without asking (for any task on that app, for 6 months, as long as the screen looks the same). The Games page shows how many steps Falcor knows for each game.\r
   - The guide's **watch-outs** are obeyed: a button it says never to press ("Never press Begin again", "Don't tap Reset") is never pressed by Autopilot, whatever suggested it. Add one with Edit, or answer one of Falcor's questions.\r
@@ -21193,7 +21326,7 @@ async function startVideo(o) {
 
 // src/main.ts
 var where = globalThis.falcorHub || { appRoot: (0, import_node_path8.join)(__dirname, ".."), packRoot: (0, import_node_path8.join)(__dirname, ".."), packVersion: null, installVersion: import_electron2.app.getVersion(), packsDir: (0, import_node_path8.join)(import_electron2.app.getPath("userData"), "packs") };
-var VERSION = "0.21.27";
+var VERSION = "0.21.32";
 var simulated = process.argv.includes("--simulated");
 if (!import_electron2.app.requestSingleInstanceLock()) {
   if (where.packVersion) {
@@ -21356,6 +21489,10 @@ async function boot() {
     hub.store.set("whats_new", JSON.stringify({ ...w, seen: true }));
     hub.store.set("whats_new_history", JSON.stringify([{ version: w.version, notes: w.notes }, ...notesHistory().filter((x) => x.version !== w.version)].slice(0, 8)));
   }
+  hub.remote.liveFrame = async (id) => {
+    const f = await windowFrame(id, "image/jpeg");
+    return f ? { mime: "image/jpeg", data: f.png } : null;
+  };
   await hub.remote.start().catch((e) => hub.engine.say("The phone app connection could not start: " + (e instanceof Error ? e.message : String(e))));
   if (!p.adb) hub.engine.say("Android platform tools (adb) are missing from this install.");
 }
@@ -21400,7 +21537,7 @@ import_electron2.ipcMain.on("frameTaken", (_e, a) => {
   const png = r.png instanceof ArrayBuffer ? Buffer.from(r.png) : r.png instanceof Uint8Array ? Buffer.from(r.png.buffer, r.png.byteOffset, r.png.byteLength) : null;
   done(png && png.length > 100 ? { png, width: Number(r.width) || 0, height: Number(r.height) || 0, at: Number(r.at) || 0 } : null);
 });
-function windowFrame(deviceId) {
+function windowFrame(deviceId, mime = "image/png") {
   return new Promise((resolve) => {
     if (!win || win.isDestroyed() || !videos.has(deviceId)) {
       resolve(null);
@@ -21414,7 +21551,7 @@ function windowFrame(deviceId) {
       clearTimeout(t);
       resolve(v);
     });
-    win.webContents.send("frameWanted", { req, deviceId });
+    win.webContents.send("frameWanted", { req, deviceId, mime });
   });
 }
 var KEYS3 = { BACK: 4, HOME: 3, APP_SWITCH: 187, ENTER: 66, DEL: 67, TAB: 61, ESCAPE: 111 };
@@ -21568,10 +21705,11 @@ var handlers = {
   },
   // Teach Falcor and what it learned.
   teachTarget: (a) => need().engine.teachTarget(String(a.deviceId)),
-  teachStart: (a) => need().engine.teachStart(String(a.deviceId), { name: String(a.name || ""), intent: String(a.intent || ""), custom: a.custom || void 0, sandbox: a.sandbox || void 0 }),
+  teachStart: (a) => need().engine.teachStart(String(a.deviceId), { name: String(a.name || ""), intent: String(a.intent || ""), custom: a.custom || void 0, sandbox: a.sandbox || void 0, home: a.home === true }),
   teachPause: (a) => need().engine.teachPause(a.on === true),
   teachMark: (a) => need().engine.teachMark(String(a.note || "")),
   teachStop: () => need().engine.teachStop(),
+  teachProgress: () => need().engine.teachWork,
   teachEstimate: (a) => need().knowledge.estimate(String(a.pkg), String(a.id)),
   teachWrite: (a) => need().knowledge.writeGuide(String(a.pkg), String(a.id), a.mode === "text" ? "text" : a.mode === "local" ? "local" : "full", a.overLimit === true),
   learned: (a) => {
@@ -21710,6 +21848,10 @@ var handlers = {
         return sb.restore(id, String(a.revisionId || ""));
       case "remove":
         return sb.remove(id);
+      case "publish":
+        return sb.publish(id);
+      case "unpublish":
+        return sb.unpublish(id);
       case "presetSave":
         return sb.savePreset(a);
       case "presetRemove":

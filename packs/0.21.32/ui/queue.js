@@ -70,15 +70,9 @@
       const paused = sbl.status === 'PAUSED' || sbl.status === 'NEEDS_ATTENTION';
       html = '<div class="qcur s-run"><div class="qhead"><span class="qico">' + icon('sandbox') + '</span><b>' + esc(sbl.title) + '</b><span class="qtime">' + clock(sbl.elapsedMs || 0) + '</span></div><div class="qsub">' + pill(paused ? 'PAUSED' : 'RUNNING', paused ? 'Paused' : 'Running') + '<span>Sequence · Sandbox</span></div><div class="step">' + esc(sbl.step || sbl.reason || '') + '</div>'
         + '<div class="row qctl"><button class="small" data-sbctl="' + (paused ? 'resume' : 'pause') + '">' + icon(paused ? 'play' : 'pause') + (paused ? 'Resume' : 'Pause') + '</button><button class="small danger" data-sbctl="stop">' + icon('stop') + 'Stop</button></div>' + nextLine + '</div>';
-    } else if (q && q.mode === 'autopilot') {
-      const all = S.queue.counts, done = all.total > 0 && all.left === 0;
-      html = '<div class="qidle"><b class="qbig">AUTOPILOT ACTIVE</b><span class="qwait">' + (q.paused ? 'QUEUE PAUSED' : done ? 'ALL OF TODAY\'S ACTIVITIES DONE' : 'WAITING FOR NEXT ACTIVITY') + '</span>'
-        + (next ? '<span>Next: <b>' + esc(next.name) + '</b> · ' + (dayOf(next.at) === 'Today' ? '' : esc(dayOf(next.at)) + ' ') + esc(hm(next.at)) + ' <span class="muted">(' + esc(when(next.at)) + ')</span></span>' : '<span class="muted small">Nothing else is scheduled. Approved tasks without a schedule still run when they are due.</span>')
-        + (q.paused ? '<div class="row"><button class="small primary" data-qctl="resume">' + icon('play') + 'Resume scheduled runs</button></div>' : '') + '</div>';
     } else {
-      const todo = S.queue ? S.queue.items.filter(i => i.deviceId === d.id && i.status === 'READY').length : 0;
-      html = '<div class="idle"><span class="sleep"><img src="dragon.png" alt=""></span><span>Nothing is running.' + (next ? '<br>Next: <b>' + esc(next.name) + '</b> · ' + esc(hm(next.at)) + ' ' + esc(when(next.at)) : '<br>Schedule a game, a playbook or a creation: it runs here at its time.') + (todo ? '<br><span class="sand">' + todo + ' due now' + (q && q.paused ? ': the queue is paused.' : ': starting in turn.') + '</span>' : '') + '</span></div>'
-        + (q && q.paused ? '<div class="row"><button class="small primary" data-qctl="resume">' + icon('play') + 'Resume scheduled runs</button></div>' : '');
+      // Nothing running: a quiet resting view (the owner, 2026-10-21), no buttons: what runs is started from the queue.
+      html = '<div class="qrest"><span class="qrestdragon"><img src="dragon.png" alt=""><i>z</i><i>z</i><i>z</i></span><b>NOTHING IS RUNNING</b><span class="qdots"><i></i><i></i><i></i></span></div>';
     }
     htmlOnce($('missionbody'), html); tickTimes();
     // The queue's one switch: paused, nothing new starts by itself; running, what is scheduled starts at its time.
