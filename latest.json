@@ -1,11 +1,11 @@
 {
-  "version": "0.21.50",
-  "notes": "Phone app block editor: a tidy control bar, Stop all as a small pill, and chunky block tiles.",
-  "publishedAt": "2026-10-22T06:22:40.385Z",
+  "version": "0.21.51",
+  "notes": "Phone block editor: Full shows every block top to bottom on the workspace grid (pinch to zoom, scroll, tap a block for its settings); Dock puts it back under the phone.",
+  "publishedAt": "2026-10-22T06:29:03.828Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "4d491e5468bf0e1ad7169c7020bfe663e8eee93abf75cf906de1df118b4c37c2",
+      "sha256": "4ab6c836f2ead378ce81903158a1bbe52b610d24bc40de396f8d46b72c04454b",
       "size": 1182319
     },
     {
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-BcfQDoGw.css",
-      "sha256": "d70bfd696e3006dce24ac1c8f349132972c3d3985046427c3c0352279d7af19f",
-      "size": 93399
+      "path": "remote-ui/assets/index-Bkv0AFQS.js",
+      "sha256": "0a2b70e7b347a9f1361dc7efbbb226ab9beb35f79837aa95db2c30b3a233c487",
+      "size": 266677
     },
     {
-      "path": "remote-ui/assets/index-CXY5979f.js",
-      "sha256": "194e25179fe01335a9818416eed93af32057ebbe7e483b7ea6ed355125c3cee6",
-      "size": 265845
+      "path": "remote-ui/assets/index-vd2BEUjZ.css",
+      "sha256": "c4c9200a51bfb7697fc28de1905eed7b4d6b6d797ba26dffbf438287e9bf14db",
+      "size": 94919
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "65268781f7a24a8aad98371491abaf940b202a744bf04250f8c9d098298f8692",
+      "sha256": "5fc7c12d4f3fd60d1c649a6cf05d47ad136b67767ea4c07ae50bf662ab6c3e6f",
       "size": 3773
     },
     {

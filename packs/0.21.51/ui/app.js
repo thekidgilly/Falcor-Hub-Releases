@@ -1519,7 +1519,6 @@ $('pair').onclick = async () => {
   const tickExp = () => { const left = Math.max(0, p.expiresAt - Date.now()), s = Math.round(left / 1000); $('paircount').style.width = (left / total * 100) + '%'; text($('pairexp'), s ? 'In Falcor.Hub Remote: Scan QR, or type the address and code. Expires in ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + '.' : 'Expired. Make a new code.'); if (!s) clearInterval(pairTimer); };
   tickExp(); pairTimer = setInterval(tickExp, 1000);
 };
-$('firewall').onclick = async () => toast(await call('firewall'));
 $('secretform').onsubmit = async e => { e.preventDefault(); const f = e.target; await call('setSecret', {name: f.name.value, value: f.value.value}); f.reset(); toast('Secret sealed on this computer.'); };
 $('updcheck').onclick = () => call('updateCheck').then(() => toast('Checked for updates.'));
 

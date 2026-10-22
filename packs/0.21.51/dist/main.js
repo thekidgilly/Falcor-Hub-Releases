@@ -16621,11 +16621,13 @@ var AdbDriver = class {
     await this.describe();
     let [win2, power] = (await this.sh(ADB.state(this.serial))).split(POWER_MARK);
     if (power === void 0 || !/mWakefulness|Display Power/.test(power)) [win2, power] = await Promise.all([this.sh(ADB.window(this.serial)), this.sh(ADB.power(this.serial))]);
-    const fg = foregroundOf(win2), act = activityOf(win2), web = fg === "com.android.chrome" && /\bwebapps\.\w*WebApk\w*Activity\b/.test(act || "") && this.webApk ? this.webApk : null;
+    const fg = foregroundOf(win2), act = activityOf(win2), web = fg === "com.android.chrome" && /\bwebapps\.\w*WebApk\w*Activity\b/.test(act || "") ? this.webApk || (this.webApks.length === 1 ? this.webApks[0] : null) : null;
     return { ...base, model: this.model, androidVersion: this.androidVersion, connected: true, authorized: true, locked: lockedFrom(win2, power), rotation: rotationOf(win2), foreground: web || fg, activity: act };
   }
   // A game drawn as one picture (Unity, GL) gives uiautomator nothing but its surface, and only after waiting for a
   // stillness that never comes: for SURFACE_MS after such a dump, looks at that app reuse it and read only the picture.
+  // (the web apps installed on the phone: with only one, a web app opened from the launcher (Teach) is known to be that one)
+  webApks = [];
   surface = null;
   drawn = null;
   // Game engine activities seen as a picture, by app, activity and rotation, for two minutes after the last dump.
@@ -16826,7 +16828,9 @@ var AdbDriver = class {
     }
   }
   async installedPackages() {
-    return String((await this.exec([...ADB.packages(this.serial)])).stdout).split(/\r?\n/).map((l) => l.replace(/^package:/, "").trim()).filter(validPackage).slice(0, 500);
+    const l = String((await this.exec([...ADB.packages(this.serial)])).stdout).split(/\r?\n/).map((l2) => l2.replace(/^package:/, "").trim()).filter(validPackage).slice(0, 500);
+    this.webApks = l.filter((p) => /^org\.chromium\.webapk\./.test(p));
+    return l;
   }
   async appVersion(pkg) {
     return versionNameOf(await this.sh(ADB.packageInfo(this.serial, pkg)));
@@ -21390,7 +21394,7 @@ async function startVideo(o) {
 
 // src/main.ts
 var where = globalThis.falcorHub || { appRoot: (0, import_node_path8.join)(__dirname, ".."), packRoot: (0, import_node_path8.join)(__dirname, ".."), packVersion: null, installVersion: import_electron2.app.getVersion(), packsDir: (0, import_node_path8.join)(import_electron2.app.getPath("userData"), "packs") };
-var VERSION = "0.21.46";
+var VERSION = "0.21.51";
 var simulated = process.argv.includes("--simulated");
 if (!import_electron2.app.requestSingleInstanceLock()) {
   if (where.packVersion) {
@@ -21561,7 +21565,7 @@ async function boot() {
   if (process.platform === "win32" && import_electron2.app.isPackaged && hub.store.get("firewall_asked") !== import_electron2.app.getVersion()) {
     const has = (0, import_node_child_process4.spawnSync)("powershell.exe", ["-NoProfile", "-Command", "(Get-NetFirewallRule -DisplayName 'Falcor.Hub phone app' -ErrorAction SilentlyContinue | Measure-Object).Count"], { encoding: "utf8", windowsHide: true });
     hub.store.set("firewall_asked", import_electron2.app.getVersion());
-    if (!(Number((has.stdout || "").trim()) > 0)) setTimeout(() => void Promise.resolve(handlers.firewall({})).then((m) => hub.engine.say(String(m)), () => hub.engine.say("The phone app firewall rule was not added: Settings \u2192 Phone app \u2192 Let my phone through Windows Firewall.")), 4e3);
+    if (!(Number((has.stdout || "").trim()) > 0)) setTimeout(() => void Promise.resolve(handlers.firewall({})).then((m) => hub.engine.say(String(m)), () => hub.engine.say("The phone app firewall rule was not added; it is asked for again with the next update.")), 4e3);
   }
   if (!p.adb) hub.engine.say("Android platform tools (adb) are missing from this install.");
 }
