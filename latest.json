@@ -1,6 +1,6 @@
 {
   "version": "0.21.27",
-  "notes": "^Falcor.Hub^ 0.21.27:^ tabs^ Hub,^ Library,^ Sandbox,^ Activity,^ Settings;^ Falcor^ floats^ as^ a^ draggable^ glowing^ square^ that^ opens^ a^ small^ chat^ ^(Full^ page^ for^ the^ whole^ chat^);^ the^ Library^ holds^ games,^ apps^ and^ creations^ ^(filters^ Games,^ Apps,^ Creations^),^ FireFaucet^ as^ an^ app^ every^ 30^ minutes;^ Capture^ is^ a^ plain^ button^ ^(the^ automatic^ offer^ sensing^ that^ slowed^ the^ phone^ is^ gone^);^ custom^ tasks^ can^ repeat^ every^ N^ minutes;^ web^ apps^ from^ Chrome^ are^ followed^ and^ get^ their^ icon^",
+  "notes": "Falcor.Hub 0.21.27: tabs Hub, Library, Sandbox, Activity, Settings; Falcor floats as a draggable glowing square that opens a small chat (Full page for the whole chat); the Library holds games, apps and creations (filters Games, Apps, Creations), FireFaucet as an app every 30 minutes; Capture is a plain button (the automatic offer sensing that slowed the phone is gone); custom tasks can repeat every N minutes; web apps from Chrome are followed and get their icon",
   "publishedAt": "2026-10-22T00:01:59.680Z",
   "files": [
     {
