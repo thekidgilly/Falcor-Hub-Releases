@@ -1,12 +1,12 @@
 {
-  "version": "0.21.54",
-  "notes": "Phone app: pressing Teach no longer shows a false can't-connect error while the phone goes Home.",
-  "publishedAt": "2026-10-22T06:44:34.919Z",
+  "version": "0.21.55",
+  "notes": "^Sandbox^ Teach^ now^ asks^ whether^ to^ analyze^ or^ delete^ recordings.^ Published^ Library^ sequences^ have^ dedicated^ detail^ pages^ with^ icon,^ name,^ description,^ Run^ now,^ scheduling^ and^ Sandbox^ editing.^ Includes^ editor^ polish,^ phone^ offline^ drafts,^ and^ new^ About^ lore^ and^ hidden^ archive.^",
+  "publishedAt": "2026-10-22T16:37:14.665Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "ee5e1c97ea104b7f68b3b634fbecc3c6f347850f5b12719027be56bf688d5727",
-      "size": 1182319
+      "sha256": "03794342ec1996a70a196d6d1a065139a704dc7987280ad23e33bd2403e888c3",
+      "size": 1184900
     },
     {
       "path": "dist/preload.js",
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-BA6Xeg09.js",
-      "sha256": "e3cfeba311db2fe2a403aeb11cada0d0dfcf8885d0b5ff3f669d0295e052bbfd",
-      "size": 269661
+      "path": "remote-ui/assets/index-BG6G-vjz.js",
+      "sha256": "edba1435a3bc911ca27fa2ae2bd76070f3019711dde97825b1e5aec28609bed2",
+      "size": 281366
     },
     {
-      "path": "remote-ui/assets/index-u8RmZuSC.css",
-      "sha256": "d8d76d06909dae39ede699dea34fa0c2386430e1030e149b2bba47c4096f0836",
-      "size": 95321
+      "path": "remote-ui/assets/index-DKTLrEl0.css",
+      "sha256": "11b23112cf0c36dcebbc69df7403443b06fe0ef8cce822cdc341f63b68e3b287",
+      "size": 98709
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "0b7d3dcfa1492c7f984cba5f6682f80d855dbed6e6b2f9a61977d33903c23faf",
+      "sha256": "edcb6638ffe4ddcce0589015630c86cd2fcefb40d9aa08f1ba87f164affc5311",
       "size": 3773
     },
     {
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "b1f22ec3f6ea815c6a2484e67d940b8600621da72661f35c7ed15eee7b16fe15",
-      "size": 151388
+      "sha256": "014cb7238c0a24d473c6523a708806a9b56bdae7b1defebf286d4c58a08a5d41",
+      "size": 151458
     },
     {
       "path": "ui/app.png",
@@ -95,8 +95,8 @@
     },
     {
       "path": "ui/creations.js",
-      "sha256": "c56588df1bb5f30334b5828bcd54d8e57a164fb47cd6c9c098c9bed5056ca4eb",
-      "size": 18131
+      "sha256": "2d7ed0d8180bb91b1cde616b7904d6364a35ab4647e5ac78fe4feb01cc0dcb3e",
+      "size": 23271
     },
     {
       "path": "ui/desk.js",
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "0e1d66d68b14b8437c9bfef13d71f527481a7f3b22f20a2f0f7fa80f6347a3af",
-      "size": 66254
+      "sha256": "7a2584ae1f9c263ed3a689ad9e393cbddbcddd50ee729762e6546eacb24c3494",
+      "size": 68655
     },
     {
       "path": "ui/motion.css",
@@ -160,13 +160,13 @@
     },
     {
       "path": "ui/sandbox.js",
-      "sha256": "786534fe9dfff21fffb645a9ade3fdbcd8ea4043400d5fc51a6ba83ebc0a8b96",
-      "size": 108751
+      "sha256": "8ed8b38f7cad5c103430382b292906edf7f4d3f7f9d5e0b37f4a63b5cd182fcc",
+      "size": 111905
     },
     {
       "path": "ui/style.css",
-      "sha256": "037e315197da65581b58ccf2e33a88317f29844db71c32c6e53bad88216654e0",
-      "size": 137542
+      "sha256": "6040e899ddcd19b0516134adde114673ef87be74cbf5efff9c3b4ea97f02fec7",
+      "size": 141752
     },
     {
       "path": "ui/tokens.css",

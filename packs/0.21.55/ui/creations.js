@@ -5,7 +5,7 @@
 // Load more and details on demand. Loaded after app.js; uses its helpers. Read on demand only while the tab is open,
 // one request at a time, and an answer that arrives after a newer one is ignored.
 (() => {
-  const CR = {view: 'creations', filter: 'all', q: '', list: null, error: '', at: 0, busy: false, seq: 0};
+  const CR = {view: 'creations', filter: 'all', q: '', list: null, error: '', at: 0, busy: false, seq: 0, detail: ''};
   const OUT_CLS = {completed: 'green', attention: 'sand', waiting: 'sand', running: 'accent', failed: 'red', stopped: 'muted', interrupted: 'sand', skipped: 'muted'};
   const ago = at => { const m = Math.round((Date.now() - at) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 36 * 60 ? Math.round(m / 60) + ' h ago' : new Date(at).toLocaleDateString(); };
   const len = ms => ms === null || ms === undefined ? '' : ms < 60000 ? Math.max(1, Math.round(ms / 1000)) + ' s' : dur(ms);
@@ -47,6 +47,9 @@
   }
   function drawCreations() {
     const box = $('crlist'); if (!box) return;
+    $('crmain').hidden = !!CR.detail;
+    $('crdetail').hidden = !CR.detail;
+    if (CR.detail) { drawDetail(); return; }
     const all = CR.list;
     text($('crcount'), all ? String(all.length) : '');
     text($('crothercount'), String((S.tasks || []).length));
@@ -60,12 +63,27 @@
       htmlOnce(n.querySelector('.crbody'), cardBody(c)); htmlOnce(n.querySelector('.cracts'), cardActs(c)); P.fix(n);
     });
   }
+  function drawDetail() {
+    const box = $('crdetail'), c = CR.list && CR.list.find(x => x.seqId === CR.detail);
+    if (!box) return;
+    if (!c) { htmlOnce(box, '<div class="panel empty"><span>This sequence could not be found in the Library.</span><button data-detail="back">Back to Library</button></div>'); return; }
+    const icons = ['sandbox', 'play', 'game', 'book', 'star', 'flag', 'target', 'camera', 'home', 'apps', 'gift', 'gem'];
+    const off = c.needsSetup ? 'Add blocks in Sandbox first' : c.device.state === 'none' || c.device.state === 'offline' ? c.device.why : '';
+    htmlOnce(box, '<div class="toolrow"><button class="ghost" data-detail="back">' + icon('back') + 'Back to Library</button><span class="grow"></span><span class="pill ' + (c.live ? 'green' : c.needsAttention ? 'sand' : c.nextRunAt ? 'accent' : 'muted') + '">' + (c.live ? 'RUNNING' : c.needsSetup ? 'NEEDS SETUP' : c.needsAttention ? 'NEEDS YOU' : c.nextRunAt ? 'SCHEDULED' : 'READY') + '</span></div>'
+      + '<article class="panel crdetailhero"><span class="cricon crdetailicon">' + icon(c.icon || 'sandbox') + '</span><div><p class="eyebrow">// PUBLISHED SEQUENCE · v' + c.revision + '</p><h2>' + esc(c.title) + '</h2><p class="muted">' + esc(c.description || 'No description yet.') + '</p></div></article>'
+      + '<div class="panel crdetailfacts"><span><b>' + c.steps + '</b><small>steps</small></span><span><b>' + esc(c.device.label) + '</b><small>phone</small></span><span><b>' + (c.nextRunAt ? esc(when(c.nextRunAt)) : '—') + '</b><small>next run</small></span><span><b>' + (c.last ? esc(c.last.label) : 'Not run') + '</b><small>last run</small></span></div>'
+      + (off ? '<p class="small sand">' + esc(off) + '</p>' : '')
+      + '<div class="row crdetailacts">' + (c.live ? '<button data-detail="' + (c.live.status === 'PAUSED' || c.live.status === 'NEEDS_ATTENTION' ? 'resume' : 'pause') + '">' + icon(c.live.status === 'PAUSED' || c.live.status === 'NEEDS_ATTENTION' ? 'play' : 'pause') + (c.live.status === 'PAUSED' || c.live.status === 'NEEDS_ATTENTION' ? 'Resume' : 'Pause') + '</button><button class="danger" data-detail="stop">' + icon('stop') + 'Stop</button>' : '<button class="primary" data-detail="run"' + (off ? ' disabled title="' + esc(off) + '"' : '') + '>' + icon('play') + 'Run now</button><button data-detail="schedule">' + icon('calendar') + 'Create schedule</button>')
+      + '<button data-detail="edit">' + icon('edit') + 'Edit in Sandbox</button><button class="ghost" data-detail="history">' + icon('stats') + 'History</button><button class="ghost danger" data-detail="delete">' + icon('trash') + 'Delete</button></div>'
+      + '<section class="panel crdetailform"><p class="eyebrow">// SEQUENCE DETAILS</p><h3>Make it yours</h3><div class="grid"><label>Name<input id="crdtitle" maxlength="80" value="' + esc(c.title) + '"></label><label>Icon<select id="crdicon">' + icons.map(n => '<option value="' + n + '"' + (n === c.icon ? ' selected' : '') + '>' + n[0].toUpperCase() + n.slice(1) + '</option>').join('') + '</select></label><label class="wide">Description<textarea id="crddesc" maxlength="500" rows="3">' + esc(c.description) + '</textarea></label></div><div class="row"><button class="primary" data-detail="save">' + icon('check') + 'Save details</button></div></section>');
+    P.fix(box);
+  }
   window.renderCreations = function () {
     setView(CR.view, true);
     if (CR.view === 'creations') { drawCreations(); void loadCreations(false); }
   };
   function setView(v, quiet) {
-    CR.view = v;
+    CR.view = v; if (v === 'other') CR.detail = '';
     document.querySelectorAll('#crview [data-v]').forEach(b => { cls(b, 'on', b.dataset.v === v); b.setAttribute('aria-selected', String(b.dataset.v === v)); });
     $('crmain').hidden = v !== 'creations'; $('crother').hidden = v !== 'other';
     if (!quiet && v === 'creations') void loadCreations(true);
@@ -74,14 +92,16 @@
   // Links that carry a mission (a task from Games, Falcor or a notice) open Other automations; a sequence id opens its card.
   window.crShow = function (ref) {
     const seq = typeof ref === 'string' && /^sq\w+$/.test(ref);
-    setView(ref && !seq ? 'other' : 'creations');
-    if (seq) setTimeout(() => { const n = document.querySelector('.crcard[data-seq="' + ref + '"]'); if (n) { n.scrollIntoView({block: 'center'}); n.classList.remove('flash'); void n.offsetWidth; n.classList.add('flash'); } }, 250);
+    if (seq) { CR.detail = ref; setView('creations'); drawCreations(); void loadCreations(false); }
+    else { CR.detail = ''; setView(ref ? 'other' : 'creations'); }
   };
   $('crview').onclick = e => { const b = e.target.closest('[data-v]'); if (b) setView(b.dataset.v); };
   $('crfilter').onclick = e => { const b = e.target.closest('[data-f]'); if (!b) return; CR.filter = b.dataset.f; $('crfilter').querySelectorAll('button').forEach(x => cls(x, 'on', x === b)); drawCreations(); };
   $('crsearch').oninput = e => { CR.q = e.target.value; drawCreations(); };
   $('crnew').onclick = () => { go('sandbox'); };
   $('crlist').addEventListener('click', async e => {
+    const body = !e.target.closest('[data-cr]') && e.target.closest('.crbody');
+    if (body) { const card = body.closest('.crcard'); if (card && card.dataset.seq) { CR.detail = card.dataset.seq; drawCreations(); } return; }
     const b = e.target.closest('[data-cr]'); if (!b || b.disabled) return;
     const act = b.dataset.cr, card = b.closest('.crcard'), c = card && CR.list ? CR.list.find(x => x.seqId === card.dataset.seq) : null;
     if (act === 'retry') return void loadCreations(true);
@@ -97,6 +117,25 @@
       if (act === 'fav') await call('sandbox', {op: 'meta', id: c.seqId, favorite: !c.favorite});
       if (act === 'delete' && confirm('Delete "' + c.title + '"? Its schedules are turned off.')) { await call('sandbox', {op: 'remove', id: c.seqId}); toast('Deleted "' + c.title + '".'); }
       if (c.live && (act === 'pause' || act === 'resume' || act === 'stop')) await call('sandbox', {op: act, runId: c.live.runId});
+    } catch (err) { toast(errText(err), 'warn'); }
+    finally { b.disabled = false; void loadCreations(true); }
+  });
+  $('crdetail').addEventListener('click', async e => {
+    const b = e.target.closest('[data-detail]'); if (!b || b.disabled) return;
+    const act = b.dataset.detail, c = CR.list && CR.list.find(x => x.seqId === CR.detail); if (act === 'back') { CR.detail = ''; drawCreations(); return; } if (!c) return;
+    b.disabled = true;
+    try {
+      if (act === 'save') {
+        const g = await call('sandbox', {op: 'get', id: c.seqId}), definition = g.definition;
+        definition.title = $('crdtitle').value.trim() || 'Untitled'; definition.description = $('crddesc').value.trim(); definition.icon = $('crdicon').value;
+        await call('sandbox', {op: 'save', id: c.seqId, definition}); toast('Sequence details saved.');
+      }
+      if (act === 'edit') { go('sandbox'); if (window.sbOpen) await window.sbOpen(c.seqId); }
+      if (act === 'run') await window.qRun({type: 'sequence', id: c.seqId}, {name: c.title});
+      if (act === 'schedule') await window.openScheduler({target: {type: 'sequence', id: c.seqId}, name: c.title, kind: 'sequence'});
+      if (act === 'history') history(c);
+      if (['pause', 'resume', 'stop'].includes(act) && c.live) await call('sandbox', {op: act, runId: c.live.runId});
+      if (act === 'delete' && confirm('Delete "' + c.title + '"? Its schedules are turned off.')) { await call('sandbox', {op: 'remove', id: c.seqId}); CR.detail = ''; toast('Sequence deleted.'); }
     } catch (err) { toast(errText(err), 'warn'); }
     finally { b.disabled = false; void loadCreations(true); }
   });

@@ -330,7 +330,7 @@
     const about = b => String(b.help || '').split(/(?<=\.)\s/)[0].slice(0, 90);
     const block = (s, i) => {
       const b = B.get(s.type) || {icon: 'sandbox', name: s.type, cat: 'flow', help: ''};
-      const card = '<div class="blk cat-' + esc(b.cat || 'flow') + (SB.sel.includes(s.id) ? ' sel' : '') + (s.enabled === false ? ' off' : '') + (s.color ? ' c-' + s.color : '') + '" data-id="' + esc(s.id) + '" draggable="true" title="' + esc(b.name + (s.note ? ' · ' + s.note : '')) + '">'
+      const card = '<div class="blk cat-' + esc(b.cat || 'flow') + (SB.sel.includes(s.id) ? ' sel' : '') + (s.enabled === false ? ' off' : '') + (s.color ? ' c-' + s.color : '') + '" data-id="' + esc(s.id) + '" role="button" tabindex="0" aria-pressed="' + SB.sel.includes(s.id) + '" aria-label="Step ' + (i + 1) + ': ' + esc(words(s) + (meta(s) ? ', ' + meta(s) : '')) + '" draggable="true" title="' + esc(b.name + (s.note ? ' · ' + s.note : '')) + '">'
         + '<span class="bn">' + String(i + 1).padStart(2, '0') + '</span><span class="bico"><span class="tile">' + icon(s.type === 'key' ? ({HOME: 'home', BACK: 'back', APP_SWITCH: 'apps', ENTER: 'check', DEL: 'close'})[s.params && s.params.key] || b.icon : b.icon) + '</span></span><span class="w">' + esc(words(s)) + '</span><span class="m">' + esc(meta(s)) + '</span><span class="bd">' + esc(about(b)) + '</span></div>';
       if (!b.group) return card;
       return '<div class="grp" data-g="' + esc(s.id) + '">' + card + '<div class="lane" data-l="' + (b.group === 'branch' ? 'THEN' : 'DO') + '">' + lane(s.children || [], s.id + ':children') + '</div>' + (b.group === 'branch' ? '<div class="lane" data-l="ELSE">' + lane(s.else || [], s.id + ':else') + '</div>' : '') + '</div>';
@@ -357,11 +357,15 @@
     const el = e.target.closest('.blk'); if (!el) { if (e.target === $('sbsteps')) { SB.sel = []; SB.focus = null; draw(); } return; }
     select(el.dataset.id, e);
   });
+  $('sbsteps').addEventListener('keydown', e => {
+    const el = e.target.closest('.blk'); if (!el || (e.key !== 'Enter' && e.key !== ' ')) return;
+    e.preventDefault(); select(el.dataset.id, e);
+  });
   function select(id, e = {}) {
     if (e.ctrlKey || e.metaKey) SB.sel = SB.sel.includes(id) ? SB.sel.filter(x => x !== id) : [...SB.sel, id];
     else if (e.shiftKey && SB.focus) { const ids = flat().map(s => s.id), a = ids.indexOf(SB.focus), b = ids.indexOf(id); SB.sel = ids.slice(Math.min(a, b), Math.max(a, b) + 1); }
     else SB.sel = [id];
-    SB.focus = id; draw();
+    SB.focus = id; draw(); if (e.type === 'keydown') $('sbsteps').querySelector('.blk[data-id="' + id + '"]')?.focus({preventScroll: true});
   }
   // Drag to reorder (several selected move together), and drop library blocks into place.
   $('sbsteps').addEventListener('dragstart', e => { const el = e.target.closest('.blk'); if (!el || SB.mode === 'run') { e.preventDefault(); return; } const id = el.dataset.id; SB.drag = {ids: SB.sel.includes(id) ? SB.sel.slice() : [id]}; e.dataTransfer.setData('text/plain', 'sandbox'); e.dataTransfer.effectAllowed = 'move'; el.classList.add('drag-source'); setTimeout(() => $('sbsteps').classList.add('dragging'), 0); });
@@ -736,22 +740,52 @@
   }
   async function endTeach() {
     SB.ending = true; render();
-    const box = $('sbtaught'); box.innerHTML = workHtml('Stopping the recording', 4); box.hidden = false;
-    const paint = (stage, pct) => { const b = $('sbtbar'); if (b) b.style.width = Math.max(4, Math.min(100, pct)) + '%'; text($('sbtstage'), stage); };
-    paint('Stopping the recording', 4);
-    let done = false, shown = 0;
-    // (each stage stays up long enough to read: a quick analysis still shows its steps)
-    const poll = (async () => { while (!done) { const w = await window.hub.call('teachProgress').catch(() => null); if (w && w.pct > shown && w.pct < 100) { shown = w.pct; paint(w.stage, w.pct); await pause(350); } else await pause(120); } })();
-    let r = null;
-    try { r = await call('teachStop'); } catch { /* call showed it */ }
-    S.teaching = null;
-    done = true; await poll;
-    // A quick analysis is over before the bar could show it: each stage it went through is still shown, briefly.
-    for (const [st, pct] of [['Reading your touches, taps and typing', 30], ['Learning the screens of ' + ((r && r.name) || 'the app'), 55], ['Building the steps', 82]]) if (pct > shown) { paint(st, pct); await pause(380); }
-    paint('Done', 100); await pause(450);
-    SB.ending = false;
-    await showTaught(r);
+    const box = $('sbtaught'); box.innerHTML = '<p class="eyebrow">// STOPPING TEACH</p><h2>' + icon('stop') + 'Saving your recording</h2><p class="muted small">The recording is kept on this computer until you choose to analyze or discard it.</p>'; box.hidden = false;
+    try {
+      const r = await call('teachStop', {deferSandbox: true});
+      S.teaching = null; SB.pendingTeach = r.pending || null; SB.ending = false;
+      setMode('view', true); await refresh();
+      if (SB.pendingTeach) showTeachDecision();
+      else { box.innerHTML = '<p class="eyebrow">// TEACH</p><h2>Recording stopped</h2><p class="muted small">No pending recording was returned. You can close this message and continue editing the draft.</p><div class="row"><button data-t="close">Close</button></div>'; box.hidden = false; }
+    } catch (e) {
+      S.teaching = null; SB.ending = false;
+      box.innerHTML = '<p class="eyebrow">// TEACH</p><h2>Could not stop recording</h2><p class="red small">' + esc(e.message || e) + '</p><div class="row"><button data-t="close">Close</button></div>'; box.hidden = false;
+    }
     render();
+  }
+  function showTeachDecision(error) {
+    const p = SB.pendingTeach; if (!p) return;
+    const box = $('sbtaught');
+    box.innerHTML = '<p class="eyebrow">// RECORDING STOPPED · ' + Math.max(0, Math.round(p.elapsedMs / 1000)) + ' S</p><h2>' + icon('rec') + 'What would you like to do?</h2>'
+      + '<p class="small">Falcor recorded ' + p.touches + ' interaction' + (p.touches === 1 ? '' : 's') + ' across ' + p.screens + ' screen' + (p.screens === 1 ? '' : 's') + (p.name ? ' in <b>' + esc(p.name) + '</b>' : '') + '.</p>'
+      + '<p class="muted small">Nothing has been analyzed or added to your sequence yet. The empty draft stays in Sandbox if you discard this recording.</p>'
+      + (error ? '<p class="red small">' + esc(error) + '</p>' : '')
+      + '<div class="row"><button class="primary" data-t="analyze">' + icon('rec') + 'Send for analysis</button><button class="ghost danger" data-t="discard-recording">' + icon('trash') + 'Delete recording</button></div>';
+    box.hidden = false;
+  }
+  async function analyzeTeach() {
+    const p = SB.pendingTeach; if (!p || SB.ending) return;
+    SB.ending = true; render();
+    const box = $('sbtaught'); box.innerHTML = workHtml('Reading your touches, taps and typing', 4); box.hidden = false;
+    const paint = (stage, pct) => { const b = $('sbtbar'); if (b) b.style.width = Math.max(4, Math.min(100, pct)) + '%'; text($('sbtstage'), stage); };
+    let done = false, shown = 0;
+    const poll = (async () => { while (!done) { const w = await window.hub.call('teachProgress').catch(() => null); if (w && w.pct > shown && w.pct < 100) { shown = w.pct; paint(w.stage, w.pct); await pause(350); } else await pause(120); } })();
+    try {
+      const r = await call('teachAnalyze', {id: p.id});
+      done = true; await poll;
+      for (const [st, pct] of [['Reading your touches, taps and typing', 30], ['Learning the screens of ' + ((r && r.name) || 'the app'), 55], ['Building the steps', 82]]) if (pct > shown) { paint(st, pct); await pause(380); }
+      paint('Done', 100); await pause(350);
+      SB.pendingTeach = null; SB.ending = false;
+      await showTaught(r); render();
+    } catch (e) {
+      done = true; await poll; SB.ending = false;
+      showTeachDecision(e.message || e); render();
+    }
+  }
+  async function discardTeach() {
+    const p = SB.pendingTeach; if (!p) return;
+    try { await call('teachDiscard', {id: p.id}); SB.pendingTeach = null; $('sbtaught').hidden = true; await refresh(); toast('Recording deleted. The empty draft is still in Sandbox.'); }
+    catch (e) { showTeachDecision(e.message || e); }
   }
   window.sbEndTeach = endTeach;
   $('sbteach').onclick = () => void toggleTeach();
@@ -784,6 +818,8 @@
     const b = e.target.closest('[data-t]'); if (!b) return;
     const act = b.dataset.t;
     if (act === 'close') { $('sbtaught').hidden = true; return; }
+    if (act === 'analyze') { await analyzeTeach(); return; }
+    if (act === 'discard-recording') { await discardTeach(); return; }
     if (act === 'library') { $('sbtaught').hidden = true; go('games'); const c = document.querySelector('#libfilter [data-f="creations"]'); if (c) c.click(); return; }
     if (!SB.seq) return;
     if (act === 'discard') {
@@ -948,11 +984,11 @@
   // example, the drafts, or a blank workspace that skips all of it.
   function startBox(b) {
     const drafts = SB.data.sequences.filter(s => !s.published).length;
-    const opt = (k, ic, t, sub, cls = '') => '<button class="sbsopt ' + cls + '" data-start="' + k + '">' + icon(ic) + '<span><b>' + esc(t) + '</b><small>' + esc(sub) + '</small></span></button>';
+    const opt = (k, ic, t, sub, cls = '') => '<button class="sbsopt ' + cls + '" data-start="' + k + '" aria-label="' + esc(t + '. ' + sub) + '">' + icon(ic) + '<span><b>' + esc(t) + '</b><small>' + esc(sub) + '</small></span></button>';
     b.innerHTML = '<div class="sbstart rise"><p class="eyebrow">// SANDBOX</p><h2>What do you want to create?</h2><p class="muted small">Build a run from blocks or show Falcor once on the phone. New here? Take the one-minute tour.</p>'
       + '<div class="sbsopts">' + opt('tour', 'help', 'Quick tour', 'A blank run and a one-minute walk through the workspace', 'tour') + opt('teach', 'rec', 'Teach Falcor', 'Use the phone on the mirror; Falcor builds the run') + opt('example', 'book', 'Start from the example', 'A finished run to look at and change')
       + opt('drafts', 'sandbox', 'Your drafts' + (drafts ? ' · ' + drafts : ''), drafts ? 'Pick up where you left off' : 'Nothing saved yet') + '</div>'
-      + '<button class="sbsblank" data-start="blank">' + icon('plus') + 'Blank workspace<small>skip all of this</small></button></div>';
+      + '<button class="sbsblank" data-start="blank" aria-label="Blank workspace. Skip all of this">' + icon('plus') + 'Blank workspace<small>skip all of this</small></button></div>';
     b.onclick = async e => {
       const o = e.target.closest('[data-start]'); if (!o) return; const k = o.dataset.start;
       if (k === 'drafts') { goHome('mine'); return; }

@@ -14497,6 +14497,7 @@ var HubEngine = class _HubEngine {
   stopped = false;
   n = 0;
   teach = null;
+  pendingSandboxTeach = null;
   // Teach Falcor pressed on a game's page: waiting for that game to come to the front (one per game).
   coachWait = /* @__PURE__ */ new Map();
   footage = /* @__PURE__ */ new Map();
@@ -14866,6 +14867,7 @@ var HubEngine = class _HubEngine {
   // sandbox: the Sandbox's recording mode: at Stop the touches are added as blocks to that sequence (teach-bridge.ts).
   async teachStart(id, o, how = { auto: false, took: false }) {
     if (this.teach) throw new Error("Falcor is already recording. Stop that session first.");
+    if (this.pendingSandboxTeach) throw new Error("Choose whether to analyze or discard the stopped Sandbox recording first.");
     const drv = this.drivers.get(id), f = this.found.get(id), v = this.views.get(id);
     if (!drv || !f || !v) throw new Error("That phone is not connected.");
     if (this.leases.emergency(id)) throw new Error("Emergency Stop is on. Clear it first.");
@@ -14973,11 +14975,24 @@ var HubEngine = class _HubEngine {
   work(stage, pct2) {
     this.teachWork = { stage, pct: pct2, at: this.now() };
   }
-  async teachStop(why = "stopped by you") {
+  async teachStop(why = "stopped by you", deferSandbox = false) {
     const t = this.teach;
     if (!t) throw new Error("Nothing is being recorded.");
     this.teach = null;
     clearInterval(t.timer);
+    if (deferSandbox && t.sandbox) {
+      const rec = await t.session.stop();
+      this.footage.get(t.deviceId)?.close(this.now());
+      if (t.tookControl) {
+        const l = this.leases.current(t.deviceId, this.now());
+        if (l?.leaseId === t.leaseId) this.leases.release(l.leaseId);
+      }
+      const id = "pending-" + this.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      this.pendingSandboxTeach = { id, t, rec, why, analyzing: false };
+      this.teachWork = null;
+      this.changed();
+      return { pending: { id, pkg: rec.pkg, name: rec.name, screens: rec.screens.length, touches: rec.touches.length, elapsedMs: rec.activeMs, sequenceId: t.sandbox.sequenceId } };
+    }
     this.work("Stopping the recording", 8);
     try {
       return await this.teachStopWork(t, why);
@@ -14985,12 +15000,39 @@ var HubEngine = class _HubEngine {
       this.work("Done", 100);
     }
   }
-  async teachStopWork(t, why) {
-    const rec = await t.session.stop();
+  async teachAnalyze(id) {
+    const pending = this.pendingSandboxTeach;
+    if (!pending || pending.id !== id) throw new Error("That stopped Sandbox recording is no longer available.");
+    if (pending.analyzing) throw new Error("This Sandbox recording is already being analyzed.");
+    pending.analyzing = true;
     this.work("Reading your touches, taps and typing", 30);
-    this.footage.get(t.deviceId)?.close(this.now());
+    let complete2 = false;
+    try {
+      const result = await this.teachStopWork(pending.t, pending.why, pending.rec, true);
+      complete2 = true;
+      return result;
+    } finally {
+      if (complete2 && this.pendingSandboxTeach === pending) this.pendingSandboxTeach = null;
+      pending.analyzing = false;
+      this.work("Done", 100);
+    }
+  }
+  teachDiscard(id) {
+    const pending = this.pendingSandboxTeach;
+    if (!pending || pending.id !== id) throw new Error("That stopped Sandbox recording is no longer available.");
+    if (pending.analyzing) throw new Error("This Sandbox recording is already being analyzed.");
+    pending.t.session.shots.clear();
+    this.pendingSandboxTeach = null;
+    this.say("Sandbox: recording discarded before analysis.", "YOU");
+    this.changed();
+    return { discarded: true, sequenceId: pending.t.sandbox.sequenceId };
+  }
+  async teachStopWork(t, why, stopped, captured = false) {
+    const rec = stopped || await t.session.stop();
+    this.work("Reading your touches, taps and typing", 30);
+    if (!captured) this.footage.get(t.deviceId)?.close(this.now());
     if (t.custom?.home && rec.pkg && !HOME_SCREEN.test(this.views.get(t.deviceId)?.info?.foreground || "")) await this.input(t.deviceId, { kind: "key", key: "HOME" }).catch(() => null);
-    if (t.tookControl) {
+    if (!captured && t.tookControl) {
       const l = this.leases.current(t.deviceId, this.now());
       if (l?.leaseId === t.leaseId) this.leases.release(l.leaseId);
     }
@@ -17896,7 +17938,9 @@ var RemoteServer = class _RemoteServer {
         e.say("Teach started from " + from + ".", "YOU");
         return ok({ sequenceId: id, teaching: st });
       }
-      if (post && body.op === "stop") return ok(await e.teachStop("ended from " + from));
+      if (post && body.op === "stop") return ok(await e.teachStop("ended from " + from, true));
+      if (post && body.op === "analyze") return ok(await e.teachAnalyze(String(body.id || "")));
+      if (post && body.op === "discard") return ok(e.teachDiscard(String(body.id || "")));
     }
     if (get && path2 === "/api/sandbox") return ok({ sequences: sb.list(), schedules: sb.scheduleList(), runs: sb.runs(void 0, 30), live: sb.live() });
     if (get && path2 === "/api/sandbox/catalog") return ok(sb.catalog());
@@ -21394,7 +21438,7 @@ async function startVideo(o) {
 
 // src/main.ts
 var where = globalThis.falcorHub || { appRoot: (0, import_node_path8.join)(__dirname, ".."), packRoot: (0, import_node_path8.join)(__dirname, ".."), packVersion: null, installVersion: import_electron2.app.getVersion(), packsDir: (0, import_node_path8.join)(import_electron2.app.getPath("userData"), "packs") };
-var VERSION = "0.21.50";
+var VERSION = "0.21.55";
 var simulated = process.argv.includes("--simulated");
 if (!import_electron2.app.requestSingleInstanceLock()) {
   if (where.packVersion) {
@@ -21805,7 +21849,9 @@ var handlers = {
   teachStart: (a) => need().engine.teachStart(String(a.deviceId), { name: String(a.name || ""), intent: String(a.intent || ""), custom: a.custom || void 0, sandbox: a.sandbox || void 0, home: a.home === true }),
   teachPause: (a) => need().engine.teachPause(a.on === true),
   teachMark: (a) => need().engine.teachMark(String(a.note || "")),
-  teachStop: () => need().engine.teachStop(),
+  teachStop: (a) => need().engine.teachStop("stopped by you", a.deferSandbox === true),
+  teachAnalyze: (a) => need().engine.teachAnalyze(String(a.id || "")),
+  teachDiscard: (a) => need().engine.teachDiscard(String(a.id || "")),
   teachProgress: () => need().engine.teachWork,
   teachEstimate: (a) => need().knowledge.estimate(String(a.pkg), String(a.id)),
   teachWrite: (a) => need().knowledge.writeGuide(String(a.pkg), String(a.id), a.mode === "text" ? "text" : a.mode === "local" ? "local" : "full", a.overLimit === true),

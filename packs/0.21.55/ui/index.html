@@ -408,6 +408,7 @@
       </div>
       <div class="crgrid" id="crlist" aria-live="polite"></div>
     </div>
+    <div id="crdetail" hidden></div>
     <div id="crother" hidden>
     <div class="toolrow">
       <div class="seg" id="taskfilter"><button data-f="all" class="on">All</button><button data-f="needs">Needs me</button><button data-f="scheduled">Scheduled</button><button data-f="done">Done</button></div>
@@ -538,7 +539,7 @@
         <button data-sub="activity"><svg class="ico"><use href="#i-stats"></use></svg>Activity</button>
         <button data-sub="secrets"><svg class="ico"><use href="#i-lock"></use></svg>Secrets</button>
         <button data-sub="updates"><svg class="ico"><use href="#i-update"></use></svg>Updates</button>
-        <button data-sub="about"><svg class="ico"><use href="#i-phone"></use></svg>About</button>
+        <button data-sub="about"><svg class="ico"><use href="#i-book"></use></svg>About</button>
       </nav>
       <div>
         <div class="panel actpanel" data-sub="activity" hidden>
@@ -627,10 +628,24 @@
             <p>The hall keeps its own secrets. Your keys rest here and nowhere else, each one whispered only to its own keeper. No website peers through these windows, and nothing that passes between you and the dragon is ever sold.</p>
             <p>This knowledge is not written in any book. It passes only from master to apprentice, from hand to claw, and you are now one of the very few who hold it.</p>
             <p class="loresign">Few are ever shown the way in. You were. Guard what you learn here, and teach him well.<span>— Falcor, Keeper of the Hub</span></p>
+            <div class="lorelinks"><button class="ghost" data-go="lore"><svg class="ico"><use href="#i-book"></use></svg>Open the sealed archive</button></div>
+            <details class="loreegg"><summary>A note tucked beneath the seal</summary><p>The Keeper says the hall has no clocks. He still knows when you have been away too long.</p></details>
           </div>
         </div>
       </div>
     </div>
+  </section>
+  <section data-pane="lore" class="pane" hidden>
+    <div class="crhead pagehead"><button class="ghost" data-go="settings:about"><svg class="ico"><use href="#i-back"></use></svg>Back to About</button><div><p class="eyebrow">// SEALED ARCHIVE · ACCESS GRANTED</p><h2>Below the Hall</h2><p class="muted small">A few leaves from the Keeper's private ledger.</p></div></div>
+    <article class="panel lore lorearchive">
+      <p class="lorehead">The first light in the workshop</p>
+      <p>Before the Hub had windows, it was a workbench: one phone, one careful hand, and a dragon learning the difference between a button that opens a door and one that asks too much. The first rule was written before the first run: the hand chooses; the Keeper follows.</p>
+      <p>So the hall was built with a place for every kind of memory. A screen may be observed, but a secret stays veiled. A lesson may be kept, but only because its maker asked. A sequence may be repeated, but never beyond the owner's word. These are not locks on the door. They are the shape of the door itself.</p>
+      <p>When the phone is near, the Keeper can watch its glass and carry out a run. When it is far, the hall waits without pretending it can reach. The Library remembers what you made; the Sandbox is where you teach it; and the red word <b>stop</b> is never more than one call away.</p>
+      <p>Every new block is another mark in the margin. Some are small: a pause, a tap, a name typed carefully. Together they become a path that belongs to you, held here on your computer and ready when you are.</p>
+      <p class="loresign">The archive keeps no prophecy. Only what you chose to teach.<span>— from the Keeper's ledger, undated</span></p>
+      <details class="loreegg" id="loremargin"><summary>Filed under: “Do not wake”</summary><p>There is no sleeping dragon beneath the floor. There is, however, a very old button that says Stop. The Keeper insists this is a much better arrangement.</p></details>
+    </article>
   </section>
 </main>
 <div class="modal" id="after" hidden>
@@ -661,4 +676,3 @@
 <script src="profile.js"></script>
 </body>
 </html>
-

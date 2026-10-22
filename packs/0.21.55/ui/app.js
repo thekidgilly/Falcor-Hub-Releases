@@ -44,7 +44,7 @@ numbers();
 // and the full-page Falcor chat (falcor) are pages without a tab: Creations opens from a creation's card in the Library
 // and lights Library; the chat opens from the floating Falcor's Full page button.
 const TABS = ['profile', 'phone', 'games', 'sandbox', 'settings'];
-const PAGES = [...TABS, 'stats', 'tasks', 'falcor', 'knowledge'], LIT = {tasks: 'games'};
+const PAGES = [...TABS, 'stats', 'tasks', 'falcor', 'knowledge', 'lore'], LIT = {tasks: 'games', lore: 'settings'};
 let dockOpen = false; // the floating Falcor's small chat is open
 // An app's guide (Knowledge) has no tab of its own: it opens from its game, a task or the chat,
 // lights the tab it came from, and Back returns there.
@@ -545,7 +545,7 @@ const icons = new Map();   // pkg → data URL ('' while loading, null when ther
 // (iconOf: the picture's data URL for a game, asked for once; the Current activity window uses it too)
 function iconOf(g) {
   const k = g.pkg + '@' + (g.iconAt || 0);
-  if (g.icon && !icons.has(k)) { icons.set(k, ''); window.hub.call('appIcon', {pkg: g.pkg}).then(u => P.normIcon(u)).then(u => { icons.set(k, u || null); if (tab === 'games') renderGames(true); else if (tab === 'phone') render(); }).catch(() => icons.set(k, null)); }
+  if (g.icon && !icons.has(k)) { icons.set(k, ''); window.hub.call('appIcon', {pkg: g.pkg}).then(u => P.normIcon(u)).then(u => { icons.set(k, u || null); if (tab === 'games') renderGames(true); else if (tab === 'phone') render(); else if (tab === 'profile') renderProfile(); }).catch(() => icons.set(k, null)); }
   return icons.get(k) || null;
 }
 function iconHtml(g) {
@@ -1521,4 +1521,3 @@ $('pair').onclick = async () => {
 };
 $('secretform').onsubmit = async e => { e.preventDefault(); const f = e.target; await call('setSecret', {name: f.name.value, value: f.value.value}); f.reset(); toast('Secret sealed on this computer.'); };
 $('updcheck').onclick = () => call('updateCheck').then(() => toast('Checked for updates.'));
-
