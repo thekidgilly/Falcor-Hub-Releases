@@ -1,12 +1,12 @@
 {
-  "version": "0.21.45",
-  "notes": "Fixes Falcor.Hub not starting (revs is not iterable).",
-  "publishedAt": "2026-10-22T05:39:58.759Z",
+  "version": "0.21.46",
+  "notes": "Fixes Falcor.Hub not starting when an older saved record had another shape.",
+  "publishedAt": "2026-10-22T05:44:10.191Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "dee257b405c3e5be4157b24d5790af30357e0c08862d96adbe2026a1d356cc29",
-      "size": 1181969
+      "sha256": "bc374f29564b1c99a154142882deef4f0babae8153cc9db56b61d74b3b3efe2d",
+      "size": 1182073
     },
     {
       "path": "dist/preload.js",

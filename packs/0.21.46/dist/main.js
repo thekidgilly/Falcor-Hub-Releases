@@ -6079,8 +6079,8 @@ var ProcedureMemory = class _ProcedureMemory {
     return p;
   }
   // The verified step for this screen, if any: the control and what it should do. Then what the owner taught there.
-  suggest(appPackage, appVersion, task, screen, now) {
-    const ok = (x) => x.screen === screen && x.failures < 2 && x.uses > x.failures;
+  suggest(appPackage, appVersion, task, screen2, now) {
+    const ok = (x) => x.screen === screen2 && x.failures < 2 && x.uses > x.failures;
     const live = this.get(appPackage, appVersion, task, now)?.steps.find(ok) || null, taught = this.get(appPackage, "*", TAUGHT, now)?.steps.find(ok) || null;
     return live && taught ? (taught.taughtAt ?? 0) > live.lastVerifiedAt ? taught : live : live || taught;
   }
@@ -6133,9 +6133,9 @@ var ProcedureMemory = class _ProcedureMemory {
     this.all.set(id, p);
   }
   // A suggested step that did not do what it should: less trusted, and dropped after two misses.
-  miss(appPackage, appVersion, task, screen, now) {
+  miss(appPackage, appVersion, task, screen2, now) {
     for (const p of [this.all.get(_ProcedureMemory.key(appPackage, appVersion, task)), this.all.get(_ProcedureMemory.key(appPackage, "*", TAUGHT))]) {
-      const s2 = p?.steps.find((x) => x.screen === screen);
+      const s2 = p?.steps.find((x) => x.screen === screen2);
       if (!p || !s2) continue;
       s2.failures++;
       p.updatedAt = now;
@@ -6927,8 +6927,8 @@ var MissionRunner = class {
   async run(mission, { leaseId, signal, runId, period, from }) {
     const scale = Math.max(1, mission.timeBudgetMs / (20 * 6e4));
     const d = this.d, limits = { maxSteps: Math.round(250 * scale), maxRecoveries: 3, repeatLimit: 6, settleMs: 2500, claimSettleMs: 9e3, pollMs: 300, maxAiSteps: Math.round(150 * scale), ...d.limits || {} };
-    const log = [], say = (line) => {
-      const l = redact(line).slice(0, 200);
+    const log = [], say = (line2) => {
+      const l = redact(line2).slice(0, 200);
       log.push(l);
       d.onLog?.(l);
     };
@@ -8242,7 +8242,7 @@ var Orchestrator = class _Orchestrator {
           await store.saveMission(cur);
         }
       },
-      onLog: (line) => this.emit({ type: "log", deviceId, missionId: m.id, line, at: d.now() }),
+      onLog: (line2) => this.emit({ type: "log", deviceId, missionId: m.id, line: line2, at: d.now() }),
       onStats: (stats) => this.perf.set(deviceId, { stats, startedAt: d.now(), app: m.appLabel })
     });
     let result;
@@ -8550,8 +8550,8 @@ var TeachSession = class {
   elapsed() {
     return this.rec.activeMs + (this.state === "recording" ? this.d.now() - this.resumedAt : 0);
   }
-  moment(what, ref, line) {
-    this.rec.timeline.push({ at: this.d.now(), what, ref, line: line.slice(0, 200) });
+  moment(what, ref, line2) {
+    this.rec.timeline.push({ at: this.d.now(), what, ref, line: line2.slice(0, 200) });
   }
   // One at a time, so the timeline stays in order.
   queue(fn) {
@@ -8803,8 +8803,8 @@ function analyze(rec, o = {}) {
       const l = b.label.trim();
       if (!l || riskyControl(l) || avoid.has(l.toLowerCase())) continue;
       const words2 = l.toLowerCase().split(/\W+/).filter((w) => w.length >= 4 && !COMMON.has(w));
-      const line = priced2.find((p) => words2.some((w) => p.toLowerCase().includes(w)));
-      if (line) avoid.set(l.toLowerCase(), 'it sells "' + line.slice(0, 50) + '"');
+      const line2 = priced2.find((p) => words2.some((w) => p.toLowerCase().includes(w)));
+      if (line2) avoid.set(l.toLowerCase(), 'it sells "' + line2.slice(0, 50) + '"');
     }
   }
   const progress = (t) => added(t).some((x) => PROOF.test(x) || LEVEL2.test(x) && !NOT_LEVEL.test(x)) || !!balanceGain(t);
@@ -11444,15 +11444,15 @@ var Sandbox = class {
     const bool = (k) => {
       if (raw[k] !== void 0) out[k] = raw[k] === true;
     };
-    const pick = (k, list) => {
+    const pick2 = (k, list) => {
       if (raw[k] !== void 0) {
         if (!list.includes(String(raw[k]))) throw new Error("Unknown value for " + k + ".");
         out[k] = raw[k];
       }
     };
-    pick("layout", ["comfortable", "compact"]);
-    pick("logLevel", ["steps", "actions"]);
-    pick("onError", ["stop", "review", "skip"]);
+    pick2("layout", ["comfortable", "compact"]);
+    pick2("logLevel", ["steps", "actions"]);
+    pick2("onError", ["stop", "review", "skip"]);
     for (const k of ["grid", "trail", "arrows", "bezel", "autosave", "notify", "sound"]) bool(k);
     num5("overlay", 0.2, 1);
     num5("defaultWaitMs", 50, 6e5);
@@ -12083,8 +12083,8 @@ var DailyQueue = class {
   w(sql, p = [], save = true) {
     return this.store.write(sql, p, save);
   }
-  say(line, tag = "SYSTEM") {
-    this.e.say(line, tag);
+  say(line2, tag = "SYSTEM") {
+    this.e.say(line2, tag);
   }
   tz() {
     return this.e.sandbox.prefs().tz;
@@ -12531,10 +12531,10 @@ var DailyQueue = class {
       const p = ctx.byId.get(d.scheduleId);
       if (!p || !p.enabled && !ctx.occ.size) return depState(d, p?.name || "its prerequisite", null);
       const list = this.dayOf(p, o.day, ctx).filter((x) => x.status !== "CANCELLED");
-      const pick = [...list].reverse().find((x) => x.at <= o.at) || list[0];
-      if (!pick) return depState(d, p.name, null);
-      const st = this.statusOf(pick, p, ctx);
-      return depState(d, p.name, { status: st.status, final: isFinal({ status: st.status, endedAt: pick.endedAt }) || st.status === "MISSED" || st.status === "SKIPPED" });
+      const pick2 = [...list].reverse().find((x) => x.at <= o.at) || list[0];
+      if (!pick2) return depState(d, p.name, null);
+      const st = this.statusOf(pick2, p, ctx);
+      return depState(d, p.name, { status: st.status, final: isFinal({ status: st.status, endedAt: pick2.endedAt }) || st.status === "MISSED" || st.status === "SKIPPED" });
     });
   }
   // The status of an occurrence now, from what is stored and what holds it back. Pure apart from the context.
@@ -14219,7 +14219,9 @@ function entryText(name, e) {
 var read = (kv, k, d) => {
   try {
     const v = kv.get(k);
-    return v === null ? d : JSON.parse(v);
+    if (v === null) return d;
+    const x = JSON.parse(v);
+    return x === null || x === void 0 || Array.isArray(x) !== Array.isArray(d) ? d : x;
   } catch {
     return d;
   }
@@ -14282,8 +14284,10 @@ var Trainer = class {
     return c;
   }
   // ------------------------------------------------------------ skill revisions
+  // (a stored value that is not a list, from an older shape, reads as none: it once stopped Falcor.Hub from starting)
   revisions(pkg) {
-    return read(this.kv, "skills:" + pkg, []);
+    const v = read(this.kv, "skills:" + pkg, []);
+    return Array.isArray(v) ? v : [];
   }
   putRevisions(pkg, list) {
     this.kv.set("skills:" + pkg, JSON.stringify(list.slice(-MAX_REVS)));
@@ -14528,8 +14532,8 @@ var HubEngine = class _HubEngine {
   notify() {
     this.changed();
   }
-  say(line, tag = "SYSTEM", missionId) {
-    const l = redact(line).slice(0, 240);
+  say(line2, tag = "SYSTEM", missionId) {
+    const l = redact(line2).slice(0, 240);
     this.lines.push({ at: this.now(), line: l, tag, ...missionId ? { missionId } : {} });
     if (this.lines.length > 400) this.lines.splice(0, 100);
     this.changed();
@@ -14598,7 +14602,7 @@ var HubEngine = class _HubEngine {
       now: this.now,
       sleep: (ms2, sig) => this.sleep(ms2, sig),
       ids: () => this.id(),
-      say: (line, tag) => this.say(line, tag),
+      say: (line2, tag) => this.say(line2, tag),
       changed: () => this.changed(),
       device: (id) => {
         const v = this.views.get(id);
@@ -16399,8 +16403,8 @@ function removeQuietly(file) {
 // src/phone/adb-parse.ts
 function parseDevices(out) {
   const list = [];
-  for (const line of out.split(/\r?\n/)) {
-    const m = /^([A-Za-z0-9._:-]{1,64})\s+(device|unauthorized|offline|no permissions|authorizing|recovery|sideload|bootloader)\b(.*)$/.exec(line.trim());
+  for (const line2 of out.split(/\r?\n/)) {
+    const m = /^([A-Za-z0-9._:-]{1,64})\s+(device|unauthorized|offline|no permissions|authorizing|recovery|sideload|bootloader)\b(.*)$/.exec(line2.trim());
     if (!m || m[1] === "List") continue;
     const state = m[2] === "device" ? "device" : m[2] === "unauthorized" || m[2] === "authorizing" || m[2] === "no permissions" ? "unauthorized" : m[2] === "offline" ? "offline" : "other";
     const model = (/\bmodel:(\S+)/.exec(m[3])?.[1] || "").replace(/_/g, " ");
@@ -16409,8 +16413,8 @@ function parseDevices(out) {
   return list;
 }
 function foregroundOf(win2) {
-  const pick = (re) => re.exec(win2)?.[1] || "";
-  return pick(/mCurrentFocus=Window\{[^}]*?\s([A-Za-z][\w.]*)\/[^\s}]+\}/) || pick(/mFocusedApp=.*?\s([A-Za-z][\w.]*)\/[^\s}]+/) || pick(/mResumedActivity:.*?\s([A-Za-z][\w.]*)\/[^\s}]+/) || (/mCurrentFocus=Window\{[^}]*\b(NotificationShade|StatusBar|Keyguard)\b/.test(win2) ? "com.android.systemui" : "");
+  const pick2 = (re) => re.exec(win2)?.[1] || "";
+  return pick2(/mCurrentFocus=Window\{[^}]*?\s([A-Za-z][\w.]*)\/[^\s}]+\}/) || pick2(/mFocusedApp=.*?\s([A-Za-z][\w.]*)\/[^\s}]+/) || pick2(/mResumedActivity:.*?\s([A-Za-z][\w.]*)\/[^\s}]+/) || (/mCurrentFocus=Window\{[^}]*\b(NotificationShade|StatusBar|Keyguard)\b/.test(win2) ? "com.android.systemui" : "");
 }
 function activityOf(win2) {
   return /mCurrentFocus=Window\{[^}]*?\s([A-Za-z][\w.]*\/[^\s}]+)\}/.exec(win2)?.[1] || /mFocusedApp=.*?\s([A-Za-z][\w.]*\/[^\s}]+)/.exec(win2)?.[1] || "";
@@ -17557,6 +17561,55 @@ var import_node_fs4 = require("node:fs");
 var import_node_path4 = require("node:path");
 var import_node_os2 = __toESM(require("node:os"));
 var import_node_crypto3 = require("node:crypto");
+
+// src/profile.ts
+var ACCENTS = ["green", "sand", "red", "blue", "white"];
+var FRAMES = ["glow", "pixel", "round"];
+var COVERS = ["grid", "stars", "embers", "plain"];
+var PIC = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/;
+var PIC_MAX = 2e6;
+var line = (v, n) => String(v ?? "").replace(/[\u0000-\u0009\u000b-\u001f]/g, "").trim().slice(0, n);
+var pick = (v, list) => list.includes(String(v)) ? String(v) : list[0];
+function getProfile(store, now = Date.now()) {
+  let p = {};
+  try {
+    p = JSON.parse(store.get("profile") || "{}") || {};
+  } catch {
+    p = {};
+  }
+  const out = {
+    name: line(p.name, 60),
+    cred: line(p.cred, 120),
+    about: line(p.about, 600),
+    pic: typeof p.pic === "string" && p.pic.length <= PIC_MAX && PIC.test(p.pic) ? p.pic : null,
+    accent: pick(p.accent, ACCENTS),
+    frame: pick(p.frame, FRAMES),
+    cover: pick(p.cover, COVERS),
+    since: Number(p.since) || now,
+    updatedAt: Number(p.updatedAt) || 0
+  };
+  if (!p.since) store.set("profile", JSON.stringify(out));
+  return out;
+}
+function saveProfile(store, patch, now = Date.now()) {
+  const p = getProfile(store, now);
+  if ("name" in patch) p.name = line(patch.name, 60);
+  if ("cred" in patch) p.cred = line(patch.cred, 120);
+  if ("about" in patch) p.about = line(patch.about, 600);
+  if ("accent" in patch) p.accent = pick(patch.accent, ACCENTS);
+  if ("frame" in patch) p.frame = pick(patch.frame, FRAMES);
+  if ("cover" in patch) p.cover = pick(patch.cover, COVERS);
+  if ("pic" in patch) {
+    if (patch.pic === null || patch.pic === "") p.pic = null;
+    else if (typeof patch.pic === "string" && PIC.test(patch.pic) && patch.pic.length <= PIC_MAX) p.pic = patch.pic;
+    else throw new Error("That picture could not be used: choose a PNG, JPEG, WebP or GIF of at most 1.5 MB.");
+  }
+  p.updatedAt = now;
+  store.set("profile", JSON.stringify(p));
+  return p;
+}
+
+// src/remote.ts
 var REMOTE_PORT = 5175;
 var sha = (t) => (0, import_node_crypto3.createHash)("sha256").update(t).digest("hex");
 var VIRTUAL = /vethernet|virtualbox|vmware|vbox|hyper-v|wsl|docker|loopback|bluetooth|tailscale|zerotier|hamachi|vpn|tap-|tun/i;
@@ -17670,6 +17723,16 @@ var RemoteServer = class _RemoteServer {
       const m = await e.approveTask(ap[1], { rulesAllow: body.rulesAllow === true, zeroCostConfirmed: body.zeroCostConfirmed === true, approvals: Array.isArray(body.approvals) ? body.approvals.map(String) : [] });
       e.say("Approved on " + who.name + ": " + m.objective + ".", "YOU");
       return { status: 200, json: { ok: true, state: m.state } };
+    }
+    if (path2 === "/api/profile") {
+      if (method === "GET") return { status: 200, json: getProfile(e.o.store) };
+      if (method === "POST") {
+        try {
+          return { status: 200, json: saveProfile(e.o.store, body) };
+        } catch (err) {
+          return { status: 400, json: { error: err.message } };
+        }
+      }
     }
     if (path2.startsWith("/api/notices")) {
       const c = this.conductor;
@@ -19451,8 +19514,8 @@ var Conductor = class {
       case "guide": {
         const pkg = this.app(a.app), g = k.get(pkg)?.guide, sec = String(a.section || "all");
         if (!g) return { out: { app: e.labelOf(pkg), guide: null, note: "No guide yet: the owner can teach me this app." } };
-        const pick = { summary: g.summary, objectives: g.objectives, rewards: g.rewards, screens: g.screens.map(({ shot, ...x }) => (void shot, x)), recipes: g.recipes, watchouts: g.watchouts, questions: g.questions.map((q2, i) => ({ index: i, q: q2 })), answers: g.answers || [] };
-        const out = sec === "all" ? guideText(e.labelOf(pkg), pkg, g) : pick[sec];
+        const pick2 = { summary: g.summary, objectives: g.objectives, rewards: g.rewards, screens: g.screens.map(({ shot, ...x }) => (void shot, x)), recipes: g.recipes, watchouts: g.watchouts, questions: g.questions.map((q2, i) => ({ index: i, q: q2 })), answers: g.answers || [] };
+        const out = sec === "all" ? guideText(e.labelOf(pkg), pkg, g) : pick2[sec];
         const lines = sec === "rewards" ? g.rewards.map((r) => [r.tier, r.requirement, r.reward, r.amount !== null ? r.amount + " " + r.unit : "", r.timeLimit].filter(Boolean).join(" \xB7 ") + " (" + r.source + ")") : sec === "objectives" ? g.objectives.map((o) => o.text + (o.requirement ? " \u2014 " + o.requirement : "") + " (" + o.source + ")") : sec === "recipes" ? g.recipes.map((r) => r.name + ": " + r.steps.map((s2) => s2.do).join(", then ")) : sec === "watchouts" ? g.watchouts.map((w) => w.text) : sec === "questions" ? g.questions : [g.summary.text];
         const label = { all: "Guide", summary: "Summary", objectives: "Objectives", rewards: "Reward tiers", screens: "Screens", recipes: "How to operate it", watchouts: "Watch-outs", questions: "Questions" }[sec] || "Guide";
         return { out, card: this.card("guide", e.labelOf(pkg) + " \xB7 " + label, lines.length ? lines.slice(0, 12) : ["Nothing in this section yet."], { data: { pkg, section: sec } }), used: { label: "Opened: " + e.labelOf(pkg) + " guide \u2192 " + label, tab: "knowledge", ref: pkg } };
@@ -20751,7 +20814,7 @@ async function createHub(o) {
       price: r.price,
       priced: r.priced,
       onResult: (x) => ai.record(r.ref, x, op),
-      onFallback: (line) => engine.say("AI fallback: " + line, "FALCOR")
+      onFallback: (line2) => engine.say("AI fallback: " + line2, "FALCOR")
     };
     if (op === "research" && r.conn.kind !== "kimi") {
       const sr = await ai.search();
@@ -21327,7 +21390,7 @@ async function startVideo(o) {
 
 // src/main.ts
 var where = globalThis.falcorHub || { appRoot: (0, import_node_path8.join)(__dirname, ".."), packRoot: (0, import_node_path8.join)(__dirname, ".."), packVersion: null, installVersion: import_electron2.app.getVersion(), packsDir: (0, import_node_path8.join)(import_electron2.app.getPath("userData"), "packs") };
-var VERSION = "0.21.41";
+var VERSION = "0.21.46";
 var simulated = process.argv.includes("--simulated");
 if (!import_electron2.app.requestSingleInstanceLock()) {
   if (where.packVersion) {
@@ -21495,6 +21558,11 @@ async function boot() {
     return f ? { mime: "image/jpeg", data: f.png } : null;
   };
   await hub.remote.start().catch((e) => hub.engine.say("The phone app connection could not start: " + (e instanceof Error ? e.message : String(e))));
+  if (process.platform === "win32" && import_electron2.app.isPackaged && hub.store.get("firewall_asked") !== import_electron2.app.getVersion()) {
+    const has = (0, import_node_child_process4.spawnSync)("powershell.exe", ["-NoProfile", "-Command", "(Get-NetFirewallRule -DisplayName 'Falcor.Hub phone app' -ErrorAction SilentlyContinue | Measure-Object).Count"], { encoding: "utf8", windowsHide: true });
+    hub.store.set("firewall_asked", import_electron2.app.getVersion());
+    if (!(Number((has.stdout || "").trim()) > 0)) setTimeout(() => void Promise.resolve(handlers.firewall({})).then((m) => hub.engine.say(String(m)), () => hub.engine.say("The phone app firewall rule was not added: Settings \u2192 Phone app \u2192 Let my phone through Windows Firewall.")), 4e3);
+  }
   if (!p.adb) hub.engine.say("Android platform tools (adb) are missing from this install.");
 }
 function openWindow() {
@@ -21503,9 +21571,15 @@ function openWindow() {
     win.focus();
     return;
   }
+  const boundsFile = (0, import_node_path8.join)(import_electron2.app.getPath("userData"), "window.json");
+  let kept = null;
+  try {
+    const b = JSON.parse((0, import_node_fs7.readFileSync)(boundsFile, "utf8"));
+    if ([b.x, b.y, b.width, b.height].every(Number.isFinite) && import_electron2.screen.getAllDisplays().some((d) => b.x + 80 < d.workArea.x + d.workArea.width && b.x + b.width - 80 > d.workArea.x && b.y >= d.workArea.y - 8 && b.y + 40 < d.workArea.y + d.workArea.height)) kept = b;
+  } catch {
+  }
   win = new import_electron2.BrowserWindow({
-    width: 1366,
-    height: 860,
+    ...kept ? { x: kept.x, y: kept.y, width: Math.max(1100, kept.width), height: Math.max(680, kept.height) } : { width: 1366, height: 860 },
     minWidth: 1100,
     minHeight: 680,
     backgroundColor: "#0A0A0A",
@@ -21516,6 +21590,14 @@ function openWindow() {
     webPreferences: { preload: (0, import_node_path8.join)(where.packRoot, "dist", "preload.js"), contextIsolation: true, sandbox: true, nodeIntegration: false }
   });
   win.removeMenu();
+  if (kept?.max) win.maximize();
+  win.on("close", () => {
+    try {
+      const w = win;
+      (0, import_node_fs7.writeFileSync)(boundsFile, JSON.stringify({ ...w.getNormalBounds(), max: w.isMaximized() }));
+    } catch {
+    }
+  });
   const popped = /* @__PURE__ */ new Set();
   win.webContents.setWindowOpenHandler(({ url, frameName }) => {
     if ((url === "about:blank" || url === "") && /^falcor-pop-[\w-]{1,40}$/.test(frameName)) return { action: "allow", overrideBrowserWindowOptions: { backgroundColor: "#0A0A0A", autoHideMenuBar: true, minWidth: 320, minHeight: 220, icon: (0, import_node_path8.join)(where.packRoot, "ui", "app.png") } };
@@ -21728,6 +21810,8 @@ var handlers = {
     if (!k) throw new Error("Not learned yet.");
     return { ...k, sessions: k.sessions.map((r) => ({ id: r.id, startedAt: r.startedAt, activeMs: r.activeMs, intent: r.intent, screens: r.screens.length, touches: r.touches.length, marks: r.marks, timeline: r.timeline.slice(-200) })) };
   },
+  // The Profile tab (the same profile as the phone app's).
+  profile: (a) => a.op === "save" ? saveProfile(need().engine.o.store, a.patch || {}) : getProfile(need().engine.o.store),
   // The Games tab.
   appIcon: (a) => {
     const i = need().engine.gameIcon(String(a.pkg));
