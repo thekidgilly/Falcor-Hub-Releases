@@ -39,16 +39,22 @@ function numbers(root = document) {
 numbers();
 
 // ------------------------------------------------------------------ tabs, keys, intro
-const TABS = ['phone', 'sandbox', 'games', 'tasks', 'falcor', 'stats', 'settings'];
+// The tab bar (keys 1–5): Hub (internal id phone), Library (games), Sandbox, Activity (stats), Settings. Creations (tasks)
+// and the full-page Falcor chat (falcor) are pages without a tab: Creations opens from a creation's card in the Library
+// and lights Library; the chat opens from the floating Falcor's Full page button.
+const TABS = ['phone', 'games', 'sandbox', 'stats', 'settings'];
+const PAGES = [...TABS, 'tasks', 'falcor', 'knowledge'], LIT = {tasks: 'games'};
+let dockOpen = false; // the floating Falcor's small chat is open
 // An app's guide (Knowledge) has no tab of its own: it opens from its game, a task, the chat or Settings → Knowledge,
 // lights the tab it came from, and Back returns there.
 let learnFrom = {tab: 'settings', sub: 'knowledge', pkg: null};
 function go(name, sub) {
-  if (!TABS.includes(name) && name !== 'knowledge') return;
+  if (!PAGES.includes(name)) return;
   const changed = name !== tab;
   tab = name;
-  if (changed && name === 'phone') setTimeout(() => watchOffers(), 0);
-  const lit = tab === 'knowledge' ? learnFrom.tab : tab;
+  const from = tab === 'knowledge' ? learnFrom.tab : tab, lit = LIT[from] || from;
+  if (tab === 'falcor') dockOpen = false;
+  placeChat();
   document.querySelectorAll('.tabs button').forEach(x => cls(x, 'on', x.dataset.tab === lit));
   document.querySelectorAll('[data-pane]').forEach(p => { p.hidden = p.dataset.pane !== tab; });
   if (sub) setSub(sub);
@@ -59,15 +65,16 @@ function go(name, sub) {
   document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tab === lit)));
   if (tab === 'falcor') openChat();
 }
-function placeTabline() { const b = document.querySelector('.tabs button.on'); if (b) { $('tabline').style.width = b.offsetWidth + 'px'; $('tabline').style.transform = 'translateX(' + b.offsetLeft + 'px)'; } }
+function placeTabline() { const b = document.querySelector('.tabs button.on'); $('tabline').hidden = !b; if (b) { $('tabline').style.width = b.offsetWidth + 'px'; $('tabline').style.transform = 'translateX(' + b.offsetLeft + 'px)'; } }
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => go(b.dataset.tab));
 document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const [t, s] = b.dataset.go.split(':'); go(t, s); });
 window.addEventListener('resize', placeTabline);
 const typing = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '') || document.activeElement?.isContentEditable;
 window.addEventListener('keydown', e => {
   if (e.ctrlKey && e.shiftKey && (e.key === 'X' || e.key === 'x')) { e.preventDefault(); void stopAll(); return; }
-  if (e.ctrlKey && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); go('falcor'); $('chattext').focus(); return; }
-  if (!typing() && !e.ctrlKey && !e.altKey && !e.metaKey && /^[1-7]$/.test(e.key) && document.activeElement !== $('mirrorbox')) go(TABS[Number(e.key) - 1]);
+  if (e.ctrlKey && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); talk(); return; }
+  if (e.key === 'Escape' && dockOpen && !typing()) { closeDock(); return; }
+  if (!typing() && !e.ctrlKey && !e.altKey && !e.metaKey && /^[1-5]$/.test(e.key) && document.activeElement !== $('mirrorbox')) go(TABS[Number(e.key) - 1]);
 });
 const boot = P.intro({dragon: 'dragon.png', flight: 'boot-flight.png', name: 'FALCOR HUB', skip: /nointro/.test(location.search)});
 setTimeout(placeTabline, 50);
@@ -98,7 +105,7 @@ function render() {
   if (em && !wasEmergency) { document.body.classList.remove('glitch'); void document.body.offsetWidth; document.body.classList.add('glitch'); $('ebar').classList.add('stepin'); }
   wasEmergency = em; $('ebar').hidden = !em;
   // Badges.
-  setBadge('badge-tasks', waiting + ((S.sandbox && S.sandbox.live) || []).filter(l => l.status === 'NEEDS_ATTENTION' && l.mode === 'run').length); setBadge('badge-falcor', S.chat.unread && tab !== 'falcor' ? S.chat.unread : 0);
+  setBadge('badge-tasks', waiting + ((S.sandbox && S.sandbox.live) || []).filter(l => l.status === 'NEEDS_ATTENTION' && l.mode === 'run').length); setBadge('badge-falcor', S.chat.unread && !chatShown() ? S.chat.unread : 0);
   renderBell();
   renderStatusbar(d);
   renderTeach();
@@ -113,7 +120,7 @@ function render() {
   if (tab === 'sandbox' && window.renderSandbox) renderSandbox(d);
   if (tab === 'games') { renderGames(); renderCapProgress(); }
   if (tab === 'tasks') renderTasks();
-  if (tab === 'falcor') renderChatMeta();
+  if (chatShown()) renderChatMeta();
   if (tab === 'knowledge') renderLearn();
   if (tab === 'stats' && window.renderActivity) renderActivity();
   if (tab === 'tasks' && window.renderCreations) renderCreations();
@@ -223,14 +230,16 @@ function renderLog() {
 $('devpick').onchange = e => { deviceId = e.target.value; render(); };
 $('take').onclick = async () => { await call('take', {deviceId}); toast('You have control. Click to tap, drag to swipe, scroll with the wheel, type with the keyboard.'); $('mirrorbox').focus(); };
 $('release').onclick = () => call('release', {deviceId});
-$('viewer').onclick = () => call('viewer', {deviceId}).then(() => toast('scrcpy window open. You have control while it is open.'));
+$('viewer').onclick = () => call('viewer', {deviceId}).then(() => toast('Second display open: drag it anywhere. You have control while it is open; close it to give the phone back to Falcor.'));
 $('kbd').onclick = () => { $('typeform').hidden = !$('typeform').hidden; if (!$('typeform').hidden) $('typetext').focus(); };
-$('askfalcor').onclick = () => { const d = dev(); chatFresh(d && d.foreground && !/launcher/.test(d.foreground) ? d.foreground : null); go('falcor'); $('chattext').focus(); };
+$('askfalcor').onclick = () => { const d = dev(); chatFresh(d && d.foreground && !/launcher/.test(d.foreground) ? d.foreground : null); talk(); };
 document.querySelectorAll('[data-key]').forEach(b => b.onclick = () => send({kind: 'key', key: b.dataset.key}));
 $('typeform').onsubmit = async e => { e.preventDefault(); const t = $('typetext').value; if (!t) return; await send({kind: 'type', text: t}); $('typetext').value = ''; };
 
 async function send(action) {
   if (!controlling) { toast('Take Control first.', 'warn'); return; }
+  // (the Back, Home and Apps buttons and the typing box: straight to the phone when the fast channel is up)
+  if (typeof fast === 'function' && fast() && (action.kind === 'key' || action.kind === 'type' && action.text)) { touch(action.kind === 'key' ? 'key' : 'text', null, action.kind === 'key' ? {key: action.key} : {text: action.text}); return; }
   await call('input', {deviceId, action}).catch(() => {});
   nextFrame(0);
 }
@@ -357,7 +366,7 @@ if (window.hub.onFrameWanted) window.hub.onFrameWanted(async p => {
 async function startVideo(id) {
   if (typeof VideoDecoder === 'undefined') { vid.failed = true; vid.error = 'this window cannot decode video'; return; }
   vid.starting = true; vid.deviceId = id; vid.waitKey = true;
-  try { await window.hub.call('videoStart', {deviceId: id}); vid.on = true; vid.tries = 0; }
+  try { const r = await window.hub.call('videoStart', {deviceId: id}); vid.on = true; vid.tries = 0; vid.control = !!(r && r.control); }
   catch (e) { vid.error = errText(e); if (++vid.tries >= 2) { vid.failed = true; vid.failedAt = Date.now(); } }
   vid.starting = false;
 }
@@ -366,7 +375,7 @@ function endVideo(why) {
   if (vid.decoder && vid.decoder.state !== 'closed') try { vid.decoder.close(); } catch { /* closed */ }
   vid.decoder = null; vid.codec = ''; vid.config = null;
   if (vid.on && vid.deviceId) void window.hub.call('videoStop', {deviceId: vid.deviceId}).catch(() => {});
-  vid.on = false; showPictures();
+  vid.on = false; vid.control = false; showPictures();
   if (why) { vid.error = why; if (++vid.tries >= 2) { vid.failed = true; vid.failedAt = Date.now(); } }
 }
 function stopVideo() { if (vid.on) endVideo(null); }
@@ -374,12 +383,33 @@ function stopVideo() { if (vid.on) endVideo(null); }
 // screen fractions; every touch goes through Falcor (and into the recording while teaching). Markers never touch the picture.
 const at = e => { const el = e.currentTarget, r = el.getBoundingClientRect(); const iw = Number(el.dataset.w) || el.width || r.width, ih = Number(el.dataset.h) || el.height || r.height; const sc = Math.min(r.width / iw, r.height / ih), dw = iw * sc, dh = ih * sc, ox = (r.width - dw) / 2, oy = (r.height - dh) / 2; return {x: Math.min(1, Math.max(0, (e.clientX - r.left - ox) / dw)), y: Math.min(1, Math.max(0, (e.clientY - r.top - oy) / dh))}; };
 let down = null;
+// Full speed: with the video's control channel up (main.ts 'touch'), the finger goes down, moves and lifts on the phone
+// as the mouse does, in a few hundredths of a second; keys and typing go the same way. While Teach records, every touch
+// takes the gate's path so the lesson keeps it. (the phone app keeps its own simple live view)
+const fast = () => vid.on && vid.control && !S.teaching && !!window.hub.touch;
+const touch = (kind, p, extra) => window.hub.touch({deviceId, kind, ...(p ? {x: p.x, y: p.y} : {}), ...(extra || {})});
+let moveAt = 0;
 for (const surface of [$('mirror'), canvas]) {
   // The Sandbox's pointer modes (view, pick a target or a gesture, a run playing) take the mouse; Control and Teach touch.
-  surface.addEventListener('pointermove', e => { if (window.sbPointer && tab === 'sandbox') sbPointer('move', at(e), e); });
-  surface.addEventListener('pointerdown', e => { if (window.sbPointer && tab === 'sandbox' && sbPointer('down', at(e), e)) return; if (!controlling) { toast('Take Control first to touch the phone.', 'warn'); return; } down = {...at(e), t: Date.now()}; surface.setPointerCapture(e.pointerId); });
+  surface.addEventListener('pointermove', e => {
+    if (window.sbPointer && tab === 'sandbox') sbPointer('move', at(e), e);
+    // (live: the finger follows the mouse, at most one move every 8 ms)
+    if (down && down.fast && Date.now() - moveAt >= 8) { moveAt = Date.now(); touch('move', at(e)); }
+  });
+  surface.addEventListener('pointerdown', e => {
+    if (window.sbPointer && tab === 'sandbox' && sbPointer('down', at(e), e)) return;
+    if (!controlling) { toast('Take Control first to touch the phone.', 'warn'); return; }
+    down = {...at(e), t: Date.now(), fast: fast()}; surface.setPointerCapture(e.pointerId);
+    if (down.fast) touch('down', down);
+  });
+  surface.addEventListener('pointercancel', () => { if (down && down.fast) touch('up', down); down = null; });
   surface.addEventListener('pointerup', e => {
     if (window.sbPointer && tab === 'sandbox' && sbPointer('up', at(e), e)) return;
+    if (down && down.fast) {
+      const up = at(e); touch('up', up);
+      if (Math.hypot(up.x - down.x, up.y - down.y) > 0.03) P.trail($('overlay'), down.x * 100, down.y * 100, up.x * 100, up.y * 100); else P.tapMark($('overlay'), down.x * 100, down.y * 100, false);
+      lastTouch = {x: down.x * 100, y: down.y * 100}; down = null; return;
+    }
     if (!down) return; const up = at(e), ms = Date.now() - down.t, moved = Math.hypot(up.x - down.x, up.y - down.y);
     const a = moved > 0.03 ? {kind: 'swipe', x: down.x, y: down.y, toX: up.x, toY: up.y, ms: Math.min(2000, Math.max(120, ms))} : ms > 600 ? {kind: 'long_press', x: down.x, y: down.y, ms: Math.min(3000, ms)} : {kind: 'tap', x: down.x, y: down.y};
     if (a.kind === 'swipe') P.trail($('overlay'), down.x * 100, down.y * 100, up.x * 100, up.y * 100); else P.tapMark($('overlay'), down.x * 100, down.y * 100, false);
@@ -388,12 +418,14 @@ for (const surface of [$('mirror'), canvas]) {
   });
 }
 let lastTouch = {x: 50, y: 50}, wheelAt = 0;
-$('mirrorbox').addEventListener('wheel', e => { if (!controlling) return; e.preventDefault(); if (Date.now() - wheelAt < 400) return; wheelAt = Date.now(); void send({kind: 'scroll', direction: e.deltaY > 0 ? 'down' : 'up'}); }, {passive: false});
+$('mirrorbox').addEventListener('wheel', e => { if (!controlling) return; e.preventDefault();
+  if (fast()) { const t = e.target === canvas || e.target === $('mirror') ? at({currentTarget: e.target, clientX: e.clientX, clientY: e.clientY}) : {x: 0.5, y: 0.5}; touch('wheel', t, {dir: e.deltaY > 0 ? 'down' : 'up'}); return; }
+  if (Date.now() - wheelAt < 400) return; wheelAt = Date.now(); void send({kind: 'scroll', direction: e.deltaY > 0 ? 'down' : 'up'}); }, {passive: false});
 $('mirrorbox').addEventListener('keydown', e => {
   if (!controlling) return;
   const k = {Enter: 'ENTER', Backspace: 'DEL', Tab: 'TAB', Escape: 'BACK'}[e.key];
-  if (k) { e.preventDefault(); void send({kind: 'key', key: k}); }
-  else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) { e.preventDefault(); void send({kind: 'type', text: e.key === ' ' ? ' ' : e.key}); }
+  if (k) { e.preventDefault(); if (fast()) touch('key', null, {key: k}); else void send({kind: 'key', key: k}); }
+  else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) { e.preventDefault(); if (fast()) touch('text', null, {text: e.key}); else void send({kind: 'type', text: e.key === ' ' ? ' ' : e.key}); }
 });
 
 // ------------------------------------------------------------------ Teach Falcor
@@ -428,7 +460,7 @@ $('teachcancel').onclick = () => { $('teachform').hidden = true; };
 $('teachcustom').onchange = () => { $('customopts').hidden = !$('teachcustom').checked; };
 $('teachform').onsubmit = async e => {
   e.preventDefault();
-  const custom = $('teachcustom').checked ? {name: $('teachname').value || $('teachintent').value, times: Number($('customtimes').value) || 1, repeat: $('customrepeat').value, untilText: $('customuntil').value, home: $('customhome').checked} : null;
+  const custom = $('teachcustom').checked ? {name: $('teachname').value || $('teachintent').value, times: Number($('customtimes').value) || 1, repeat: $('customrepeat').value, everyMin: Number($('customevery').value) || 30, untilText: $('customuntil').value, home: $('customhome').checked} : null;
   // Recording into the open Sandbox sequence: it is saved first, so the blocks land on the version the owner sees.
   let sandbox = null;
   if (!$('teachsb').hidden && $('teachsbon').checked && window.sbBeforeTeach) { const id = await sbBeforeTeach(); if (id) sandbox = {sequenceId: id, launch: $('teachsblaunch').checked, waits: $('teachsbwaits').checked, check: $('teachsbcheck').checked}; }
@@ -490,9 +522,14 @@ $('afterclose').onclick = () => { $('after').hidden = true; after = null; toast(
 let gamePkg = null;
 const icons = new Map();   // pkg → data URL ('' while loading, null when there is none)
 // A game's picture is asked for again when it changes (the app's icon read after the offer's artwork was shown).
-function iconHtml(g) {
+// (iconOf: the picture's data URL for a game, asked for once; the Current activity window uses it too)
+function iconOf(g) {
   const k = g.pkg + '@' + (g.iconAt || 0);
-  if (g.icon && !icons.has(k)) { icons.set(k, ''); window.hub.call('appIcon', {pkg: g.pkg}).then(u => P.normIcon(u)).then(u => { icons.set(k, u || null); if (tab === 'games') renderGames(true); }).catch(() => icons.set(k, null)); }
+  if (g.icon && !icons.has(k)) { icons.set(k, ''); window.hub.call('appIcon', {pkg: g.pkg}).then(u => P.normIcon(u)).then(u => { icons.set(k, u || null); if (tab === 'games') renderGames(true); else if (tab === 'phone') render(); }).catch(() => icons.set(k, null)); }
+  return icons.get(k) || null;
+}
+function iconHtml(g) {
+  const k = g.pkg + '@' + (g.iconAt || 0); iconOf(g);
   const u = icons.get(k);
   return u ? '<img src="' + esc(u) + '" alt="">' : P.monogram(g.name, g.pkg);
 }
@@ -501,20 +538,30 @@ const gameState = g => g.note ? {label: g.note, mood: 'sand'} : !g.tasks.length 
 // and sorted the same way on the phone.
 let libFilter = 'all', libSort = 'updated';
 try { libFilter = localStorage.getItem('libFilter') || 'all'; libSort = localStorage.getItem('libSort') || 'updated'; } catch { /* the defaults */ }
+// The owner's creations (Sandbox sequences) in the Library beside games and apps (the owner, 2026-10-21): read from the
+// same service as the Creations tab, at most every 5 s while the Library is drawn.
+let libCreations = [], libCreationsAt = 0, libCreationsBusy = false;
+function loadLibCreations() {
+  if (libCreationsBusy || Date.now() - libCreationsAt < 5000) return;
+  libCreationsBusy = true;
+  window.hub.call('views', {op: 'creations'}).then(list => { libCreations = Array.isArray(list) ? list : []; libCreationsAt = Date.now(); if (tab === 'games' && !gamePkg) renderGames(true); }).catch(() => { libCreationsAt = Date.now(); }).finally(() => { libCreationsBusy = false; });
+}
+const creationEntry = c => ({kind: 'creation', creation: c, pkg: 'sequence:' + c.seqId, name: c.title, status: c.live ? 'active' : 'none', updatedAt: c.updatedAt || 0, totals: [], goals: {reached: 0, of: 0}, deadline: null, tasks: []});
 function renderGames(force) {
-  const list = S.games || [];
+  loadLibCreations();
+  const list = [...(S.games || []), ...libCreations.map(creationEntry)];
   if (gamePkg && !list.some(g => g.pkg === gamePkg)) gamePkg = null;
   $('gamesview').hidden = !!gamePkg; $('gamepage').hidden = !gamePkg;
   if (gamePkg) return renderGame(list.find(g => g.pkg === gamePkg), force);
   const box = $('gamegrid');
   for (const b of $('libfilter').querySelectorAll('button')) cls(b, 'on', b.dataset.f === libFilter);
   $('libsort').value = libSort;
-  if (!list.length) { htmlOnce(box, '<div class="panel empty" data-empty><img src="dragon.png" alt=""><span>No games yet. Open a game\'s offer in your earning app on the phone and press Capture game, or create a task for a game: Falcor opens it so you can show it how to play.</span><button class="primary" data-newgame>' + icon('plus') + 'New task</button></div>'); return; }
+  if (!list.length) { htmlOnce(box, '<div class="panel empty" data-empty><img src="dragon.png" alt=""><span>No games yet. Open a game\'s offer in your earning app on the phone and press Capture, or create a task for a game: Falcor opens it so you can show it how to play.</span><button class="primary" data-newgame>' + icon('plus') + 'New task</button></div>'); return; }
   const shown = P.library(list, libFilter, libSort);
-  if (!shown.length) { htmlOnce(box, '<div class="panel empty" data-empty><span>No ' + esc(libFilter) + ' games.</span></div>'); return; }
+  if (!shown.length) { htmlOnce(box, '<div class="panel empty" data-empty><span>' + esc(({games: 'No games yet.', apps: 'No apps yet.', creations: 'No creations yet. Build one in Sandbox and it shows here.'})[libFilter] || 'Nothing ' + libFilter + ' in the library.') + '</span></div>'); return; }
   if (box.querySelector('[data-empty]')) box.innerHTML = '';
   keyed(box, shown, g => g.pkg, () => P.el('<button class="panel gametile gcard"></button>'), (n, g) => {
-    htmlOnce(n, P.cardHtml(g, iconHtml(g)));
+    htmlOnce(n, P.cardHtml(g, g.kind === 'creation' ? icon(g.creation.icon || 'sandbox') : iconHtml(g)));
     n.title = g.name + (g.pkg.startsWith('offer:') ? ' · not linked to an app on the phone yet' : ' · ' + g.pkg);
   });
 }
@@ -522,6 +569,15 @@ $('libfilter').onclick = e => { const b = e.target.closest('[data-f]'); if (!b) 
 $('libsort').onchange = () => { libSort = $('libsort').value; try { localStorage.setItem('libSort', libSort); } catch { /* not kept */ } renderGames(); };
 function renderGame(g) {
   const st = gameState(g), d = dev();
+  // (an app's page: the same page, its words for an app; a reward app has no rewarded ads to play)
+  const app = g.kind === 'app', thing = app ? 'app' : 'game';
+  htmlOnce($('gameback'), icon('back') + 'Library');
+  text(document.querySelector('.gamehead .gtitle .eyebrow'), '// ' + thing.toUpperCase());
+  htmlOnce($('gpopen'), icon('phone') + 'Open ' + thing);
+  text($('gptasksbox').firstElementChild, '// TASKS IN THIS ' + thing.toUpperCase());
+  htmlOnce($('gpremove'), icon('trash') + 'Remove ' + thing);
+  text($('gpnotes').querySelector('.muted.small'), (app ? 'How to use this app' : 'How to play this game') + ', in your words. Falcor reads them on every move and they win over anything it learned. One tip per note: a screen and what to do there.');
+  $('gpads').hidden = app;
   htmlOnce($('gpicon'), iconHtml(g));
   text($('gpname'), g.name);
   // (research done: nothing to show; the playbook below says it is ready)
@@ -547,7 +603,10 @@ function renderGame(g) {
   const tot = g.totals || [], stx = {active: ['Active', 'green'], completed: ['Completed', 'accent'], expired: ['Expired', 'red'], none: [st.label, st.mood]}[g.status] || [st.label, st.mood];
   const stats = [['PLATFORM', (g.platforms || []).join(' · ') || '—', ''], ['STATUS', stx[0], stx[1]], ['MAX REWARD', tot.filter(t => t.potential).map(t => P.money(t.potential, t.unit)).join(' + ') || '—', ''],
     ['VERIFIED EARNINGS', tot.filter(t => t.earned).map(t => P.money(t.earned, t.unit)).join(' + ') || '0', tot.some(t => t.earned) ? 'green' : 'muted'], ['TIME REMAINING', g.deadline ? g.deadline.text : '—', g.deadline && g.deadline.at && g.deadline.at - Date.now() < 86_400_000 ? 'sand' : '']];
-  htmlOnce($('gpstats'), (g.earning || []).length ? stats.map(([k, v, c]) => '<span><em>' + k + '</em><b class="' + c + '">' + esc(v) + '</b></span>').join('') : '');
+  // (an app's page: how it repeats, its next run, today's runs, its last result and its tasks, in place of offers)
+  const a = g.app || {}, hm = t => new Date(t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'});
+  const appStats = [['KIND', 'App', ''], ['REPEATS', a.repeat || '—', ''], ['NEXT RUN', a.nextAt ? hm(a.nextAt) + ' (' + when(a.nextAt) + ')' : '—', ''], ['TODAY', (a.okToday || 0) + ' done of ' + (a.runsToday || 0) + ' runs', a.okToday ? 'green' : 'muted'], ['LAST RUN', a.lastAt ? hm(a.lastAt) + ' · ' + String(a.lastOutcome || '').toLowerCase().replace(/_/g, ' ') : 'not yet', /VERIFIED|RECEIVED/.test(a.lastOutcome || '') ? 'green' : /FAILED|BLOCKED/.test(a.lastOutcome || '') ? 'red' : '']];
+  htmlOnce($('gpstats'), g.kind === 'app' ? appStats.map(([k, v, c]) => '<span><em>' + k + '</em><b class="' + c + '">' + esc(v) + '</b></span>').join('') : (g.earning || []).length ? stats.map(([k, v, c]) => '<span><em>' + k + '</em><b class="' + c + '">' + esc(v) + '</b></span>').join('') : '');
   const first = (g.earning || [])[0];
   $('gpofferedit').hidden = $('gpofferrefresh').hidden = !first;
   $('gpofferrefresh').disabled = !d || !!d.emergency; $('gpofferrefresh').title = 'Open the offer page in ' + (first ? first.source.name : 'the earning app') + ' on the phone, then read it again and see what changed';
@@ -583,13 +642,14 @@ function renderGame(g) {
   renderAds(g);
   const k = g.learned, moves = g.moves ? '<p class="small green">' + g.moves + ' step' + (g.moves === 1 ? '' : 's') + ' Falcor presses here without asking (from your teaching and its own runs).</p>' : '';
   htmlOnce($('gpknowbody'), moves + (k ? '<p>' + esc(k.summary || (k.hasGuide ? 'Guide ready.' : 'Recorded; no guide written yet.')) + '</p><p class="muted small">' + k.sessions + ' teaching session' + (k.sessions === 1 ? '' : 's') + ' · last ' + new Date(k.lastSessionAt).toLocaleDateString() + '</p><button class="small" data-link="knowledge" data-ref="' + esc(g.pkg) + '">' + icon('book') + 'Read the guide</button>'
-    : '<p class="muted small">' + (g.note ? esc(g.note) + '.' : 'Falcor has not learned this game yet. Press Teach again (or Teach on the Phone tab) and play it on the mirror.') + '</p>'));
+    : '<p class="muted small">' + (g.note ? esc(g.note) + '.' : 'Falcor has not learned this ' + (g.kind === 'app' ? 'app yet. Press Teach Falcor and use it on the mirror once.' : 'game yet. Press Teach again (or Teach on the Phone tab) and play it on the mirror.')) + '</p>'));
 }
 // Game Autopilot: the goal (next level, an offer milestone that is a level, level N, or one of its tasks), Start / Pause /
 // Stop, and what is true now: the verified level, the live step, inputs the phone accepted, the next return and what
 // the last session taught (campaigns.ts).
 function renderAutopilot(g, d) {
-  $('gpap').hidden = g.pkg.startsWith('offer:');
+  // (Game Autopilot plays a game toward a level: an app's page has its tasks and schedule instead)
+  $('gpap').hidden = g.pkg.startsWith('offer:') || g.kind === 'app';
   const c = g.campaign, on = !!c && c.active && !c.paused, goals = g.apGoals || [];
   const sig = goals.map(x => x.objective + ':' + x.label).join('|'), sel = $('gpgoal');
   renderPlan(g);
@@ -692,7 +752,7 @@ $('gpapstop').onclick = async () => { await call(planOwned() ? 'gamePlaybook' : 
 // reward is granted; a game can be turned off (and on again) here.
 function renderAds(g) {
   const box = $('gpadsbody'), sig = g.pkg + ':' + g.ads + ':' + g.adsAlways + ':' + g.adsLocked;
-  $('gpads').hidden = g.pkg.startsWith('offer:');
+  $('gpads').hidden = g.pkg.startsWith('offer:') || g.kind === 'app';
   if (box.dataset.sig === sig) return; box.dataset.sig = sig;
   const mode = !g.ads ? 'off' : g.adsAlways ? 'always' : 'on';
   const opt = (m, label) => '<button class="small' + (mode === m ? ' primary' : '') + '" data-ads="' + m + '"' + (mode === m ? ' aria-pressed="true"' : '') + '>' + label + '</button>';
@@ -801,7 +861,7 @@ async function capAuto() {
     const r = await window.hub.call('captureAuto', {deviceId});
     capShow(r);
     if (r.end) { capAutoOn = false; await capReview(); return; }
-  } catch (e) { const m = errText(e); if (!/cancelled/i.test(m)) toast(m, 'warn'); if (/try Capture Game|could not read this screen/.test(m)) { $('capbox').hidden = true; capOffer = null; } }
+  } catch (e) { const m = errText(e); if (!/cancelled/i.test(m)) toast(m, 'warn'); if (/try Capture|could not read this screen/.test(m)) { $('capbox').hidden = true; capOffer = null; } }
   finally { capAutoOn = false; for (const b of $('capacts').querySelectorAll('button')) b.disabled = false; renderCapProgress(); }
 }
 $('capauto').onclick = () => void capAuto();
@@ -812,32 +872,26 @@ async function capStart(offerId, join, scan) {
   try { const r = await window.hub.call('captureStart', {deviceId, offerId: capOffer, join: !!join, scan: !!scan}); if (gamePkg) { gamePkg = null; renderGames(); } capShow(r); if (r.auto) capAutoOn = true; renderCapProgress(); return r; }
   catch (e) { capOffer = null; const m = errText(e); toast(m, 'warn'); if (/by hand/.test(m)) openOffer({source: {name: (/^(.+?)'s offer import/.exec(m) || [])[1] || '', pkg: ''}, game: {name: '', pkg: null}, milestones: [], total: null, expiresAt: null, by: 'owner'}, null, m); return null; }
 }
-// The Phone tab's Capture Game: what Falcor spotted on the phone (status.sense, per phone) lights it blue; a press opens
-// Games and runs the same capture as there (capStart, then capAuto), one session per phone.
+// The Phone tab's Capture: one press reads the offer page open on the phone, the same capture as in the Library
+// (capStart, then capAuto). Nothing reads the phone before the press (the owner, 2026-10-21: the screen was read every
+// 2.5 s while the tab was open, and a picture went to Falcor AI every 20 s on screens without words).
 let phoneCapBusy = false;
 function renderPhoneCap() {
-  const st = S.sense && deviceId ? S.sense[deviceId] : null, d = dev(), state = !d ? 'unavailable' : st ? st.state : 'idle';
-  const capturing = state === 'capturing' || !!(S.capture && deviceId && S.capture[deviceId] && !['done', 'stopped'].includes(S.capture[deviceId].phase));
-  cls($('phonecap'), 'hot', state === 'new' && !capturing); cls($('phonecap'), 'saved', state === 'existing' && !capturing);
-  $('phonecap').disabled = phoneCapBusy || state === 'unavailable';
-  text($('phonecaplbl'), state === 'existing' && !capturing ? 'REFRESH OFFER' : 'CAPTURE GAME');
-  const note = capturing ? 'CAPTURE IN PROGRESS' : state === 'new' ? (st.name ? st.name + ' · Ready to capture' : 'NEW GAME OFFER DETECTED') : state === 'existing' ? 'OFFER ALREADY SAVED' + (st.name ? ' · ' + st.name : '') : '';
-  text($('capsense'), note); cls($('capsense'), 'hot', state === 'new' && !capturing);
-  $('phonecap').title = state === 'new' ? 'A game offer is open on the phone: Games opens and Falcor reads the whole page' : state === 'existing' ? 'This offer is already saved: read it again and see what changed' : 'Read the game\'s offer page open on the phone (Games opens and Falcor reads the whole page)';
+  const capturing = !!(S.capture && deviceId && S.capture[deviceId] && !['done', 'stopped'].includes(S.capture[deviceId].phase));
+  $('phonecap').disabled = phoneCapBusy || !dev();
+  text($('phonecaplbl'), capturing ? 'CAPTURING…' : 'CAPTURE');
+  $('phonecap').title = 'Read the offer page open on the phone (the Library opens and Falcor reads the whole page; a saved offer is refreshed)';
 }
 async function phoneCapture() {
   if (phoneCapBusy || !deviceId) return;
   phoneCapBusy = true; renderPhoneCap();
   try {
-    const st = S.sense ? S.sense[deviceId] : null;
     go('games');
-    const r = await capStart(st && st.state === 'existing' ? st.offerId : null, true, true);
+    const r = await capStart(null, true, true);
     if (r && !r.active && !r.end) await capAuto();
   } finally { phoneCapBusy = false; renderPhoneCap(); }
 }
 $('phonecap').onclick = () => void phoneCapture();
-const watchOffers = () => { if (tab === 'phone' && deviceId && !document.hidden) void window.hub.call('watchOffers', {deviceId, on: true}).catch(() => null); };
-setInterval(watchOffers, 5000);
 async function capStep(op, args = {}) {
   for (const b of $('capbox').querySelectorAll('button')) b.disabled = true;
   try { return await call(op, {deviceId, ...args}); }
@@ -890,7 +944,7 @@ $('gpoffers').addEventListener('click', async e => {
 });
 $('gpofferedit').onclick = () => { const o = (S.games.find(g => g.pkg === gamePkg)?.earning || [])[0]; if (o) void editOffer(o); };
 $('gpofferrefresh').onclick = () => { const o = (S.games.find(g => g.pkg === gamePkg)?.earning || [])[0]; if (o) void capStart(o.id); };
-$('gamegrid').onclick = e => { if (e.target.closest('[data-newgame]')) return openDrawer(); const t = e.target.closest('.gametile'); if (t) { gamePkg = t.dataset.key; renderGames(); $('gamepage').scrollIntoView({block: 'start'}); } };
+$('gamegrid').onclick = e => { if (e.target.closest('[data-newgame]')) return openDrawer(); const t = e.target.closest('.gametile'); if (t && /^sequence:/.test(t.dataset.key || '')) { go('tasks'); if (window.crShow) crShow(t.dataset.key.slice(9)); return; } if (t) { gamePkg = t.dataset.key; renderGames(); $('gamepage').scrollIntoView({block: 'start'}); } };
 $('gamenew').onclick = () => openDrawer();
 $('gameback').onclick = () => { gamePkg = null; renderGames(); };
 $('gpopen').onclick = async () => { await call('openApp', {deviceId, pkg: gamePkg}); go('phone'); toast('Opened. You have control: play it on the mirror, or press Release when you are done.'); };
@@ -932,7 +986,7 @@ $('gpauto').onclick = async () => {
   openDrawer(); draft.app = gamePkg; draft.step = 2; drawStep();
 };
 $('gpguide').onclick = () => followLink('knowledge', gamePkg);
-$('gpchat').onclick = () => { chatFresh(gamePkg); go('falcor'); $('chattext').focus(); };
+$('gpchat').onclick = () => { chatFresh(gamePkg); talk(); };
 $('gamepage').addEventListener('click', e => { const l = e.target.closest('[data-link]'); if (l) followLink(l.dataset.link, l.dataset.ref); const t = e.target.closest('[data-gotask]'); if (t) followLink('tasks', t.dataset.gotask); });
 
 // ------------------------------------------------------------------ tasks
@@ -1008,7 +1062,7 @@ document.addEventListener('click', async e => {
 function customHtml(c) {
   if (!c) return '';
   const steps = c.steps.length > 8 ? c.steps.slice(0, 7).concat(['… ' + (c.steps.length - 7) + ' more']) : c.steps;
-  return '<div class="routine muted small"><b>' + c.steps.length + ' steps:</b> ' + steps.map(esc).join(' → ') + '<br>' + [c.times > 1 ? c.times + ' rounds' : '1 round', c.repeat === 'daily' ? 'every day' : 'once', c.done.length ? 'done when it says “' + esc(c.done[0]) + '”' : '', c.untilText ? 'stops at “' + esc(c.untilText) + '”' : '', c.home ? 'then the home screen' : ''].filter(Boolean).join(' · ') + '</div>';
+  return '<div class="routine muted small"><b>' + c.steps.length + ' steps:</b> ' + steps.map(esc).join(' → ') + '<br>' + [c.times > 1 ? c.times + ' rounds' : '1 round', c.repeat === 'daily' ? 'every day' : c.repeat === 'every' ? 'every ' + (c.everyMin || 30) + ' min' : 'once', c.done.length ? 'done when it says “' + esc(c.done[0]) + '”' : '', c.untilText ? 'stops at “' + esc(c.untilText) + '”' : '', c.home ? 'then the home screen' : ''].filter(Boolean).join(' · ') + '</div>';
 }
 // Edit a task in place: what it does, its target, schedule, reward note and (for a signup) the details it types.
 // A change to what runs sends an approved task back to "Needs review".
@@ -1020,7 +1074,7 @@ async function openEditor(card, id) {
     + (d.type === 'game_level' ? '<label>Target level<input name="targetLevel" type="number" min="1" max="100000"></label>' : '')
     + (d.hour !== null ? '<label>Resets daily at (hour 0–23)<input name="hour" type="number" min="0" max="23"></label>' : '')
     + '<label>Reward (as the offer says)<input name="reward" type="number" min="0" step="any"></label><label>Unit<input name="unit" maxlength="24"></label>'
-    + (d.custom ? '<label>Rounds<input name="times" type="number" min="1" max="50"></label><label>Runs<select name="repeat"><option value="once">once</option><option value="daily">every day</option></select></label><label class="wide">Stop early when the screen says<input name="untilText" maxlength="80"></label><label class="check wide"><input type="checkbox" name="home"> Go back to the home screen when done</label>' : '')
+    + (d.custom ? '<label>Rounds<input name="times" type="number" min="1" max="50"></label><label>Runs<select name="repeat"><option value="once">once</option><option value="daily">every day</option><option value="every">every … minutes</option></select></label><label>Minutes<input name="everyMin" type="number" min="15" max="1440"></label><label class="wide">Stop early when the screen says<input name="untilText" maxlength="80"></label><label class="check wide"><input type="checkbox" name="home"> Go back to the home screen when done</label>' : '')
     + (d.type === 'free_signup' ? '<label class="wide">Signup details (one per line, name=value; a password as vault:name; a hidden one left empty stays as saved)<textarea name="fields" rows="4"></textarea></label>' : '')
     + '</div><div class="row"><button class="primary">Save</button><button type="button" data-cancel>Cancel</button><span class="muted small">Changing what it does sends an approved task back to Needs review.</span></div></form>');
   const f = box;
@@ -1029,7 +1083,7 @@ async function openEditor(card, id) {
   if (f.hour) f.hour.value = d.hour;
   f.reward.value = d.reward ?? ''; f.unit.value = d.unit;
   if (f.fields) f.fields.value = fields.map(x => x.key + '=' + (x.hidden ? '' : x.value)).join('\n');
-  if (d.custom) { f.times.value = d.custom.times; f.repeat.value = d.custom.repeat; f.untilText.value = d.custom.untilText || ''; f.home.checked = d.custom.home; }
+  if (d.custom) { f.times.value = d.custom.times; f.repeat.value = d.custom.repeat; f.everyMin.value = d.custom.everyMin || 30; f.untilText.value = d.custom.untilText || ''; f.home.checked = d.custom.home; }
   box.querySelector('[data-cancel]').onclick = () => box.remove();
   box.onsubmit = async ev => {
     ev.preventDefault();
@@ -1037,7 +1091,7 @@ async function openEditor(card, id) {
     if (f.targetLevel && f.targetLevel.value !== String(d.targetLevel ?? '')) patch.targetLevel = Number(f.targetLevel.value);
     if (f.hour && f.hour.value !== String(d.hour)) { patch.hour = Number(f.hour.value); patch.minute = 0; }
     if (f.reward.value !== '' && (Number(f.reward.value) !== d.reward || f.unit.value !== d.unit)) { patch.reward = Number(f.reward.value); patch.unit = f.unit.value || 'points'; }
-    if (d.custom) { patch.times = Number(f.times.value) || 1; patch.repeat = f.repeat.value; patch.untilText = f.untilText.value; patch.home = f.home.checked; }
+    if (d.custom) { patch.times = Number(f.times.value) || 1; patch.repeat = f.repeat.value; patch.everyMin = Number(f.everyMin.value) || 30; patch.untilText = f.untilText.value; patch.home = f.home.checked; }
     if (f.fields) { const out = {}; for (const line of f.fields.value.split('\n')) { const i = line.indexOf('='); if (i > 0) out[line.slice(0, i).trim()] = line.slice(i + 1).trim(); } patch.fields = out; }
     await call('editTask', patch); box.remove(); toast('Task saved.');
   };
@@ -1102,8 +1156,75 @@ async function openChat(id) {
   if (chat.id && !chat.threads.some(t => t.id === chat.id)) chat.id = null;
   if (!chat.id) { renderMsgs(); renderFocus(chat.focus ? appName(chat.focus) : null); }
   await pullChat(true);
-  clearInterval(chat.poll); chat.poll = setInterval(() => { if (tab === 'falcor') void pullChat(true); }, 1000);
+  clearInterval(chat.poll); chat.poll = setInterval(() => { if (chatShown()) void pullChat(true); }, 1000);
 }
+// ------------------------------------------------------------------ the floating Falcor
+// A square with his picture over every page (hidden on the chat page). Dragged, it stays where it is dropped (kept per
+// computer); pressed, it opens the small chat beside it: the conversation panel itself, moved out of the chat page, so
+// one conversation and one set of handlers serve both. Full page opens the chat page; Small chat brings it back.
+const FPOS = 'falcor.fbtn.v1';
+function chatShown() { return tab === 'falcor' || dockOpen; }
+function placeChat() {
+  const convo = document.querySelector('.convo'), dock = $('fdock'), grid = $('chatgrid');
+  if (!convo || !dock || !grid) return;
+  const full = tab === 'falcor';
+  if (full && convo.parentNode !== grid) grid.insertBefore(convo, $('context'));
+  if (!full && convo.parentNode !== dock) dock.appendChild(convo);
+  dock.hidden = full || !dockOpen;
+  $('fbtn').hidden = full;
+  cls($('fbtn'), 'on', dockOpen && !full);
+  $('docknew').hidden = $('dockclose').hidden = full; $('ctxtoggle').hidden = !full;
+  $('chatsize').title = full ? 'Small chat' : 'Full page';
+  $('chattext').placeholder = full ? 'Ask Falcor anything, or say what to do. Enter sends · Shift+Enter new line' : 'Ask Falcor anything…';
+  $('chatsize').querySelector('use').setAttribute('href', full ? '#i-restore' : '#i-max');
+  if (dockOpen && !full) placeDock();
+}
+// The box opens on the side of the button with room, kept inside the window.
+function placeDock() {
+  const b = $('fbtn').getBoundingClientRect(), d = $('fdock'), W = innerWidth, H = innerHeight, w = Math.min(400, W - 24), h = Math.min(560, H - 24);
+  const left = b.left + b.width / 2 > W / 2 ? b.left - w - 10 : b.right + 10, top = b.top + b.height / 2 > H / 2 ? b.bottom - h : b.top;
+  d.style.width = w + 'px'; d.style.height = h + 'px';
+  d.style.left = Math.max(12, Math.min(W - w - 12, left)) + 'px'; d.style.top = Math.max(12, Math.min(H - h - 12, top)) + 'px';
+}
+function openDock() { dockOpen = true; placeChat(); void openChat(); setTimeout(() => $('chattext').focus(), 30); }
+function closeDock() { dockOpen = false; placeChat(); }
+// Ask Falcor from anywhere: the chat page when it is open, else the small chat.
+function talk() { if (tab === 'falcor') { $('chattext').focus(); void openChat(); } else openDock(); }
+function placeFbtn(x, y) {
+  const f = $('fbtn'), s = f.offsetWidth || 56;
+  x = Math.max(8, Math.min(innerWidth - s - 8, x)); y = Math.max(8, Math.min(innerHeight - s - 8, y));
+  f.style.left = x + 'px'; f.style.top = y + 'px'; f.style.right = f.style.bottom = 'auto';
+  return {x, y};
+}
+(() => {
+  const f = $('fbtn');
+  let saved = null; try { saved = JSON.parse(localStorage.getItem(FPOS) || 'null'); } catch { /* no storage */ }
+  const fromSaved = () => saved && placeFbtn(saved.fx * innerWidth, saved.fy * innerHeight);
+  requestAnimationFrame(() => { if (!fromSaved()) placeFbtn(innerWidth - 56 - 24, innerHeight - 56 - 24); });
+  window.addEventListener('resize', () => { const r = f.getBoundingClientRect(); if (!fromSaved()) placeFbtn(r.left, r.top); if (dockOpen) placeDock(); });
+  let drag = null;
+  f.addEventListener('pointerdown', e => { if (e.button !== 0) return; const r = f.getBoundingClientRect(); drag = {id: e.pointerId, dx: e.clientX - r.left, dy: e.clientY - r.top, x0: e.clientX, y0: e.clientY, moved: false}; f.setPointerCapture(e.pointerId); });
+  f.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 5) return;
+    drag.moved = true; cls(f, 'drag', true);
+    placeFbtn(e.clientX - drag.dx, e.clientY - drag.dy); if (dockOpen) placeDock();
+  });
+  const end = e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const moved = drag.moved; drag = null; cls(f, 'drag', false);
+    if (moved) { const r = f.getBoundingClientRect(); saved = {fx: r.left / innerWidth, fy: r.top / innerHeight}; try { localStorage.setItem(FPOS, JSON.stringify(saved)); } catch { /* no storage */ } return; }
+    if (e.type === 'pointerup') dockOpen ? closeDock() : openDock();
+  };
+  f.addEventListener('pointerup', end); f.addEventListener('pointercancel', end);
+  f.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dockOpen ? closeDock() : openDock(); } });
+  f.onclick = e => e.preventDefault();
+  $('dockclose').onclick = closeDock;
+  $('docknew').onclick = () => { chatFresh(); $('chattext').focus(); };
+  $('chatsize').onclick = () => { if (tab === 'falcor') { go(chatBack || 'phone'); openDock(); } else { chatBack = tab === 'knowledge' ? learnFrom.tab : tab; go('falcor'); } };
+  placeChat();
+})();
+let chatBack = null; // the page the chat page was opened from (Small chat returns there)
 async function loadThreads() { chat.threads = await window.hub.call('chatThreads').catch(() => chat.threads); renderThreads(); }
 async function pullChat(seen) {
   if (!chat.id) { text($('chattitle'), 'New chat'); return; }
@@ -1260,7 +1381,7 @@ function renderLearn() {
   if (learnPkg && !list.some(k => k.pkg === learnPkg)) learnPkg = null;
   if (!learnPkg) { go(learnFrom.tab === 'games' ? 'games' : 'settings', learnFrom.tab === 'games' ? undefined : 'knowledge'); return; }
   const f = learnFrom, game = f.tab === 'games' && (S.games || []).find(g => g.pkg === f.pkg);
-  text($('learnbackname'), game ? 'Back to ' + game.name : f.tab === 'tasks' ? 'Back to Tasks' : f.tab === 'falcor' ? 'Back to Falcor' : f.tab === 'phone' ? 'Back to Phone' : f.tab === 'sandbox' ? 'Back to Sandbox' : 'Back to Knowledge');
+  text($('learnbackname'), game ? 'Back to ' + game.name : f.tab === 'tasks' ? 'Back to Creations' : f.tab === 'falcor' ? 'Back to Falcor' : f.tab === 'phone' ? 'Back to Hub' : f.tab === 'sandbox' ? 'Back to Sandbox' : 'Back to Knowledge');
   $('learnempty').hidden = true;
   const sig = JSON.stringify(list.find(k => k.pkg === learnPkg) || null);
   if (sig !== learnSig && !editing) { learnSig = sig; void loadApp(); }
@@ -1344,7 +1465,7 @@ $('guidename').addEventListener('keydown', async e => {
 });
 $('guideexport').onclick = async () => { if (await call('exportApp', {pkg: learnPkg})) toast('Exported.'); };
 $('guidedelete').onclick = async () => { if (confirm('Delete everything Falcor learned about ' + L.name + '? Sessions, pictures and the guide are removed from this computer.')) { await call('deleteApp', {pkg: learnPkg}); learnPkg = null; learnSig = ''; toast('Deleted.'); $('learnback').click(); } };
-$('guidechat').onclick = () => { chatFresh(learnPkg); go('falcor'); $('chattext').focus(); };
+$('guidechat').onclick = () => { chatFresh(learnPkg); talk(); };
 $('sessions').addEventListener('click', e => { const w = e.target.closest('[data-write]'); if (w) void showAfter(learnPkg, w.dataset.write, L.name, Number(w.dataset.screens)); });
 
 // ------------------------------------------------------------------ stats

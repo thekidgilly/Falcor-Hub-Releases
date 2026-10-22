@@ -1,17 +1,17 @@
 {
-  "version": "0.21.26",
-  "notes": "^Word^ Yatzy:^ each^ session^ opens^ Daily^ Tasks^ first^ and^ plays^ an^ open^ Daily^ Challenge;^ an^ opponent^ is^ waited^ for^ 15^ s^ at^ most,^ then^ another^ match;^ a^ match^ clock^ no^ longer^ ends^ the^ session;^ the^ Google^ Play^ pill's^ arrows^ and^ a^ playable^ ad's^ arrows^ close^ ads^ at^ once.^ Phone^ tab:^ Today's^ Queue^ is^ a^ clear^ line-up^ with^ large^ game^ icons^ ^(NOW,^ NEXT,^ then^ in^ order;^ Needs^ you^ below,^ with^ Add^ back^ to^ queue^),^ and^ Current^ activity^ shows^ the^ game's^ icon,^ level,^ next^ goal,^ goals,^ rewards^ and^ time^ left.^",
-  "publishedAt": "2026-10-21T23:03:23.535Z",
+  "version": "0.21.27",
+  "notes": "^Falcor.Hub^ 0.21.27:^ tabs^ Hub,^ Library,^ Sandbox,^ Activity,^ Settings;^ Falcor^ floats^ as^ a^ draggable^ glowing^ square^ that^ opens^ a^ small^ chat^ ^(Full^ page^ for^ the^ whole^ chat^);^ the^ Library^ holds^ games,^ apps^ and^ creations^ ^(filters^ Games,^ Apps,^ Creations^),^ FireFaucet^ as^ an^ app^ every^ 30^ minutes;^ Capture^ is^ a^ plain^ button^ ^(the^ automatic^ offer^ sensing^ that^ slowed^ the^ phone^ is^ gone^);^ custom^ tasks^ can^ repeat^ every^ N^ minutes;^ web^ apps^ from^ Chrome^ are^ followed^ and^ get^ their^ icon^",
+  "publishedAt": "2026-10-22T00:01:59.680Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "9aa5d63331a56f6e1bb1716c3c226aab15fa3b1b96abde1960dbb46eae52b199",
-      "size": 1169599
+      "sha256": "7e25264cfcad98c254e5a5247c01f87c94d372a077edefb4c437165e957e4df0",
+      "size": 1167478
     },
     {
       "path": "dist/preload.js",
-      "sha256": "6973da0a154dc802abd1e2a192420e5fc067a9e8cdf8dfdfc5ab2f3b7ef3c38c",
-      "size": 2208
+      "sha256": "cd16b7a2ea898bc5f12f33370d9c088e67b00804497f2d244f332d2a9c73cce1",
+      "size": 2191
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -34,9 +34,9 @@
       "size": 56554
     },
     {
-      "path": "remote-ui/assets/index-U8eg03So.js",
-      "sha256": "7c0b62284a40d2371ea7c086058702dd15bf955fef6542c047979add4d9a7d89",
-      "size": 168546
+      "path": "remote-ui/assets/index-BtFkTGiC.js",
+      "sha256": "e8225c8647a006d3d7b037009677997dcc793fb80c3d59b1aaa150fd3b435235",
+      "size": 170964
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "f7dcb55357479a8a28120e1ac91191d4d392fc6a6c8f2e8dbc03e24ed88a4835",
+      "sha256": "ef77c5708a2e37a652a6f0d4922e527c8b00a7eabeaf283bea95f5dfe8bffab4",
       "size": 3854
     },
     {
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "e8fe91584a92f265559f696b77a7319c02c172b2b1c3fd7c44a2a1b0c5e1f81d",
-      "size": 141667
+      "sha256": "af77fd3ac8db345d61c48be89f73649e85dbf65fd9980a26eb7ab64265cc5953",
+      "size": 149465
     },
     {
       "path": "ui/app.png",
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "74da2b760d68106cec82d487fa4079c293bc2d16c1ae0bfc3968e02db119c1a5",
-      "size": 55516
+      "sha256": "7e5cfa8906947dbb8ab31e54d23a46fea660df9cd926430b2b5b674fe74be937",
+      "size": 56370
     },
     {
       "path": "ui/motion.css",
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "856ff54a11de2c5127924779ff2fa466c7b049a15668ca51f01d98092436a494",
-      "size": 61718
+      "sha256": "fe067417dd83b09641062ee9186b6a4dc236998b7373d721e1654e55d02d100e",
+      "size": 65190
     },
     {
       "path": "ui/queue.js",
@@ -155,8 +155,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "c05e01efdbdc716114dda1df4190f1ece381bdb7ea8028464acb2bbd1fdd70a7",
-      "size": 97916
+      "sha256": "cd050a108cc427593c514794dda0e011c6760ff284954ba405e2ab0b83d10337",
+      "size": 99138
     },
     {
       "path": "ui/tokens.css",
