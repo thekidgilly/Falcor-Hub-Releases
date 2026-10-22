@@ -11,7 +11,7 @@
 <div id="boot-screen" class="boot-screen" aria-hidden="true"></div>
 <header class="titlebar">
   <div class="embers"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-  <div class="brand"><span class="logo" id="logo"><img src="dragon.png" alt=""><i class="eye"></i></span><div><h1>FALCOR.HUB</h1><p class="eyebrow">Phone control</p></div></div>
+  <div class="brand"><span class="logo" id="logo"><img src="dragon.png" alt=""><i class="eye"></i></span><div><h1>FALCOR.HUB</h1><p class="eyebrow">Workspace</p></div></div>
   <div class="strip" id="strip">
     <button class="sys" data-go="phone"><span class="led" id="led-phone"></span><span id="sys-phone">Phone</span></button>
     <button class="sys" data-go="phone"><span class="led" id="led-auto"></span><span id="sys-auto">Queue</span></button>
@@ -29,10 +29,10 @@
 <div class="ebar" id="ebar" hidden><span class="led bad"></span><span>Emergency Stop is on. Autopilot and tasks are stopped.</span><button id="clear">Clear</button></div>
 <div class="tabrow">
 <nav class="tabs" id="tabs">
-  <button data-tab="phone" title="Key 1" class="on"><svg class="ico"><use href="#i-phone"></use></svg>Hub</button>
-  <button data-tab="games" title="Key 2"><svg class="ico"><use href="#i-game"></use></svg>Library</button>
-  <button data-tab="sandbox" title="Key 3"><svg class="ico"><use href="#i-sandbox"></use></svg>Sandbox<span class="badge" id="badge-sandbox" hidden></span></button>
-  <button data-tab="stats" title="Key 4"><svg class="ico"><use href="#i-stats"></use></svg>Activity</button>
+  <button data-tab="profile" title="Key 1"><svg class="ico"><use href="#i-user"></use></svg>Profile</button>
+  <button data-tab="phone" title="Key 2" class="on"><svg class="ico"><use href="#i-phone"></use></svg>Hub</button>
+  <button data-tab="games" title="Key 3"><svg class="ico"><use href="#i-game"></use></svg>Library</button>
+  <button data-tab="sandbox" title="Key 4"><svg class="ico"><use href="#i-sandbox"></use></svg>Sandbox<span class="badge" id="badge-sandbox" hidden></span></button>
   <button data-tab="settings" title="Key 5"><svg class="ico"><use href="#i-settings"></use></svg>Settings</button>
   <span class="tabline" id="tabline"></span>
 </nav>
@@ -154,6 +154,36 @@
           <div class="row"><button class="small" id="linkviewer" title="Open a second display of the phone in its own window"><svg class="ico"><use href="#i-popout"></use></svg>Second display</button><button class="small" id="linkmirror" title="Start the live mirror again"><svg class="ico"><use href="#i-update"></use></svg>Restart mirror</button><button class="small" id="linkapps" title="Read the phone's app list again"><svg class="ico"><use href="#i-apps"></use></svg>Refresh apps</button></div>
         </div></div>
       </section>
+      <section class="win" data-win="ticker" aria-label="LED sign" hidden>
+        <header class="winbar"><span class="wintitle">// LED SIGN</span><button class="ghost small icon" id="tkedit" title="Change the message"><svg class="ico"><use href="#i-edit"></use></svg></button></header>
+        <div class="winbody"><div class="ledbox"><canvas class="ledsign" id="tkcanvas"></canvas>
+          <form class="tkform" id="tkform" hidden><input id="tktext" maxlength="160" autocomplete="off" placeholder="Type what the sign says"><span class="tkcolors" id="tkcolors"></span><select id="tkspeed" title="Speed"><option value="1">Slow</option><option value="2">Steady</option><option value="3">Fast</option></select><button class="small primary">Show</button></form>
+        </div></div>
+      </section>
+      <section class="win" data-win="rain" aria-label="Data rain" hidden>
+        <header class="winbar"><span class="wintitle">// DATA RAIN</span></header>
+        <div class="winbody"><canvas class="decor" id="raincanvas"></canvas></div>
+      </section>
+      <section class="win" data-win="radar" aria-label="Radar" hidden>
+        <header class="winbar"><span class="wintitle">// RADAR</span><span class="winx muted" id="radarcount"></span></header>
+        <div class="winbody"><canvas class="decor" id="radarcanvas"></canvas></div>
+      </section>
+      <section class="win" data-win="scope" aria-label="Signal" hidden>
+        <header class="winbar"><span class="wintitle">// SIGNAL</span><span class="winx muted" id="scopehz"></span></header>
+        <div class="winbody"><canvas class="decor" id="scopecanvas"></canvas></div>
+      </section>
+      <section class="win" data-win="clock" aria-label="Clock" hidden>
+        <header class="winbar"><span class="wintitle">// CLOCK</span></header>
+        <div class="winbody"><div class="clockbox"><b class="clockt" id="clockt"></b><span class="clockd" id="clockd"></span><span class="clockn" id="clockn"></span></div></div>
+      </section>
+      <section class="win" data-win="spend" aria-label="AI meter" hidden>
+        <header class="winbar"><span class="wintitle">// AI METER</span><span class="winx muted" id="spendmonth"></span></header>
+        <div class="winbody"><div class="spendbox" id="spendbox"></div></div>
+      </section>
+      <section class="win" data-win="vitals" aria-label="Phone vitals" hidden>
+        <header class="winbar"><span class="wintitle">// PHONE VITALS</span></header>
+        <div class="winbody"><div class="vitalsbox" id="vitalsbox"></div></div>
+      </section>
       <div class="deskguides" aria-hidden="true"><i class="gx" id="deskgx" hidden></i><i class="gy" id="deskgy" hidden></i></div>
     </div>
   </section>
@@ -170,7 +200,7 @@
       <div class="sbname"><svg class="ico"><use href="#i-sandbox"></use></svg><input id="sbtitle" maxlength="80" placeholder="No sequence open" aria-label="Sequence name"><span class="dirty" id="sbdirty" title="Unsaved changes" hidden></span><span class="muted small" id="sbrev"></span></div>
       <select id="sbdev" title="The phone it runs on"></select>
       <span class="grow"></span>
-      <div class="sbacts"><button class="small" id="sbfocus" aria-pressed="false">Focus</button><button class="small danger" id="sbstudio-stop">Stop all</button><button class="small" id="sbpanels">Panels</button><button class="small" id="sbfeedback">Feedback: Off</button>
+      <div class="sbacts"><button class="small" id="sbfocus" aria-pressed="false">Focus</button><button class="small danger" id="sbstudio-stop">Stop all</button><button class="small" id="sbpanels">Panels</button>
         <button class="small" id="sbnew" title="New sequence (Ctrl+N)"><svg class="ico"><use href="#i-plus"></use></svg>New</button>
         <button class="small" id="sbopen" title="Drafts and published (Ctrl+O)"><svg class="ico"><use href="#i-book"></use></svg>Open</button>
         <button class="small" id="sbsave" title="Save a new version (Ctrl+S)"><svg class="ico"><use href="#i-check"></use></svg>Save</button>
@@ -203,12 +233,12 @@
         </div>
     <div class="sbgrid" id="sbgrid">
       <aside class="panel sblib" id="sblib">
-        <div class="top"><p class="eyebrow">// BLOCKS</p><button class="ghost small icon" id="sblibfold" title="Fold the library"><svg class="ico"><use href="#i-chevron"></use></svg></button></div>
+        <div class="top"><p class="eyebrow">// BLOCKS</p><span class="row"><button class="ghost small icon popbtn" data-pop="sblib" data-poptitle="Blocks" title="Pop out to its own window (put it on another monitor)"><svg class="ico"><use href="#i-popout"></use></svg></button><button class="ghost small icon" id="sblibfold" title="Fold the library"><svg class="ico"><use href="#i-chevron"></use></svg></button></span></div>
         <input id="sblibq" placeholder="Search blocks" autocomplete="off">
         <div class="cats" id="sbcats"></div>
         <div class="liblist" id="sbliblist"></div>
       </aside>
-      <div class="sbcenter">
+      <div class="sbcenter" id="sbcenter">
         <div class="sbmodes">
           <div class="seg" id="sbmodes">
             <button data-mode="view" class="on" title="Look only (V)"><svg class="ico"><use href="#i-eye"></use></svg>View</button>
@@ -223,7 +253,7 @@
           <button class="small icon" data-sbkey="BACK" title="Back"><svg class="ico"><use href="#i-back"></use></svg></button>
           <button class="small icon" data-sbkey="HOME" title="Home"><svg class="ico"><use href="#i-home"></use></svg></button>
           <button class="small icon" data-sbkey="APP_SWITCH" title="Recent apps"><svg class="ico"><use href="#i-apps"></use></svg></button>
-          <button class="small icon" id="sbgridbtn" title="Grid over the mirror"><svg class="ico"><use href="#i-grid"></use></svg></button>
+          <button class="small icon" id="sbgridbtn" title="Grid over the mirror"><svg class="ico"><use href="#i-grid"></use></svg></button><button class="small icon popbtn" data-pop="sbcenter" data-poptitle="Phone stage" title="Pop out to its own window (put it on another monitor)"><svg class="ico"><use href="#i-popout"></use></svg></button>
         </div>
         <div class="sbstage" id="sbstage"><div class="sbempty" id="sbnophone" hidden><svg class="ico big"><use href="#i-usb"></use></svg><b>No phone</b><span class="muted small">Plug in the phone (see the Phone tab). You can still build a sequence.</span></div></div>
         <p class="hint" id="sbhint"></p>
@@ -250,13 +280,13 @@
           </div>
           <div class="row"><button class="primary"><svg class="ico"><use href="#i-rec"></use></svg>Start recording</button><button type="button" id="teachcancel">Cancel</button></div>
         </form>
-        <div class="top"><p class="eyebrow" id="sbinsptitle">// SEQUENCE</p><div class="seg" id="sbinsptabs"><button data-t="basic" class="on">Basic</button><button data-t="advanced">Advanced</button></div></div>
+        <div class="top"><p class="eyebrow" id="sbinsptitle">// SEQUENCE</p><span class="row"><div class="seg" id="sbinsptabs"><button data-t="basic" class="on">Basic</button><button data-t="advanced">Advanced</button></div><button class="ghost small icon popbtn" data-pop="sbinsp" data-poptitle="Step settings" title="Pop out to its own window (put it on another monitor)"><svg class="ico"><use href="#i-popout"></use></svg></button></span></div>
         <div class="inspbody" id="sbinspbody"></div>
       </aside>
     </div>
     <div class="panel sbtl" id="sbtl">
       <div class="top">
-        <div class="seg" id="sbviews"><button data-v="flow" class="on">Flow</button><button data-v="tree">Tree</button><button data-v="log">Run log</button></div>
+        <div class="seg" id="sbviews"><button data-v="flow" class="on">Flow</button><button data-v="tree">Tree</button><button data-v="log">Run log</button></div><button class="ghost small icon popbtn" data-pop="sbtl" data-poptitle="Timeline" title="Pop out to its own window (put it on another monitor)"><svg class="ico"><use href="#i-popout"></use></svg></button>
         <span class="muted small" id="sbsum"></span>
         <span class="grow"></span>
         <div class="sbrun" id="sbrun" hidden><span class="led"></span><b id="sbrunstate"></b><span class="muted small" id="sbrunstep"></span><span class="muted small timer" id="sbruntime"></span></div>
@@ -463,35 +493,65 @@
     </div>
   </section>
 
-  <!-- STATS -->
-  <section data-pane="stats" class="pane actpane" hidden>
-    <div class="crhead">
-      <div><p class="eyebrow">// ACTIVITY</p><h2>Everything that ran</h2><p class="muted small">What ran, when, on which phone, and how it ended.</p></div>
-      <span class="grow"></span>
-      <p class="muted small" id="actusage"></p>
+  <!-- PROFILE (profile.js) -->
+  <section data-pane="profile" class="pane profpane" hidden>
+    <div class="crhead pagehead"><div><p class="eyebrow">// PROFILE</p><h2>Your legend</h2><p class="muted small">Who you are, what you are playing and what Falcor has done for you.</p></div></div>
+    <div class="profbento">
+      <div class="panel profhero" id="profhero">
+        <div class="profcover" aria-hidden="true"><i class="pcfx"></i></div>
+        <div class="profheroin">
+          <button class="profavatar" id="profavatar" title="Change your picture"><img id="profimg" alt="" hidden><span id="profinit">?</span><i class="profcam"><svg class="ico"><use href="#i-camera"></use></svg></i></button>
+          <input type="file" id="proffile" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+          <div class="profwho"><h3 id="profshow">Your name</h3><p id="profcredshow" class="muted"></p>
+            <div class="profrank"><b id="profrank">Hatchling</b><i class="profbar"><u id="profbar"></u></i><span class="muted small" id="profnext"></span></div></div>
+          <span class="grow"></span>
+          <div class="profheroact"><span class="muted small" id="profsince"></span><button class="small" id="profcustom" aria-expanded="false"><svg class="ico"><use href="#i-edit"></use></svg>Customize</button></div>
+        </div>
+        <div class="profcust" id="profcustpanel" hidden>
+          <div><p class="eyebrow">// ACCENT</p><div class="pcrow" id="pcaccent"></div></div>
+          <div><p class="eyebrow">// FRAME</p><div class="pcrow" id="pcframe"></div></div>
+          <div><p class="eyebrow">// BANNER</p><div class="pcrow" id="pccover"></div></div>
+          <div><p class="eyebrow">// PICTURE</p><div class="pcrow"><button class="small" id="profpicnew"><svg class="ico"><use href="#i-camera"></use></svg>Choose</button><button class="small ghost" id="profpicdel" hidden>Remove</button></div></div><button class="small primary pcdone" id="profcustdone">Done</button>
+        </div>
+      </div>
+      <div class="panel profme">
+        <p class="eyebrow">// ABOUT YOU</p>
+        <label class="small">Name<input id="profname" maxlength="60" placeholder="What Falcor calls you" autocomplete="off"></label>
+        <label class="small">Credentials<input id="profcred" maxlength="120" placeholder="Titles, skills, certifications" autocomplete="off"></label>
+        <label class="small">About me<textarea id="profabout" maxlength="600" rows="6" placeholder="A few lines about you and what you play"></textarea></label>
+        <p class="muted small proftip">Never a password here: passwords and codes go in Settings → Secrets.</p>
+        <span class="muted small" id="profsaved"></span>
+      </div>
+      <div class="panel profact"><div class="top"><p class="eyebrow">// ACTIVE NOW</p><button class="small ghost" data-go="games">Library</button></div><div class="profactive" id="profactive"></div></div>
+      <div class="panel profrec"><p class="eyebrow">// YOUR RECORD</p><div class="proftiles" id="proftiles"></div><div class="profearn" id="profearn"></div></div>
+      <div class="panel profwork"><p class="eyebrow">// YOUR WORKSHOP</p><div class="proftiles" id="profwork"></div></div>
+      <div class="panel profrecs"><p class="eyebrow">// RECOMMENDED FOR YOU</p><div class="profrecl" id="profrecs"></div></div>
     </div>
-    <div class="toolrow">
-      <div class="seg" id="actfilter" aria-label="Filter by outcome"><button data-o="all" class="on">All</button><button data-o="completed">Completed</button><button data-o="attention">Needs attention</button><button data-o="failed">Failed</button><button data-o="stopped">Stopped</button><button data-o="interrupted">Interrupted</button></div>
-      <label class="small actdate">From <input type="date" id="actfrom" aria-label="From date"></label><label class="small actdate">To <input type="date" id="actto" aria-label="To date"></label>
-      <label class="check small"><input type="checkbox" id="acttests"> Include previews and tests</label>
-    </div>
-    <div class="actlist" id="actlist" aria-live="polite"></div>
-    <div class="actmore"><button id="actmore" hidden>Load more</button><p class="muted small" id="actnote"></p></div>
   </section>
-
   <!-- SETTINGS -->
   <section data-pane="settings" class="pane" hidden>
-    <div class="crhead pagehead"><div><p class="eyebrow">// SETTINGS</p><h2>Tune your Hub</h2><p class="muted small">Falcor's AI, the phone app, secrets and updates.</p></div></div>
+    <div class="crhead pagehead"><div><p class="eyebrow">// SETTINGS</p><h2>Tune your Hub</h2><p class="muted small">Falcor's AI, the phone app, activity, secrets and updates.</p></div></div>
     <div class="settingsgrid">
       <nav class="submenu" id="submenu">
         <button data-sub="ai" class="on"><svg class="ico"><use href="#i-ai"></use></svg>AI</button>
         <button data-sub="phoneapp"><svg class="ico"><use href="#i-wifi"></use></svg>Phone app</button>
+        <button data-sub="activity"><svg class="ico"><use href="#i-stats"></use></svg>Activity</button>
         <button data-sub="secrets"><svg class="ico"><use href="#i-lock"></use></svg>Secrets</button>
         <button data-sub="updates"><svg class="ico"><use href="#i-update"></use></svg>Updates</button>
         <button data-sub="about"><svg class="ico"><use href="#i-phone"></use></svg>About</button>
       </nav>
       <div>
-        <div class="panel aicc" data-sub="ai">
+        <div class="panel actpanel" data-sub="activity" hidden>
+          <p class="eyebrow">// ACTIVITY</p>
+          <div class="top"><h2>Everything that ran</h2><span class="muted small" id="actusage"></span></div>
+          <div class="toolrow">
+            <div class="seg" id="actfilter" aria-label="Filter by outcome"><button data-o="all" class="on">All</button><button data-o="completed">Done</button><button data-o="attention">Needs you</button><button data-o="failed">Failed</button><button data-o="stopped">Stopped</button><button data-o="interrupted">Interrupted</button></div>
+            <label class="small actdate">From <input type="date" id="actfrom" aria-label="From date"></label><label class="small actdate">To <input type="date" id="actto" aria-label="To date"></label>
+            <label class="check small"><input type="checkbox" id="acttests"> Previews and tests</label>
+          </div>
+          <div class="actlist" id="actlist" aria-live="polite"></div>
+          <div class="actmore"><button class="small" id="actmore" hidden>Load more</button><p class="muted small" id="actnote"></p></div>
+        </div>        <div class="panel aicc" data-sub="ai">
           <p class="eyebrow">// AI CONTROL CENTER</p>
           <div class="top"><h2>Falcor's AI</h2><span class="state" id="aistate"><span class="led"></span><span></span></span></div>
           <p class="muted small">Connect the AI services you use, pick which model plays your games and which one chats. Keys are sealed on this computer and each one only ever goes to its own provider.</p>
@@ -597,6 +657,9 @@
 <script src="creations.js"></script>
 <script src="queue.js"></script>
 <script src="desk.js"></script>
+<script src="popout.js"></script>
+<script src="widgets.js"></script>
+<script src="profile.js"></script>
 </body>
 </html>
 

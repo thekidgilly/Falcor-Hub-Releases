@@ -1,17 +1,17 @@
 {
-  "version": "0.21.41",
-  "notes": "The Hub's Clock shows Minnesota time on a 12-hour face.",
-  "publishedAt": "2026-10-22T03:37:32.372Z",
+  "version": "0.21.42",
+  "notes": "A Profile tab (your picture, name, credentials, About me and your own look, also in the phone app from your header picture). Activity moved into Settings as a compact log. The phone Studio has one white menu tab, a gold Magic tab (Teach, Stop and Falcor's AI) and widgets you move, snap and pin. Falcor.Hub keeps its window, popped-out windows and layout across restarts. The header reads WORKSPACE.",
+  "publishedAt": "2026-10-22T04:15:53.447Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "9f6ce84575cc2547b9321ceb883e5d1d5c05d921e68e30147f0dde5e6b38dd11",
-      "size": 1177697
+      "sha256": "45c61409fa0caf3d95372122c9c6fce440096a16cca001c64623419d57f46580",
+      "size": 1181030
     },
     {
       "path": "dist/preload.js",
-      "sha256": "f8e7cc05fb2efd425a76cb142d8ab8f38d3ca12d272cfa9c7ad38bb91c0f9896",
-      "size": 2210
+      "sha256": "33b116a15b6a69ac07d92501ab16858554bcf2000d1a0591d168704499090176",
+      "size": 2223
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-CQttps62.js",
-      "sha256": "6df560c0dfed0c2a7d0e4857d92ba8a1a3309703f74c696de757310e222d41f0",
-      "size": 197947
+      "path": "remote-ui/assets/index-BWOgLpMa.css",
+      "sha256": "bd139b4aaf3cb7db0dfb5fce0e71a529a60c1a5ef83853edb966bf805206f139",
+      "size": 84850
     },
     {
-      "path": "remote-ui/assets/index-M3hbjtEK.css",
-      "sha256": "c32398b952f5ac441eb5f800b48d83b0c0aacc4951a07a0ce53ab840ea96e38e",
-      "size": 71285
+      "path": "remote-ui/assets/index-CLInnvMm.js",
+      "sha256": "a955c1bb0cb8ffcc5deace9d76a039eb05b6b92f9a4dcc1e8a30a8bc6dce6e3c",
+      "size": 257209
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "62acd1ac80d23a2b0f28efe80d27f1984b12b753b6878a15405929cdd87b4c5d",
+      "sha256": "f78891f393ae5556298d89596415a7dac41c052ce15dc97b2f75904b64ec935b",
       "size": 3845
     },
     {
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "296f095761380b63af42989dc949f0aab862f3ff5a1ca19d9c2e3a5cd3764589",
-      "size": 150039
+      "sha256": "3cffcc10334a1c0c8e61b54f53d744bcb3f5eaeebfa030e9e4857e77c0a1375c",
+      "size": 150517
     },
     {
       "path": "ui/app.png",
@@ -95,8 +95,8 @@
     },
     {
       "path": "ui/creations.js",
-      "sha256": "b15ef2294eba1478ca95607ed65012894cabbee99e28926ea52d7385983699dd",
-      "size": 18106
+      "sha256": "c56588df1bb5f30334b5828bcd54d8e57a164fb47cd6c9c098c9bed5056ca4eb",
+      "size": 18131
     },
     {
       "path": "ui/desk.js",
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "2bb9e021b1ebe44df912749d88475e337bf6aced6532db6271ae4a88f7c01c61",
-      "size": 63082
+      "sha256": "934630ed1fd93aa3e89ef5c2116f0b1cec45adc21c9c51229f8bb926e111fe09",
+      "size": 66505
     },
     {
       "path": "ui/motion.css",
@@ -140,13 +140,18 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "453ffb4202872b4b92ba042d55ac42d8935770087b15f3def53f668312e810f1",
-      "size": 64083
+      "sha256": "480c156df24574435f4c71c9a7d4f414f2c0fa5e8383db4b8505d4c1009c4110",
+      "size": 64287
     },
     {
       "path": "ui/popout.js",
-      "sha256": "a3176929d157c7a95abba919460c6b52f1241536b57f0b5ab8c018357ff11f35",
-      "size": 4379
+      "sha256": "dd0bd56812eac5159ef678a5365b9626f4f4e816c187f7852cc0e02fe611afbd",
+      "size": 6325
+    },
+    {
+      "path": "ui/profile.js",
+      "sha256": "17860c43b0d0efab74bdc91a29d566516dca53f58682614f68ac7be6af4f360e",
+      "size": 10139
     },
     {
       "path": "ui/queue.js",
@@ -160,8 +165,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "5d2bde51b6765314069b8b0801f89459bc74af1541ebeb4361f74698cc3f10c3",
-      "size": 121157
+      "sha256": "b4347cfb8a4f891d919dc9a015ec3974b81b6283c807ca883299f9d8e070173c",
+      "size": 133262
     },
     {
       "path": "ui/tokens.css",

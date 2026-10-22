@@ -18,6 +18,14 @@
     {id: 'creations', name: 'Creations', about: 'Run or stop your Sandbox sequences', min: [240, 140], size: [320, 300], weight: 1.1},
     {id: 'today', name: 'Today', about: 'How today went, what is next, AI spending', min: [220, 130], size: [300, 270], weight: 1},
     {id: 'link', name: 'Connection', about: 'The cable, the mirror, the tools and paired phones', min: [220, 140], size: [300, 290], weight: 1},
+    {id: 'clock', name: 'Clock', about: 'The time, the date and the queue\'s next start', min: [200, 110], size: [300, 160], weight: .7},
+    {id: 'spend', name: 'AI meter', about: 'This month\'s AI spending and the last seven days', min: [220, 150], size: [300, 230], weight: 1},
+    {id: 'vitals', name: 'Phone vitals', about: 'Battery, screen, control and the paired phones', min: [220, 150], size: [300, 230], weight: 1},
+    // (decor, the owner 2026-10-21: a cyber workspace; widgets.js draws them only while they are seen)
+    {id: 'ticker', name: 'LED sign', about: 'Your own message scrolling across in lights', min: [240, 90], size: [420, 120], weight: .6, decor: true},
+    {id: 'rain', name: 'Data rain', about: 'Falling glyphs in Falcor green', min: [180, 140], size: [260, 260], weight: 1, decor: true},
+    {id: 'radar', name: 'Radar', about: 'A sweep with a blip for every phone Falcor knows', min: [180, 180], size: [260, 260], weight: 1, decor: true},
+    {id: 'scope', name: 'Signal', about: 'The Hub\'s pulse as a scope line', min: [200, 100], size: [320, 150], weight: .7, decor: true},
   ];
   const byId = Object.fromEntries(WINS.map(w => [w.id, w]));
   const LAYOUTS = {
@@ -26,8 +34,8 @@
     grid: {name: 'Grid', about: 'The phone on the left, panels in an even grid', make: grid},
   };
   // Classic's two columns: where each panel goes, before the columns are evened out.
-  const LEFT = ['device', 'current', 'needs', 'today', 'link'], RIGHT = ['queue', 'log', 'creations', 'apps'];
-  const blank = () => ({v: 1, visible: Object.fromEntries(WINS.map(w => [w.id, !!w.core])), z: [...WINS.map(w => w.id).filter(id => id !== 'mirror'), 'mirror'], locked: false, snap: true, maxed: null,
+  const LEFT = ['device', 'current', 'needs', 'today', 'link', 'clock', 'vitals', 'radar', 'rain'], RIGHT = ['queue', 'log', 'creations', 'apps', 'spend', 'ticker', 'scope'];
+  const blank = () => ({v: 1, visible: Object.fromEntries(WINS.map(w => [w.id, !!w.core])), z: [...WINS.map(w => w.id).filter(id => id !== 'mirror'), 'mirror'], locked: false, snap: false, snapV: 1, maxed: null,
     slots: {upright: {preset: 'classic', rects: {}}, sideways: {preset: 'focus', rects: {}}}});
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const desk = $('phonegrid'), wins = Object.fromEntries(WINS.map(w => [w.id, desk.querySelector('[data-win="' + w.id + '"]')]));
@@ -41,7 +49,8 @@
       if (!s || s.v !== 1) return d;
       for (const w of WINS) if (typeof (s.visible || {})[w.id] === 'boolean') d.visible[w.id] = !!w.fixed || s.visible[w.id];
       if (Array.isArray(s.z)) d.z = [...new Set([...s.z.filter(id => byId[id]), ...d.z])];
-      d.locked = s.locked === true; d.snap = s.snap !== false; d.headV = s.headV === 1 ? 1 : 0; d.maxed = byId[s.maxed] && d.visible[s.maxed] ? s.maxed : null;
+      // (windows move freely by default, the owner 2026-10-21: a snap setting kept from before is turned off once)
+      d.locked = s.locked === true; d.snap = s.snapV === 1 ? s.snap === true : false; d.snapV = 1; d.headV = s.headV === 1 ? 1 : 0; d.maxed = byId[s.maxed] && d.visible[s.maxed] ? s.maxed : null;
       for (const k of ['upright', 'sideways']) {
         const sl = (s.slots || {})[k]; if (!sl) continue;
         d.slots[k].preset = LAYOUTS[sl.preset] ? sl.preset : null;
@@ -59,7 +68,7 @@
     bar.tabIndex = 0; bar.setAttribute('role', 'group');
     bar.setAttribute('aria-label', w.name + ' window: Enter maximizes it, the arrow keys move it, Shift with the arrows resizes it');
     bar.insertAdjacentHTML('afterbegin', '<span class="wingrip" aria-hidden="true"></span>');
-    bar.insertAdjacentHTML('beforeend', '<span class="winbtns"><button type="button" data-wact="max" title="Maximize" aria-label="Maximize ' + esc(w.name) + '">' + icon('max') + '</button>'
+    bar.insertAdjacentHTML('beforeend', '<span class="winbtns">' + (w.id === 'mirror' ? '' : '<button type="button" data-wact="pop" title="Pop out to its own window (put it on another monitor)" aria-label="Pop out ' + esc(w.name) + '">' + icon('popout') + '</button>') + '<button type="button" data-wact="max" title="Maximize" aria-label="Maximize ' + esc(w.name) + '">' + icon('max') + '</button>'
       + (w.fixed ? '' : '<button type="button" data-wact="hide" title="Hide it (Windows shows it again)" aria-label="Hide ' + esc(w.name) + '">' + icon('close') + '</button>') + '</span>');
     el.insertAdjacentHTML('beforeend', ['n', 'e', 's', 'w', 'ne', 'nw', 'se', 'sw'].map(k => '<i class="rz ' + k + '" data-rz="' + k + '" aria-hidden="true"></i>').join(''));
     el.hidden = !D.visible[w.id];
@@ -72,6 +81,7 @@
     bar.addEventListener('keydown', e => keys(w.id, e));
     bar.querySelector('.winbtns').addEventListener('click', e => {
       const b = e.target.closest('[data-wact]'); if (!b) return;
+      if (b.dataset.wact === 'pop') { if (window.popOut) window.popOut('hub-' + w.id, el.querySelector('.winbody'), w.name); return; }
       if (b.dataset.wact === 'max') toggleMax(w.id);
       else { show(w.id, false); $('deskwins').focus(); }
     });
@@ -280,7 +290,8 @@
       drag.moved = true; desk.classList.add(drag.kind === 'move' ? 'dragging' : 'resizing');
       if (D.maxed === drag.id) unmax(drag);
     }
-    const snap = D.snap && !e.altKey;
+    // Free by default; Snap on (Layout menu) catches edges, Alt then moves freely; Shift snaps while it is held.
+    const snap = (D.snap && !e.altKey) || e.shiftKey;
     drag.r = drag.kind === 'move' ? moveTo(drag, dx, dy, snap) : sizeTo(drag, dx, dy, snap);
     put(drag.id, drag.r);
   });
@@ -388,12 +399,12 @@
     const group = (label, items) => '<div role="group" aria-label="' + esc(label) + '"><p class="eyebrow" aria-hidden="true">// ' + esc(label.toUpperCase()) + '</p>' + items + '</div>';
     if (menu.kind === 'wins') {
       const item = w => '<button type="button" role="menuitemcheckbox" data-k="w:' + w.id + '" aria-checked="' + !!D.visible[w.id] + '"' + (w.fixed ? ' disabled' : '') + '>' + box + line(w.name, w.about) + '</button>';
-      pop.innerHTML = group('Windows', WINS.filter(w => w.core).map(item).join('')) + '<hr>' + group('More windows', WINS.filter(w => !w.core).map(item).join(''))
+      pop.innerHTML = group('Windows', WINS.filter(w => w.core).map(item).join('')) + '<hr>' + group('More windows', WINS.filter(w => !w.core && !w.decor).map(item).join('')) + '<hr>' + group('Decor', WINS.filter(w => w.decor).map(item).join(''))
         + '<hr><div class="duo" role="group" aria-label="Show"><button type="button" role="menuitem" data-k="all">' + line('Show all') + '</button><button type="button" role="menuitem" data-k="usual">' + line('Only the usual five') + '</button></div>';
     } else {
       const cur = D.slots[slot].preset;
       pop.innerHTML = group('Layout · ' + (slot === 'sideways' ? 'sideways game' : 'upright') + (cur ? '' : ' · arranged by you'), Object.entries(LAYOUTS).map(([k, l]) => '<button type="button" role="menuitemradio" data-k="l:' + k + '" aria-checked="' + (cur === k) + '">' + box.replace('box', 'box dot') + line(l.name, l.about) + '</button>').join(''))
-        + '<hr><button type="button" role="menuitemcheckbox" data-k="snap" aria-checked="' + D.snap + '">' + box + line('Snap', 'Edges catch the desk and other windows (hold Alt to move freely)') + '</button>'
+        + '<hr><button type="button" role="menuitemcheckbox" data-k="snap" aria-checked="' + D.snap + '">' + box + line('Snap', 'Edges catch the desk and other windows. Off: windows move freely (hold Shift to snap once)') + '</button>'
         + '<button type="button" role="menuitem" data-k="reset">' + line('Reset', 'The usual five windows in the classic layout, upright and sideways') + '</button>';
     }
     if (had) { const f = pop.querySelector('[data-k="' + had + '"]'); if (f) f.focus(); }
