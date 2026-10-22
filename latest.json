@@ -1,11 +1,11 @@
 {
-  "version": "0.21.30",
-  "notes": "Falcor.Hub 0.21.30: Sandbox drafts (runs stay drafts until you Publish them to the Library; only published runs can be scheduled); the phone app redone: Hub (customize its panels, today's queue), Sandbox Studio (the plugged-in phone's screen big and glowing, touch control and Teach right from your phone, S Pen crosshair, Skills drawer), Library with creations, Settings; Falcor chat as a floating button on the phone; one workspace grid behind every tab; a calm resting view in Current activity without the Resume button; scrollbars clear of the boxes; Device shows green when ready",
-  "publishedAt": "2026-10-22T01:51:48.887Z",
+  "version": "0.21.31",
+  "notes": "Falcor.Hub 0.21.31: every tab opens with the same heading in the same place (Library, Sandbox, Activity, Settings, and the phone app's tabs); Settings keeps its side menu; the Sandbox landing has one heading; Settings - About tells Falcor's story",
+  "publishedAt": "2026-10-22T02:06:10.553Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "b988f6175eefa0fc5580f1d10fbb2cfb4f19cb5d68a528626489cc140da0f01a",
+      "sha256": "e3e67bb6f37c059971f8bdd2a65895e13b89411fd5a5066c2b620ee7d8a7ec6d",
       "size": 1176314
     },
     {
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-C6QvynH4.css",
-      "sha256": "8ea951df75cf0c9befddc442b3813e2dd54b6212c1e8804b81f654c6f7df2965",
-      "size": 64974
+      "path": "remote-ui/assets/index-CmWHxfOz.css",
+      "sha256": "1332dbe2ec62359ae296333a66e31e812b39626222a5a2ce8593d6287c56c744",
+      "size": 65103
     },
     {
-      "path": "remote-ui/assets/index-DnN8sbq-.js",
-      "sha256": "7adcd92c3e59039baee2b65666d2a6acc25ec6bf495f93896c41cc0b24a80878",
-      "size": 193379
+      "path": "remote-ui/assets/index-Do3_qfyZ.js",
+      "sha256": "66b5933e271c6578eefc561503882d4f979fca030339909532f2f1420db663a3",
+      "size": 193664
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "cf52a4692a1ded71d7a40b397177df815c37100c02199984e4afa1c6f689f449",
+      "sha256": "813f08452c9a6a43004357e7e124e07bc5b1685f0fb9ee9a78e61f2c7a17175c",
       "size": 3845
     },
     {
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "ebaf306aa936e06a6d7c8a32691c86369562e2524eadf1d5a6f3cd74c4be1985",
-      "size": 56784
+      "sha256": "97510611269005a99a0a5e797aab1fa8f033fa04409744eb75eb90ee2f298d82",
+      "size": 58178
     },
     {
       "path": "ui/motion.css",
@@ -150,13 +150,13 @@
     },
     {
       "path": "ui/sandbox.js",
-      "sha256": "50b62b37861297d2c3131e9c14c37cf8509b3771b17a874fd8c43f180d014e14",
-      "size": 105184
+      "sha256": "40c7b6e0f40e7d9e8db7d2f1bf8b653618558a984006fd88c615a45f9908d24c",
+      "size": 104796
     },
     {
       "path": "ui/style.css",
-      "sha256": "d88adf2fa0b0225bec07063a593922e75441da1ab33bddd6db4ef4c7291a0b75",
-      "size": 111952
+      "sha256": "a36b14494dd18cbf6ba488b3e16c47569928f77cea62e3c62fdfc5ce5ac92447",
+      "size": 112956
     },
     {
       "path": "ui/tokens.css",
