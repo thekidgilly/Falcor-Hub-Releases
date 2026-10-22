@@ -239,7 +239,12 @@
       + (d ? '<span>' + (d.rotation % 2 ? 'Landscape' : 'Portrait') + '</span>' : '')
       + (q && def().target.rotation !== null && d && def().target.rotation !== d.rotation ? '<span class="warn">Drawn ' + (def().target.rotation % 2 ? 'landscape' : 'portrait') + '</span>' : ''));
     const l = liveRun(), mine = l && q && l.sequenceId === q.id;
-    for (const id of ['sbsave', 'sbsaveas', 'sbtest', 'sbpreview', 'sbsched', 'sbqueue', 'sbsavetask']) $(id).disabled = !q;
+    for (const id of ['sbsave', 'sbsaveas', 'sbtest', 'sbpreview', 'sbsched', 'sbqueue', 'sbsavetask', 'sbpublish']) $(id).disabled = !q;
+    // A draft can be played by hand; only a published one (in the Library) can be scheduled or queued.
+    const mineRow = q && SB.data ? SB.data.sequences.find(x => x.id === q.id) : null, isPub = !!(mineRow && mineRow.published);
+    htmlOnce($('sbpublish'), icon('check') + (isPub ? 'In Library' : 'Publish')); cls($('sbpublish'), 'done', isPub);
+    $('sbpublish').title = isPub ? 'Published: it is in the Library. Click to unpublish it.' : 'Put it in the Library, where it can be scheduled';
+    for (const id of ['sbsched', 'sbqueue']) { if (q && !isPub) $(id).disabled = true; $(id).title = q && !isPub ? 'Publish it to the Library first' : id === 'sbsched' ? 'Schedule' : 'Add to queue'; }
     if (q) { const listed = SB.data && SB.data.sequences.find(x => x.id === q.id); $('sbsavetask').innerHTML = icon(listed && listed.task ? 'check' : 'tasks') + (listed && listed.task ? 'In Tasks' : 'Save as task'); }
     $('sbsave').disabled = !q || !SB.dirty; $('sbundo').disabled = !SB.undo.length; $('sbredo').disabled = !SB.redo.length;
     $('sbstart').hidden = !!l; $('sbpreview').hidden = !!l; $('sbtest').hidden = !!l;
@@ -775,7 +780,7 @@
       + '<p class="muted small">' + s.added + ' step' + (s.added === 1 ? ' is' : 's are') + ' in the timeline below. Click one to change it, drag to reorder, Delete removes it, Preview plays it.</p>'
       + (s.skipped && s.skipped.length ? '<p class="sand small">Left out: ' + esc(s.skipped.join(', ')) + '.</p>' : '')
       + '<label>Name<input id="sbtname" maxlength="80" value="' + esc(title) + '"></label>'
-      + '<div class="row"><button class="primary" data-t="publish">' + icon('check') + 'Save to Library</button><button data-t="close">' + icon('edit') + 'Edit steps</button><button class="ghost danger" data-t="discard">' + icon('trash') + 'Discard</button></div>';
+      + '<p class="muted small">It is a draft until you publish it: drafts can be edited and run by hand; published runs are in the Library and can be scheduled.</p><div class="row"><button class="primary" data-t="publish">' + icon('check') + 'Publish to Library</button><button data-t="close">' + icon('edit') + 'Keep as draft</button><button class="ghost danger" data-t="discard">' + icon('trash') + 'Discard</button></div>';
     box.hidden = false; setMode('view', true);
   }
   $('sbtaught').onclick = async e => {
@@ -792,7 +797,7 @@
     if (act === 'publish') {
       const name = ($('sbtname').value || '').trim().slice(0, 80) || def().title;
       if (name !== def().title) edit(d => { d.title = name; }, {merge: 'title', insp: false});
-      await save({force: true, silent: true});
+      if (!await publishSeq({force: true, quiet: true})) return;
       $('sbtaught').innerHTML = '<p class="eyebrow">// SAVED</p><h2>' + icon('check') + 'In your Library</h2><p class="small">"' + esc(name) + '" is saved under Creations in the Library. Run it, schedule it or edit it any time.</p><div class="row"><button class="primary" data-t="library">Open Library</button><button data-t="close">Keep editing</button></div>';
       P.burst($('sbtaught'));
     }
@@ -804,12 +809,26 @@
   $('sbdev').onchange = e => { deviceId = e.target.value; if (def() && e.target.value) edit(d => { d.target.deviceId = e.target.value; }, {merge: 'dev'}); render(); };
   $('sbnew').onclick = () => newSheet(); $('sbopen').onclick = () => goHome('mine');
   $('sbsave').onclick = () => save(); $('sbsaveas').onclick = () => saveAs();
+  // Publish (draft → Library) or, when it is already there, Unpublish (back to Drafts, its schedules off).
+  async function publishSeq(o = {}) {
+    if (!SB.seq) return false;
+    if (SB.dirty || o.force) await save({force: !!o.force, silent: true});
+    const row = SB.data.sequences.find(x => x.id === SB.seq.id);
+    if (row && row.published && !o.force) {
+      if (!window.confirm('Unpublish "' + def().title + '"? It leaves the Library and its schedules turn off. It stays here as a draft.')) return false;
+      await sb('unpublish', {id: SB.seq.id}); await refresh(); toast('"' + def().title + '" is a draft again.'); return false;
+    }
+    try { await sb('publish', {id: SB.seq.id}); } catch { return false; }
+    await refresh(); if (!o.quiet) toast('"' + def().title + '" is in your Library now. Schedule it or run it from there.');
+    return true;
+  }
+  $('sbpublish').onclick = () => void publishSeq();
   $('sbundo').onclick = undo; $('sbredo').onclick = redo;
   $('sbtest').onclick = () => start('test'); $('sbpreview').onclick = () => start('preview'); $('sbstart').onclick = () => start('run');
   $('sbpause').onclick = () => { const l = liveRun(); if (!l) return; const paused = l.status === 'PAUSED' || l.status === 'NEEDS_ATTENTION'; void ctl(paused ? 'resume' : 'pause', paused ? 'Resumed.' : 'Paused. Resume or Stop when you are ready.')(); };
   $('sbskip').onclick = ctl('skip', 'Skipped that step.'); $('sbstop').onclick = ctl('stop', 'Stopped.'); $('sbafter').onclick = ctl('stopAfterGroup', 'It stops when this group or loop ends.');
   // Schedules are the Daily Queue's (queue.js#openScheduler, the same editor as Games and Tasks).
-  const schedule = async () => { if (!SB.seq) { toast('Open a sequence first.', 'warn'); return; } if (SB.dirty) await save({silent: true}); openScheduler({target: {type: 'sequence', id: SB.seq.id}, name: def().title, kind: 'sequence'}); };
+  const schedule = async () => { if (!SB.seq) { toast('Open a sequence first.', 'warn'); return; } if (SB.dirty) await save({silent: true}); const row = SB.data.sequences.find(x => x.id === SB.seq.id); if (row && !row.published) { toast('"' + def().title + '" is a draft. Publish it to the Library first, then schedule it.', 'warn'); return; } openScheduler({target: {type: 'sequence', id: SB.seq.id}, name: def().title, kind: 'sequence'}); };
   $('sbsched').onclick = schedule; $('sbprefs').onclick = () => prefsSheet(); $('sbhelp').onclick = () => helpSheet();
   $('sbqueue').onclick = async () => { if (!SB.seq) return; if (SB.dirty) await save({silent: true}); const d = sdev(); await call('queue', {op: 'add', target: {type: 'sequence', id: SB.seq.id}, deviceId: d && d.id}); toast('Added to today\'s queue: it runs in its turn while Autopilot runs (or press Run Ready on the Phone tab).'); };
   $('sbsavetask').onclick = async () => { if (!SB.seq) return; await save({silent: true, force: SB.dirty}); await call('queue', {op: 'saveAsTask', id: SB.seq.id, on: true}); await refresh(); toast('Saved, and listed in Tasks with Run now, Schedule and its history.'); };
@@ -873,17 +892,23 @@
     if (!SB.data) return;
     let q = '', sort = local.get('sort', 'updated'), folder = '';
     const draw = b => {
-      const L = SB.data.sequences.filter(s => (!q || (s.title + ' ' + s.description + ' ' + s.folder).toLowerCase().includes(q)) && (!folder || s.folder === folder))
+      const pub = SB.listPub === true;
+      b.querySelectorAll('#sbopub [data-p]').forEach(x => cls(x, 'on', (x.dataset.p === 'pub') === pub));
+      const L = SB.data.sequences.filter(s => !!s.published === pub && (!q || (s.title + ' ' + s.description + ' ' + s.folder).toLowerCase().includes(q)) && (!folder || s.folder === folder))
         .sort((a, c) => (c.favorite - a.favorite) || (sort === 'name' ? a.title.localeCompare(c.title) : sort === 'last' ? (c.lastRunAt || 0) - (a.lastRunAt || 0) : sort === 'next' ? (a.nextRunAt || Infinity) - (c.nextRunAt || Infinity) : c.updatedAt - a.updatedAt));
       b.querySelector('#sbolist').innerHTML = L.map(s => '<li class="' + (s.running ? 'run' : '') + '" data-id="' + esc(s.id) + '"><button class="ghost icon small" data-act="star" title="Star">' + icon('star', s.favorite ? 'sand' : '') + '</button><div><b>' + esc(s.title) + '</b>' + (s.folder ? ' <span class="chipcode">' + esc(s.folder) + '</span>' : '') + '<div class="meta">' + s.steps + ' steps · about ' + fmtMs(s.estimateMs) + ' · v' + s.revision + (s.lastRun ? ' · last ' + esc(s.lastRun.status.toLowerCase()) + ' ' + new Date(s.lastRun.at).toLocaleString() : ' · never run') + (s.nextRunAt ? ' · next ' + new Date(s.nextRunAt).toLocaleString() : '') + '</div></div>'
-        + '<div class="row"><button class="small primary" data-act="start" title="Run it now">' + icon('play') + '</button><button class="small" data-act="edit">Edit</button><button class="small icon" data-act="sched" title="Schedule">' + icon('calendar') + '</button><button class="small icon" data-act="clone" title="Clone">' + icon('copy') + '</button><button class="small icon" data-act="folder" title="Folder">' + icon('tasks') + '</button><button class="small icon danger" data-act="del" title="Delete">' + icon('trash') + '</button></div></li>').join('') || '<li class="muted small">No sequences' + (q ? ' match' : ' yet') + '.</li>';
+        + '<div class="row"><button class="small primary" data-act="start" title="Run it now">' + icon('play') + '</button><button class="small" data-act="edit">Edit</button>'
+        + (s.published ? '<button class="small icon" data-act="sched" title="Schedule">' + icon('calendar') + '</button><button class="small ghost" data-act="unpub" title="Take it out of the Library (its schedules turn off)">Unpublish</button>' : '<button class="small pubbtn" data-act="pub" title="Put it in the Library, where it can be scheduled"' + (s.steps ? '' : ' disabled') + '>' + icon('check') + 'Publish</button>')
+        + '<button class="small icon" data-act="clone" title="Clone">' + icon('copy') + '</button><button class="small icon" data-act="folder" title="Folder">' + icon('tasks') + '</button><button class="small icon danger" data-act="del" title="Delete">' + icon('trash') + '</button></div></li>').join('')
+        || '<li class="muted small">' + (q ? 'Nothing matches.' : pub ? 'Nothing published yet. Publish a draft to put it in the Library.' : 'No drafts. Everything you build or teach starts here until you publish it.') + '</li>';
       P.fix(b);
     };
     const folders = [...new Set(SB.data.sequences.map(s => s.folder).filter(Boolean))];
-    sheet(head('MY SEQUENCES', 'My sequences') + '<div class="row"><input id="sboq" placeholder="Search" class="grow"><select id="sbosort"><option value="updated">Last edited</option><option value="name">Name</option><option value="last">Last run</option><option value="next">Next run</option></select>' + (folders.length ? '<select id="sbofolder"><option value="">All folders</option>' + folders.map(f => '<option>' + esc(f) + '</option>').join('') + '</select>' : '') + '</div>'
+    sheet(head('DRAFTS', 'Drafts') + '<div class="row"><div class="seg" id="sbopub"><button data-p="draft">Drafts · ' + SB.data.sequences.filter(s => !s.published).length + '</button><button data-p="pub">Published · ' + SB.data.sequences.filter(s => s.published).length + '</button></div><input id="sboq" placeholder="Search" class="grow"><select id="sbosort"><option value="updated">Last edited</option><option value="name">Name</option><option value="last">Last run</option><option value="next">Next run</option></select>' + (folders.length ? '<select id="sbofolder"><option value="">All folders</option>' + folders.map(f => '<option>' + esc(f) + '</option>').join('') + '</select>' : '') + '</div>'
       + '<ul class="seqlist" id="sbolist"></ul><div class="row"><button class="primary small" id="sbonew">' + icon('plus') + 'New</button><button class="small" id="sboimport">' + icon('export') + 'Import .json</button><span class="grow"></span><span class="muted small">' + SB.data.schedules.filter(s => s.enabled).length + ' schedules on · ' + SB.data.runs.length + ' recent runs</span></div>', b => {
       b.querySelector('#sbosort').value = sort; draw(b);
       b.querySelector('#sboq').oninput = e => { q = e.target.value.toLowerCase(); draw(b); };
+      b.querySelector('#sbopub').onclick = e => { const p = e.target.closest('[data-p]'); if (p) { SB.listPub = p.dataset.p === 'pub'; draw(b); } };
       b.querySelector('#sbosort').onchange = e => { sort = e.target.value; local.set('sort', sort); draw(b); };
       const fsel = b.querySelector('#sbofolder'); if (fsel) fsel.onchange = e => { folder = e.target.value; draw(b); };
       b.querySelector('#sbonew').onclick = () => newSheet();
@@ -894,7 +919,9 @@
         if (a.dataset.act === 'edit') { if (SB.dirty && SB.seq && SB.seq.id !== id && !confirmLeave()) return; closeSheet(); await open(id); }
         if (a.dataset.act === 'start') { const d = sdev(); if (!d) { toast('Plug in the phone first.', 'warn'); return; } const r = await sb('start', {id, deviceId: d.id}); toast('Running "' + s.title + '" (version ' + r.revision + ').'); closeSheet(); if (!SB.seq || SB.seq.id !== id) await open(id); }
         if (a.dataset.act === 'sched') { closeSheet(); if (!SB.seq || SB.seq.id !== id) await open(id); schedule(); }
-        if (a.dataset.act === 'clone') { await sb('clone', {id}); await refresh(); draw(b); toast('Cloned.'); }
+        if (a.dataset.act === 'pub') { await sb('publish', {id}); await refresh(); draw(b); toast('"' + s.title + '" is in your Library now.'); }
+        if (a.dataset.act === 'unpub') { if (!window.confirm('Unpublish "' + s.title + '"? It leaves the Library and its schedules turn off. It stays here as a draft.')) return; await sb('unpublish', {id}); await refresh(); draw(b); toast('"' + s.title + '" is a draft again.'); }
+        if (a.dataset.act === 'clone') { await sb('clone', {id}); await refresh(); draw(b); toast('Cloned as a draft.'); }
         if (a.dataset.act === 'star') { await sb('meta', {id, favorite: !s.favorite}); await refresh(); draw(b); }
         if (a.dataset.act === 'folder') { const inpEl = P.el('<input maxlength="40" placeholder="Folder name, Enter to keep" value="' + esc(s.folder) + '">'); a.replaceWith(inpEl); inpEl.focus(); inpEl.onkeydown = async ev => { if (ev.key === 'Enter') { await sb('meta', {id, folder: inpEl.value}); await refresh(); draw(b); } if (ev.key === 'Escape') { ev.stopPropagation(); draw(b); } }; }
         if (a.dataset.act === 'del') { if (!window.confirm('Delete "' + s.title + '"? Its schedules turn off. Run logs are kept.')) return; await sb('remove', {id}); local.set('draft.' + id, null); if (SB.seq && SB.seq.id === id) { SB.seq = null; local.set('last', null); } await refresh(); draw(b); renderAll(); }
@@ -908,14 +935,14 @@
     if (SB.home && !$('rec').hidden) SB.home = null; // Teach records on the mirror: the editor's stage stays in view.
     const on = !!SB.home; cls(document.querySelector('[data-pane="sandbox"]'), 'home', on); $('sbhome').hidden = !on;
     if (!on || !SB.cat || !SB.data) return;
-    text($('sbminecount'), '· ' + SB.data.sequences.length);
+    text($('sbminecount'), '· ' + SB.data.sequences.filter(s => !s.published).length);
     document.querySelectorAll('#sbhometabs button').forEach(x => cls(x, 'on', x.dataset.home === SB.home));
     const b = $('sbhomebody');
     if (!force && SB.homeDrawn === SB.home) return;
     if (!force || !b.contains(document.activeElement)) SB.homeDrawn = SB.home; else return;
     if (SB.home === 'create') {
       newSheet(b);
-      b.insertAdjacentHTML('afterbegin', '<div class="sbabout"><p class="eyebrow">// THE SANDBOX</p><h2>Line up blocks, and Falcor plays them on the phone</h2><p class="muted">Taps, swipes, waits, apps and checks, one after another, through the same safety gate as everything Falcor does: never a price, a purchase or an ad, and you can stop it at any moment. Start blank, from the example or a preset, or press Teach in the editor and show it on the mirror.</p></div>');
+      // (the tab's own heading, // SANDBOX, introduces it: no second heading here)
     } else openSheet(b);
   }
   $('sbhometabs').onclick = e => { const t = e.target.closest('[data-home]'); if (t) goHome(t.dataset.home); };

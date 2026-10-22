@@ -160,19 +160,21 @@
   <!-- SANDBOX -->
   <section data-pane="sandbox" class="pane sandbox" hidden>
     <div class="sbhome" id="sbhome" hidden>
-      <div class="sbhometop"><div class="seg" id="sbhometabs"><button data-home="create"><svg class="ico"><use href="#i-plus"></use></svg>Create</button><button data-home="mine"><svg class="ico"><use href="#i-sandbox"></use></svg>My sequences <span id="sbminecount"></span></button></div></div>
+      <div class="crhead pagehead"><div><p class="eyebrow">// SANDBOX</p><h2>Sandbox</h2><p class="muted small">Build runs from blocks, or press Teach and show Falcor on the phone.</p></div></div>
+      <div class="sbhometop"><div class="seg" id="sbhometabs"><button data-home="create"><svg class="ico"><use href="#i-plus"></use></svg>Create</button><button data-home="mine"><svg class="ico"><use href="#i-sandbox"></use></svg>Drafts <span id="sbminecount"></span></button></div></div>
       <div class="sbhomebody" id="sbhomebody"></div>
     </div>
     <div class="sbhead" id="sbhead">
-      <button class="small ghost" id="sbtohome" title="Back to My sequences"><svg class="ico"><use href="#i-back"></use></svg>My sequences</button>
+      <button class="small ghost" id="sbtohome" title="Back to Drafts"><svg class="ico"><use href="#i-back"></use></svg>Drafts</button>
       <div class="sbname"><svg class="ico"><use href="#i-sandbox"></use></svg><input id="sbtitle" maxlength="80" placeholder="No sequence open" aria-label="Sequence name"><span class="dirty" id="sbdirty" title="Unsaved changes" hidden></span><span class="muted small" id="sbrev"></span></div>
       <select id="sbdev" title="The phone it runs on"></select>
       <span class="grow"></span>
       <div class="sbacts"><button class="small" id="sbfocus" aria-pressed="false">Focus</button><button class="small danger" id="sbstudio-stop">Stop all</button><button class="small" id="sbpanels">Panels</button><button class="small" id="sbfeedback">Feedback: Off</button>
         <button class="small" id="sbnew" title="New sequence (Ctrl+N)"><svg class="ico"><use href="#i-plus"></use></svg>New</button>
-        <button class="small" id="sbopen" title="My sequences (Ctrl+O)"><svg class="ico"><use href="#i-book"></use></svg>Open</button>
+        <button class="small" id="sbopen" title="Drafts and published (Ctrl+O)"><svg class="ico"><use href="#i-book"></use></svg>Open</button>
         <button class="small" id="sbsave" title="Save a new version (Ctrl+S)"><svg class="ico"><use href="#i-check"></use></svg>Save</button>
         <button class="small" id="sbsaveas" title="Save as a new sequence">Save As</button>
+        <button class="small pubbtn" id="sbpublish" title="Put it in the Library, where it can be scheduled"><svg class="ico"><use href="#i-check"></use></svg>Publish</button>
         <button class="small" id="sbsavetask" title="Save it and list it in Tasks, with Run now, Schedule and its history"><svg class="ico"><use href="#i-tasks"></use></svg>Save as task</button>
         <button class="small icon" id="sbundo" title="Undo (Ctrl+Z)"><svg class="ico"><use href="#i-undo"></use></svg></button>
         <button class="small icon" id="sbredo" title="Redo (Ctrl+Y)"><svg class="ico"><use href="#i-redo"></use></svg></button>
@@ -266,7 +268,7 @@
   <!-- GAMES -->
   <section data-pane="games" class="pane" hidden>
     <div id="gamesview">
-      <div class="toolrow"><div><p class="eyebrow">// LIBRARY</p><h2>Your games and apps</h2></div><span class="grow"></span><button class="primary" id="capgame" title="Read the offer page open in your earning app on the phone"><svg class="ico"><use href="#i-camera"></use></svg>Capture</button><button id="offeradd"><svg class="ico"><use href="#i-reward"></use></svg>Add offer</button><button id="gamenew"><svg class="ico"><use href="#i-plus"></use></svg>New task</button></div>
+      <div class="toolrow"><div class="libhead"><p class="eyebrow">// LIBRARY</p><h2>Your games and apps</h2><p class="muted small">Every game, app and creation, with what each one pays and where it stands.</p></div><span class="grow"></span><button class="primary" id="capgame" title="Read the offer page open in your earning app on the phone"><svg class="ico"><use href="#i-camera"></use></svg>Capture</button><button id="offeradd"><svg class="ico"><use href="#i-reward"></use></svg>Add offer</button><button id="gamenew"><svg class="ico"><use href="#i-plus"></use></svg>New task</button></div>
       <div class="toolrow libbar"><div class="seg" id="libfilter"><button data-f="all" class="on">All</button><button data-f="games">Games</button><button data-f="apps">Apps</button><button data-f="creations">Creations</button><button data-f="active">Active</button><button data-f="completed">Completed</button><button data-f="expired">Expired</button></div><span class="grow"></span><label class="inline small muted">Sort<select id="libsort"><option value="updated">Recently updated</option><option value="deadline">Deadline</option><option value="reward">Advertised reward</option><option value="progress">Progress</option></select></label></div>
       <div class="panel capbox" id="capbox" hidden>
         <div class="caphead"><span class="gicon" id="capart"></span><div class="grow"><p class="eyebrow">// CAPTURE · <span id="capsrc"></span></p><h3 id="capname">Reading…</h3><p class="small" id="capline"></p></div>
@@ -469,12 +471,12 @@
 
   <!-- SETTINGS -->
   <section data-pane="settings" class="pane" hidden>
+    <div class="crhead pagehead"><div><p class="eyebrow">// SETTINGS</p><h2>Settings</h2><p class="muted small">Falcor's AI, the phone app, secrets and updates.</p></div></div>
     <div class="settingsgrid">
       <nav class="submenu" id="submenu">
         <button data-sub="ai" class="on"><svg class="ico"><use href="#i-ai"></use></svg>AI</button>
         <button data-sub="phoneapp"><svg class="ico"><use href="#i-wifi"></use></svg>Phone app</button>
         <button data-sub="secrets"><svg class="ico"><use href="#i-lock"></use></svg>Secrets</button>
-        <button data-sub="knowledge"><svg class="ico"><use href="#i-book"></use></svg>Knowledge</button>
         <button data-sub="updates"><svg class="ico"><use href="#i-update"></use></svg>Updates</button>
         <button data-sub="about"><svg class="ico"><use href="#i-phone"></use></svg>About</button>
       </nav>
@@ -536,7 +538,6 @@
           <form class="row" id="secretform"><input name="name" placeholder="name" required><input name="value" type="password" placeholder="value" required><button>Save</button></form>
           <ul class="rows" id="secrets"></ul>
         </div>
-        <div class="panel" data-sub="knowledge" hidden><p class="eyebrow">// KNOWLEDGE</p><h2>What Falcor learned</h2><p class="muted small">Every app Falcor learned from watching you play it, with its guide and teaching sessions. Each game's page shows the same under What Falcor knows. Teach a new app from the Phone or Sandbox tab.</p><div class="appcards" id="apps"></div><div class="panel empty" id="learnnone" hidden><img src="dragon.png" alt=""><span>I haven't learned any app yet. Open one on the phone and press <b>Teach Falcor</b>, then play it on the mirror.</span><button data-go="phone">Go to Phone</button></div></div>
         <div class="panel" data-sub="updates" hidden>
           <p class="eyebrow">// UPDATES</p>
           <div class="top"><h2 id="aboutver">Falcor.Hub</h2><span class="state" id="updstate"><span class="led"></span><span></span></span></div>
@@ -547,7 +548,17 @@
         <div class="panel" data-sub="about" hidden>
           <p class="eyebrow">// ABOUT</p>
           <div class="abouthero"><img src="dragon.png" alt=""><div><h2>FALCOR.HUB</h2><p class="muted small" id="about"></p></div></div>
-          <p class="muted small">Phone control and automation on this computer. Nothing here talks to a website; the AI services you connect are called only with your own keys.</p>
+          <div class="lore">
+            <p class="lorehead">The Lay of the Keeper</p>
+            <p>Before the first screen ever glowed, the old dragons kept the lore of play. From the high places they watched every game ever made, and learned its hidden paths: where the treasure lies buried, which doors are snares, how a level is won by patience and never by haste. One by one the old dragons went to their long sleep, until only the eldest remained.</p>
+            <p>Falcor would not sleep. He came down from the mountain with everything his kin had known, and he built a hall to keep it. This is that hall.</p>
+            <p>Here the Keeper watches over the phone you bring him. Through its glass he sees what you see, and through its glowing frame he learns. When you rest, he plays on through the long night, and when the sun returns, the spoils of the day wait for you, counted and true.</p>
+            <p>Nothing here is learned by chance. When you play before him, he marks every tap, every pause and every word you type, and weaves them into runs that answer to you alone. A run once shown can be cast again, unchanged, as often as you call for it. Each game he plays leaves him wiser for the next, and the more you show him, the deeper his memory runs.</p>
+            <p>The old laws still bind him. He never spends what is not his: no purchase, no wager, not a single coin of yours leaves your hand by his claw. Nothing in this hall stirs until you have blessed it. And should you speak the word of stilling, <b>stop</b>, every wing in the hall folds at once.</p>
+            <p>The hall keeps its own secrets. Your keys rest here and nowhere else, each one whispered only to its own keeper. No website peers through these windows, and nothing that passes between you and the dragon is ever sold.</p>
+            <p>This knowledge is not written in any book. It passes only from master to apprentice, from hand to claw, and you are now one of the very few who hold it.</p>
+            <p class="loresign">Few are ever shown the way in. You were. Guard what you learn here, and teach him well.<span>— Falcor, Keeper of the Hub</span></p>
+          </div>
         </div>
       </div>
     </div>

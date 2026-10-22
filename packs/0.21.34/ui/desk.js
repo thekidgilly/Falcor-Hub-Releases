@@ -9,7 +9,7 @@
   const KEY = 'falcor.desk.v1', GAP = 12, SNAP = 10, STEP = 8;
   const WINS = [
     {id: 'mirror', name: 'Phone screen', about: 'The live mirror and its tools (always shown)', core: true, fixed: true, min: [240, 300]},
-    {id: 'device', name: 'Device', about: 'The phone, Autopilot and Run Ready', core: true, min: [220, 140]},
+    {id: 'device', name: 'Device', about: 'The phone plugged into this computer', core: true, min: [220, 140]},
     {id: 'current', name: 'Current activity', about: 'What runs now and what comes next', core: true, min: [220, 110], weight: 1},
     {id: 'queue', name: 'Today\'s queue', about: 'Everything planned for today', core: true, min: [240, 150], weight: 1.7},
     {id: 'log', name: 'Activity log', about: 'What Falcor and you did, line by line', core: true, min: [220, 110], weight: 1.1},
@@ -81,7 +81,11 @@
     });
   }
   // Touching a window brings it to the front (only its stacking changes, so nothing inside it reloads or loses focus).
-  desk.addEventListener('pointerdown', e => { const el = e.target.closest('.win'); if (el && topShown() !== el.dataset.win) { raise(el.dataset.win); save(); } }, true);
+  desk.addEventListener('pointerdown', e => {
+    const el = e.target.closest('.win');
+    if (!el) { if (!unfocused) { unfocused = true; stackZ(); if (document.activeElement && desk.contains(document.activeElement)) document.activeElement.blur(); } return; }
+    if (topShown() !== el.dataset.win || unfocused) { raise(el.dataset.win); save(); }
+  }, true);
   new ResizeObserver(() => { if (!drag) apply(false); }).observe(desk);
 
   // ------------------------------------------------------------------ placing
@@ -120,8 +124,10 @@
     cls(wins[id], 'maxed', max); htmlOnce(b, icon(max ? 'restore' : 'max')); b.title = max ? 'Restore' : 'Maximize';
     wins[id].querySelector('.winbar').title = D.locked || max ? 'Double-click to ' + (max ? 'restore' : 'maximize') + (D.locked ? ' · the layout is locked' : '') : 'Drag to move · double-click to maximize';
   }
-  function stackZ() { const top = topShown(); for (const w of WINS) { wins[w.id].style.zIndex = String(D.maxed === w.id ? 60 : 10 + D.z.indexOf(w.id)); cls(wins[w.id], 'front', w.id === top); } }
-  function raise(id) { if (D.z[D.z.length - 1] !== id) D.z = [...D.z.filter(x => x !== id), id]; stackZ(); }
+  // (a click on the empty grid clears the highlight until a window is touched again; the stacking order is kept)
+  let unfocused = false;
+  function stackZ() { const top = topShown(); for (const w of WINS) { wins[w.id].style.zIndex = String(D.maxed === w.id ? 60 : 10 + D.z.indexOf(w.id)); cls(wins[w.id], 'front', !unfocused && w.id === top); } }
+  function raise(id) { unfocused = false; if (D.z[D.z.length - 1] !== id) D.z = [...D.z.filter(x => x !== id), id]; stackZ(); }
   // A window shown in an arranged layout goes where nothing else is, at its usual size, else its smallest. With no room
   // left it goes where it covers the least, at its usual size; covering the phone's screen counts four times over.
   function place(id, W, H) {

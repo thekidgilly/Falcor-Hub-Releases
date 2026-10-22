@@ -1,11 +1,11 @@
 {
-  "version": "0.21.33",
-  "notes": "Falcor.Hub 0.21.33: Settings no longer has a Knowledge list: every app Falcor learned has its card in the Library, whose page shows What Falcor knows and opens the guide",
-  "publishedAt": "2026-10-22T02:15:15.517Z",
+  "version": "0.21.34",
+  "notes": "Falcor.Hub 0.21.34: on the Hub, a click on the empty grid clears the highlighted window",
+  "publishedAt": "2026-10-22T02:18:17.058Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "2ee7b30b946f39dc44c9705779d2ec55d0f74c1cfb0a544d590eadeaa57b4262",
+      "sha256": "eb3c7b7a8cdeb6921c5103069974c60c874e688ceae4cadf3536663ce1c5c2f9",
       "size": 1176346
     },
     {
@@ -100,8 +100,8 @@
     },
     {
       "path": "ui/desk.js",
-      "sha256": "122eb80f55484d8fe5deb66c41f141302305872c873be1dd997f2a3787930c10",
-      "size": 44631
+      "sha256": "21052f5de10478494af7e1b2bd46e086c5e6c74638d0441d9bb05d712087d29e",
+      "size": 44993
     },
     {
       "path": "ui/dragon.png",

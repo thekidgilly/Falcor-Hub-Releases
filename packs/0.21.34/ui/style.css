@@ -251,13 +251,6 @@ section[data-pane="falcor"] { height: 100%; display: flex; flex-direction: colum
 section[data-pane="knowledge"] > .toolrow { margin-bottom: var(--s3); }
 .learngrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s3); align-items: start; max-width: 1180px; }
 .learnmain { display: grid; gap: var(--s3); }
-.appcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s2); margin-top: var(--s3); }
-.appcards .appcard { text-align: left; font: inherit; white-space: normal; cursor: pointer; } .appcards .appcard:hover { border-color: var(--accent); }
-.appcard { display: grid; grid-template-columns: 32px 1fr; gap: var(--s2) var(--s3); padding: var(--s3); cursor: pointer; }
-.appcard.on { border-color: var(--accent); }
-.appcard .ai { width: 32px; height: 32px; display: grid; place-items: center; background: var(--panel-2); color: var(--accent); border: 1px solid var(--line); }
-.appcard b { font: var(--t14) var(--voice); font-weight: 400; } .appcard .m { color: var(--muted); font-size: var(--t11); }
-.klevel { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; } .klevel i { height: 4px; background: var(--line); } .klevel i.on { background: var(--accent); }
 .legend { display: flex; gap: var(--s2); align-items: center; color: var(--muted); margin: var(--s2) 0 0; }
 .dot { display: inline-block; width: 7px; height: 7px; } .dot.seen, .dot.g { background: var(--accent); } .dot.ai, .dot.s { background: var(--sand); } .dot.r { background: var(--red); }
 #guide { display: grid; gap: var(--s3); }
@@ -961,3 +954,63 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .steps.flow .blk .tile::before { content: none; }
 .steps.flow .blk .tile .ico { width: 34px; height: 34px; filter: drop-shadow(0 0 3px rgba(var(--cc, 122,167,255), .9)) drop-shadow(0 0 8px rgba(var(--cc, 122,167,255), .45)); }
 .steps.flow .blk.sel .bico { filter: none; } .steps.flow .blk.sel .tile .ico { filter: drop-shadow(0 0 4px rgba(var(--cc, 122,167,255), 1)) drop-shadow(0 0 12px rgba(var(--cc, 122,167,255), .6)); }
+/* Publish: a draft's way into the Library (green); In Library once it is there */
+.pubbtn { color: var(--green); border-color: rgba(92,229,154,.5); } .pubbtn.done { color: var(--muted); border-color: var(--line-strong); }
+/* Workspace grid (the owner, 2026-10-21): faint white pixel lines on the Hub's desk of windows, the Sandbox stage and its
+   timeline, a brighter line every fourth, so arranging windows and building runs feels like working on a grid. */
+.desk, .sbstage, .sbtl .steps {
+  background: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px) -1px -1px / 96px 96px, linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px) -1px -1px / 96px 96px,
+    linear-gradient(rgba(255,255,255,.024) 1px, transparent 1px) -1px -1px / 24px 24px, linear-gradient(90deg, rgba(255,255,255,.024) 1px, transparent 1px) -1px -1px / 24px 24px; }
+.desk { box-shadow: inset 0 0 0 1px rgba(255,255,255,.04); }/* a creation's card in the Library: its pixel icon large and glowing */
+.gcard .gicon > .ico { width: 34px; height: 34px; color: #7AA7FF; filter: drop-shadow(0 0 3px rgba(122,167,255,.9)) drop-shadow(0 0 8px rgba(122,167,255,.4)); }
+/* Current activity at rest: the sleeping dragon breathing, its z's drifting up, a pixel waiting bar. */
+.qrest { height: 100%; min-height: 160px; display: grid; place-items: center; align-content: center; gap: 14px; text-align: center; }
+.qrest b { font: 13px var(--voice); font-weight: 400; letter-spacing: .16em; color: var(--muted); }
+.qrestdragon { position: relative; width: 72px; height: 72px; }
+.qrestdragon img { width: 72px; height: 72px; image-rendering: pixelated; opacity: .85; animation: qbreathe 3.2s steps(8) infinite alternate; }
+.qrestdragon i { position: absolute; right: -6px; top: 4px; font: 12px var(--voice); font-style: normal; color: var(--accent); opacity: 0; animation: qzz 3s steps(6) infinite; }
+.qrestdragon i:nth-child(3) { animation-delay: 1s; right: -14px; } .qrestdragon i:nth-child(4) { animation-delay: 2s; right: -22px; }
+@keyframes qbreathe { from { transform: translateY(0) scale(1); } to { transform: translateY(-2px) scale(1.03); } }
+@keyframes qzz { 0% { opacity: 0; transform: translateY(6px); } 30% { opacity: .9; } 100% { opacity: 0; transform: translateY(-16px); } }
+@media (prefers-reduced-motion: reduce) { .qrestdragon img, .qrestdragon i { animation: none; } }/* The workspace grid behind every tab (the owner, 2026-10-21): one grid for the whole page, scrolling with it; the desk,
+   the Sandbox stage and the timeline are clear so it shows through them, lined up. */
+main { background: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px) -1px -1px / 96px 96px, linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px) -1px -1px / 96px 96px,
+    linear-gradient(rgba(255,255,255,.024) 1px, transparent 1px) -1px -1px / 24px 24px, linear-gradient(90deg, rgba(255,255,255,.024) 1px, transparent 1px) -1px -1px / 24px 24px, var(--bg);
+  background-attachment: local, local, local, local, local; }
+.desk, .sbstage, .sbtl .steps { background: transparent; }/* Scrollbars never touch the boxes (the owner, 2026-10-21): the space is kept beside every scrolling list, and the thumb
+   is slim with clear space around it. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border: 3px solid transparent; background-clip: padding-box; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--accent); }
+.winbody, .qlist, .console .log, .sblib, .sbinsp, .steps, .runlog, .launch, .crw, .threadlist, .context, .applist, .timeline, .mrows, .msgs, .drawer, .sbhome { scrollbar-gutter: stable; }
+.winbody { padding-right: 6px; }
+.qlist, .console .log, .launch, .crw, .applist, .timeline, .threadlist, .context { padding-right: 6px; }/* (the resting view, calmer: centred a little above the middle of the window, slow smooth breathing, the z's drifting
+   softly, and three dots fading in turn instead of a blinking bar) */
+#missionbody:has(.qrest) { position: relative; min-height: 180px; }
+.qrest { position: absolute; inset: 0; min-height: 0; padding-bottom: 10%; height: auto; }
+.qrestdragon img { animation: qbreathe2 4s ease-in-out infinite; }
+.qrestdragon i { animation: qzz2 4.5s ease-in-out infinite; }
+.qrestdragon i:nth-child(3) { animation-delay: 1.5s; } .qrestdragon i:nth-child(4) { animation-delay: 3s; }
+@keyframes qbreathe2 { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes qzz2 { 0% { opacity: 0; transform: translate(0, 4px); } 35% { opacity: .7; } 100% { opacity: 0; transform: translate(4px, -14px); } }
+.qdots { display: inline-flex; gap: 8px; } .qdots i { width: 6px; height: 6px; background: var(--accent); opacity: .25; animation: qdot 1.8s ease-in-out infinite; }
+.qdots i:nth-child(2) { animation-delay: .3s; } .qdots i:nth-child(3) { animation-delay: .6s; }
+@keyframes qdot { 0%, 100% { opacity: .2; } 50% { opacity: .85; } }
+@media (prefers-reduced-motion: reduce) { .qdots i { animation: none; opacity: .5; } }
+/* (a wider gap between scrollbars and the boxes) */
+::-webkit-scrollbar { width: 14px; height: 14px; }
+::-webkit-scrollbar-thumb { border: 4px solid transparent; background-clip: padding-box; }
+.winbody { padding-right: 12px; }
+.qlist, .console .log, .launch, .crw, .applist, .timeline, .threadlist, .context, .sblib, .sbinsp { padding-right: 12px; }#missionbody:has(.qrest) { position: absolute; inset: 0; min-height: 0; }
+.devwhich { margin: 2px 0 8px; line-height: 1.4; }
+/* Every tab opens with the same heading in the same place (eyebrow, title, a line): Library, Sandbox, Activity, Settings. */
+.pagehead { margin: 0 0 var(--s4); }
+.sbhome { margin: 0; }
+.libhead .eyebrow { margin: 0; } .libhead h2 { margin: 2px 0 2px; } .libhead p { margin: 0; }
+/* About: Falcor's lore, in his own voice. */
+.lore { display: grid; gap: 12px; margin-top: var(--s3); padding: var(--s4); border: 1px solid rgba(92,229,154,.25); border-radius: var(--r2); background: linear-gradient(180deg, rgba(92,229,154,.05), transparent 60%); box-shadow: 0 0 18px rgba(92,229,154,.06); font-size: var(--t13); line-height: 1.7; }
+.lore p { margin: 0; } .lore b { color: var(--red); font-weight: 400; font-family: var(--voice); }
+.lorehead { font: 15px var(--voice); letter-spacing: .04em; color: var(--green); text-shadow: 0 0 8px rgba(92,229,154,.35); }
+.loresign { font-family: var(--voice); color: var(--sand); display: grid; gap: 4px; } .loresign span { color: var(--muted); font-size: var(--t12); }/* (the lore's title: white in the voice font with a thin sand rule, no green glow) */
+.lorehead { color: var(--text); text-shadow: none; font-size: 16px; letter-spacing: .12em; text-transform: uppercase; padding-bottom: 10px; border-bottom: 1px solid rgba(245,181,68,.45); }
+.lore { border-color: var(--line-strong); background: linear-gradient(180deg, rgba(245,181,68,.04), transparent 50%); box-shadow: none; }
