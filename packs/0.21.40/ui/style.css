@@ -1036,3 +1036,48 @@ section[data-pane="phone"] > .pagehead { flex: none; margin-bottom: 0; }
 .gpdrawerhead .eyebrow { margin: 0; } .gpdrawerhead h2 { margin: 2px 0 0; }/* tab names and both heading lines in capitals (the owner, 2026-10-21) */
 .tabs button { text-transform: uppercase; letter-spacing: .06em; }
 .pagehead h2, .libhead h2 { text-transform: uppercase; letter-spacing: .06em; }
+/* (every page heading's title in capitals, Activity's and Creations' too) */
+.crhead h2 { text-transform: uppercase; letter-spacing: .06em; }
+/* The Hub's heading sits behind the desk, which fills the whole tab: windows can be moved over it. */
+section[data-pane="phone"] { position: relative; }
+section[data-pane="phone"] > .pagehead { position: absolute; top: 0; left: 0; z-index: 0; pointer-events: none; }
+section[data-pane="phone"] > .desk { z-index: 1; }
+/* A panel in its own window (popout.js): a title strip, the panel filling the rest, on the workspace grid. */
+.popbody { margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+.pophead { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); font: 12px var(--voice); letter-spacing: .1em; color: var(--muted); }
+.pophead b { font-weight: 400; color: var(--text); } .popdot { width: 8px; height: 8px; background: var(--green); box-shadow: 0 0 6px rgba(92,229,154,.8); }
+.popstage { flex: 1; min-height: 0; overflow: auto; padding: 12px; scrollbar-gutter: stable;
+  background: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px) -1px -1px / 96px 96px, linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px) -1px -1px / 96px 96px, linear-gradient(rgba(255,255,255,.024) 1px, transparent 1px) -1px -1px / 24px 24px, linear-gradient(90deg, rgba(255,255,255,.024) 1px, transparent 1px) -1px -1px / 24px 24px; }
+.popchain { position: static !important; inset: auto !important; transform: none !important; width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; display: flex !important; flex-direction: column; border: 0 !important; box-shadow: none !important; background: none !important; overflow: visible !important; grid-template-columns: none !important; }
+.popchain > .winbody, .popchain > .panel { flex: 1; min-height: 0; max-height: none; overflow: auto; }
+.popbody .popbtn, .popbody [data-wact="pop"] { display: none; }
+/* Where a popped-out panel was: a note and Bring it back. */
+.popplace { display: grid; place-items: center; align-content: center; gap: 8px; padding: 16px; min-height: 90px; text-align: center; font: 12px var(--voice); color: var(--muted); border: 1px dashed rgba(92,229,154,.35); border-radius: var(--r2); background: rgba(92,229,154,.03); }
+.popplace .ico { width: 22px; height: 22px; color: var(--green); }
+.win > .popplace { flex: 1; margin: 8px; }
+/* A Sandbox panel popped out leaves no mark: the stage and its grid take its space (the owner, 2026-10-21). */
+.popplace.popfree { display: none !important; }
+/* (with a panel out the row becomes free space: the others keep their widths and the stage's grid shows where it was) */
+.sbgrid:has(> .popfree) { display: flex; }
+.sbgrid:has(> .popfree) > .sblib { flex: 0 0 44px; } .sbgrid.libopen:has(> .popfree) > .sblib { flex-basis: 220px; }
+.sbgrid:has(> .popfree) > .sbcenter { flex: 1 1 260px; min-width: 0; } .sbgrid:has(> .popfree) > .sbinsp { flex: 0 0 280px; margin-left: auto; }
+.popbody .sblib > :not(.top), .popbody .sblib .eyebrow { display: revert !important; } .popbody #sblibfold { display: none; }
+.popbody .popchain.sbgrid { display: block; height: 100%; } .popbody .sbcenter, .popbody .sblib, .popbody .sbinsp { height: 100%; }
+/* The Hub's extra windows (widgets.js): Clock, AI meter, Phone vitals and the decor. */
+.win .decor, .ledsign { display: block; width: 100%; height: 100%; min-height: 0; border-radius: var(--r2); image-rendering: pixelated; }
+.ledbox { position: relative; height: 100%; display: flex; flex-direction: column; gap: 6px; }
+.ledbox .ledsign { flex: 1; box-shadow: inset 0 0 0 1px rgba(92,229,154,.15); }
+.tkform { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; } .tkform input { flex: 1; min-width: 140px; } .tkform select { width: auto; }
+.tkcolors { display: flex; gap: 4px; } .tkdot { width: 18px; height: 18px; min-height: 0; padding: 0; border-radius: 50%; border: 2px solid transparent; } .tkdot.on { border-color: #EDEDED; box-shadow: 0 0 8px currentColor; }
+.clockbox { height: 100%; display: grid; place-content: center; text-align: center; gap: 4px; }
+.clockt { font: clamp(26px, 9cqw, 64px)/1 var(--voice); color: var(--green); letter-spacing: .06em; text-shadow: 0 0 10px rgba(92,229,154,.55), 0 0 26px rgba(92,229,154,.25); }
+.win[data-win="clock"] .winbody { container-type: inline-size; }
+.clockd { font: 12px var(--voice); letter-spacing: .14em; color: var(--muted); } .clockn { font-size: var(--t12); color: var(--sand, #F5B544); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spendbox, .vitalsbox { display: flex; flex-direction: column; gap: 10px; }
+.spendtop b { display: block; font: 28px/1 var(--voice); color: var(--green); text-shadow: 0 0 12px rgba(92,229,154,.4); } .spendtop span { font-size: var(--t11); color: var(--muted); }
+.spendbars { display: flex; align-items: flex-end; gap: 6px; height: 64px; padding-bottom: 14px; }
+.spendbars i { position: relative; flex: 1; min-height: 3px; background: linear-gradient(#5CE59A, rgba(92,229,154,.35)); box-shadow: 0 0 8px rgba(92,229,154,.35); }
+.spendbars em { position: absolute; left: 0; right: 0; bottom: -15px; text-align: center; font: 10px var(--voice); font-style: normal; color: var(--muted); }
+.vbatt { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: baseline; } .vbatt span { font: 12px var(--voice); } .vbatt b { font: 22px/1 var(--voice); }
+.vbatt i { grid-column: 1 / -1; height: 10px; border: 1px solid rgba(237,237,237,.25); padding: 1px; } .vbatt u { display: block; height: 100%; background: var(--green); box-shadow: 0 0 8px rgba(92,229,154,.6); text-decoration: none; }
+.vbatt.warn b { color: var(--sand, #F5B544); } .vbatt.warn u { background: var(--sand, #F5B544); } .vbatt.bad b { color: var(--red, #F0544F); } .vbatt.bad u { background: var(--red, #F0544F); } .vbatt.ok b { color: var(--green); }

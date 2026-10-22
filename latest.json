@@ -1,11 +1,11 @@
 {
-  "version": "0.21.39",
-  "notes": "Pop any Hub window or Sandbox panel out into its own window for a second monitor; Falcor's picture is the new app icon (desktop shortcut, taskbar and the phone app); small vibrations on the phone app (needs the 0.3.3 phone app).",
-  "publishedAt": "2026-10-22T03:14:56.896Z",
+  "version": "0.21.40",
+  "notes": "New Hub windows in the Windows menu: Clock, AI meter, Phone vitals, and under Decor an LED sign with your own message, Data rain, Radar and Signal. Every Sandbox panel (Blocks, Phone stage, Step settings, Timeline) pops out and leaves its space to the grid. The app icon is Falcor on plain black. Haptics moved to the phone app's Settings.",
+  "publishedAt": "2026-10-22T03:32:56.369Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "92f188cc75a3c07adbc428b49f487f07bf6898ea8477f0c9793e7a51d763a43c",
+      "sha256": "d1623d63976b6f4c9ce44a907ba636dc3287ec129de8ce8b0654d1d6af68754e",
       "size": 1177697
     },
     {
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-D5uyNwRY.css",
-      "sha256": "41bf797c525ab68f097f9ab8e2a494265f4aeea22582de64b8323763f1d1ec45",
-      "size": 71086
+      "path": "remote-ui/assets/index-CQttps62.js",
+      "sha256": "6df560c0dfed0c2a7d0e4857d92ba8a1a3309703f74c696de757310e222d41f0",
+      "size": 197947
     },
     {
-      "path": "remote-ui/assets/index-DxnaYGn_.js",
-      "sha256": "3d024a36bb108fdefd5a0a287a203da60beb17dd5bb495821c771c996ead3503",
-      "size": 198589
+      "path": "remote-ui/assets/index-M3hbjtEK.css",
+      "sha256": "c32398b952f5ac441eb5f800b48d83b0c0aacc4951a07a0ce53ab840ea96e38e",
+      "size": 71285
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -60,12 +60,12 @@
     },
     {
       "path": "remote-ui/icon.png",
-      "sha256": "74d930ea93368c44311fc19d33eff932f56845bf8e186bf1a74a5ed87d30511d",
-      "size": 140839
+      "sha256": "ae7a21e54ae2731abf2409ac4839b2048f4323c11db9d3ff5cceb32c67cfedaa",
+      "size": 127978
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "5db08e791d1488e67fdc360906e3f5ddbfbc28c4024430848d97c8543ea46196",
+      "sha256": "62acd1ac80d23a2b0f28efe80d27f1984b12b753b6878a15405929cdd87b4c5d",
       "size": 3845
     },
     {
@@ -75,8 +75,8 @@
     },
     {
       "path": "ui/app.ico",
-      "sha256": "a2931cd9f5da7f92d8712b7eaaa6aca5ba6825c265dd22f3bf05371cc2d8517c",
-      "size": 102336
+      "sha256": "a96d29c4b60464d6980c88c4124d06d3f4e09bb066aa65f9a08cfb06153581da",
+      "size": 96534
     },
     {
       "path": "ui/app.js",
@@ -85,8 +85,8 @@
     },
     {
       "path": "ui/app.png",
-      "sha256": "a0786f56b86b8879b26c74c826239c41ab9ac0e2b69072babd9941e7323f84e2",
-      "size": 183293
+      "sha256": "06eff61745c035ee4b6927cd0ce0c9ddc7c599306866d1a91a5674617cc66cb3",
+      "size": 174282
     },
     {
       "path": "ui/boot-flight.png",
@@ -100,8 +100,8 @@
     },
     {
       "path": "ui/desk.js",
-      "sha256": "3ce96d1ef8096290e47e878fdf6274e6e25719f9da79de4293cb94e13c5049b5",
-      "size": 46518
+      "sha256": "a928d9e51a355d35969ad300b5ce332489b0b804a86646429ac2d021da66e41e",
+      "size": 47774
     },
     {
       "path": "ui/dragon.png",
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "0c07a0d1fb5d27807879551977cca80388d653e3c42814deb0b900ea55cff0b0",
-      "size": 60331
+      "sha256": "2bb9e021b1ebe44df912749d88475e337bf6aced6532db6271ae4a88f7c01c61",
+      "size": 63082
     },
     {
       "path": "ui/motion.css",
@@ -140,13 +140,13 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "fe067417dd83b09641062ee9186b6a4dc236998b7373d721e1654e55d02d100e",
-      "size": 65190
+      "sha256": "453ffb4202872b4b92ba042d55ac42d8935770087b15f3def53f668312e810f1",
+      "size": 64083
     },
     {
       "path": "ui/popout.js",
-      "sha256": "b6c0891beb056932ac92d64e56513787053ec74b29b9407977f7cbb0b12ab5b8",
-      "size": 4202
+      "sha256": "a3176929d157c7a95abba919460c6b52f1241536b57f0b5ab8c018357ff11f35",
+      "size": 4379
     },
     {
       "path": "ui/queue.js",
@@ -155,18 +155,23 @@
     },
     {
       "path": "ui/sandbox.js",
-      "sha256": "40c7b6e0f40e7d9e8db7d2f1bf8b653618558a984006fd88c615a45f9908d24c",
-      "size": 104796
+      "sha256": "f5db3b5a03d212d07c59e4369c88dd59b0068d8628f8dab20dc871d1c0ad136a",
+      "size": 104405
     },
     {
       "path": "ui/style.css",
-      "sha256": "6fd8b42c9ee3af3d25b793a7f71b07550675cb632d9af19a9a7b74b52e82a5fe",
-      "size": 117639
+      "sha256": "5d2bde51b6765314069b8b0801f89459bc74af1541ebeb4361f74698cc3f10c3",
+      "size": 121157
     },
     {
       "path": "ui/tokens.css",
       "sha256": "6ec5659aab51fc736776febc50737fa2f42e957c963342ed83400c744a723cb8",
       "size": 692
+    },
+    {
+      "path": "ui/widgets.js",
+      "sha256": "4d209abb04f8fcf3df8d29071fe2afbd39c1db9f6c2fc21a0c316f7dbbcaf7f8",
+      "size": 13596
     }
   ]
 }

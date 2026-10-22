@@ -4565,6 +4565,7 @@ var require_lib = __commonJS({
 // src/main.ts
 var import_electron2 = require("electron");
 var import_node_fs7 = require("node:fs");
+var import_node_crypto6 = require("node:crypto");
 var import_node_path8 = require("node:path");
 var import_node_child_process4 = require("node:child_process");
 var import_qrcode = __toESM(require_lib());
@@ -21326,7 +21327,7 @@ async function startVideo(o) {
 
 // src/main.ts
 var where = globalThis.falcorHub || { appRoot: (0, import_node_path8.join)(__dirname, ".."), packRoot: (0, import_node_path8.join)(__dirname, ".."), packVersion: null, installVersion: import_electron2.app.getVersion(), packsDir: (0, import_node_path8.join)(import_electron2.app.getPath("userData"), "packs") };
-var VERSION = "0.21.35";
+var VERSION = "0.21.40";
 var simulated = process.argv.includes("--simulated");
 if (!import_electron2.app.requestSingleInstanceLock()) {
   if (where.packVersion) {
@@ -21515,9 +21516,18 @@ function openWindow() {
     webPreferences: { preload: (0, import_node_path8.join)(where.packRoot, "dist", "preload.js"), contextIsolation: true, sandbox: true, nodeIntegration: false }
   });
   win.removeMenu();
-  win.webContents.setWindowOpenHandler(({ url }) => {
+  const popped = /* @__PURE__ */ new Set();
+  win.webContents.setWindowOpenHandler(({ url, frameName }) => {
+    if ((url === "about:blank" || url === "") && /^falcor-pop-[\w-]{1,40}$/.test(frameName)) return { action: "allow", overrideBrowserWindowOptions: { backgroundColor: "#0A0A0A", autoHideMenuBar: true, minWidth: 320, minHeight: 220, icon: (0, import_node_path8.join)(where.packRoot, "ui", "app.png") } };
     if (/^https:\/\//.test(url)) void import_electron2.shell.openExternal(url);
     return { action: "deny" };
+  });
+  win.webContents.on("did-create-window", (child) => {
+    popped.add(child);
+    child.removeMenu();
+    child.webContents.on("will-navigate", (e) => e.preventDefault());
+    child.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    child.on("closed", () => popped.delete(child));
   });
   win.webContents.on("will-navigate", (e) => e.preventDefault());
   void win.loadFile((0, import_node_path8.join)(where.packRoot, "ui", "index.html"), process.env.FALCOR_NO_INTRO ? { search: "nointro" } : void 0);
@@ -21525,6 +21535,7 @@ function openWindow() {
     win = null;
     for (const v of videos.values()) v.stop();
     videos.clear();
+    for (const c of popped) if (!c.isDestroyed()) c.close();
   });
 }
 var frameReq = 0;
@@ -22008,9 +22019,14 @@ import_electron2.app.on("window-all-closed", () => import_electron2.app.quit());
 function shortcutIcons() {
   if (process.platform !== "win32" || !import_electron2.app.isPackaged) return;
   try {
-    const ico = (0, import_node_path8.join)(import_electron2.app.getPath("userData"), "Falcor.Hub.ico");
-    (0, import_node_fs7.writeFileSync)(ico, (0, import_node_fs7.readFileSync)((0, import_node_path8.join)(where.packRoot, "ui", "app.ico")));
-    const dirs = [import_electron2.app.getPath("desktop"), (0, import_node_path8.join)(import_electron2.app.getPath("appData"), "Microsoft", "Windows", "Start Menu", "Programs"), (0, import_node_path8.join)(process.env.PUBLIC || "C:\\Users\\Public", "Desktop"), (0, import_node_path8.join)(process.env.ProgramData || "C:\\ProgramData", "Microsoft", "Windows", "Start Menu", "Programs")];
+    const bytes = (0, import_node_fs7.readFileSync)((0, import_node_path8.join)(where.packRoot, "ui", "app.ico")), dir = import_electron2.app.getPath("userData");
+    const ico = (0, import_node_path8.join)(dir, "Falcor.Hub-" + (0, import_node_crypto6.createHash)("sha256").update(bytes).digest("hex").slice(0, 10) + ".ico");
+    if (!(0, import_node_fs7.existsSync)(ico)) (0, import_node_fs7.writeFileSync)(ico, bytes);
+    for (const f of (0, import_node_fs7.readdirSync)(dir)) if (/^Falcor\.Hub(-[0-9a-f]{10})?\.ico$/.test(f) && (0, import_node_path8.join)(dir, f) !== ico) try {
+      (0, import_node_fs7.unlinkSync)((0, import_node_path8.join)(dir, f));
+    } catch {
+    }
+    const dirs = [import_electron2.app.getPath("desktop"), (0, import_node_path8.join)(import_electron2.app.getPath("appData"), "Microsoft", "Windows", "Start Menu", "Programs"), (0, import_node_path8.join)(process.env.PUBLIC || "C:\\Users\\Public", "Desktop"), (0, import_node_path8.join)(process.env.ProgramData || "C:\\ProgramData", "Microsoft", "Windows", "Start Menu", "Programs"), (0, import_node_path8.join)(import_electron2.app.getPath("appData"), "Microsoft", "Internet Explorer", "Quick Launch", "User Pinned", "TaskBar")];
     for (const lnk of dirs.map((d) => (0, import_node_path8.join)(d, "Falcor.Hub.lnk")).filter(import_node_fs7.existsSync)) {
       try {
         const s2 = import_electron2.shell.readShortcutLink(lnk);

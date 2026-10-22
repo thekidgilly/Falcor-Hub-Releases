@@ -9,9 +9,6 @@
   $('sbstudio-stop').onclick = () => $('stop').click();
   $('sbfocus').onclick = () => { const on = workspace.classList.toggle('studio-focus'); $('sbfocus').setAttribute('aria-pressed', String(on)); $('sbfocus').textContent = on ? 'Exit focus' : 'Focus'; requestAnimationFrame(() => fitDevice()); };
   $('sbpanels').onclick = () => { workspace.classList.toggle('studio-panels-hidden'); requestAnimationFrame(() => fitDevice()); };
-  const feedbackLabel = () => $('sbfeedback').textContent = 'Feedback: ' + Pixel.editFeedback.mode();
-  $('sbfeedback').onclick = () => { Pixel.editFeedback.cycle(); feedbackLabel(); Pixel.editFeedback.pulse(); }; feedbackLabel();
-  workspace.addEventListener('click', e => { if (e.target.closest('button:not(:disabled)') && !e.target.closest('#sbfeedback')) Pixel.editFeedback.pulse(); });
   new ResizeObserver(() => { if (!workspace.hidden) requestAnimationFrame(() => fitDevice()); }).observe($('sbtl'));
   const BLOCKS = () => new Map((SB.cat ? SB.cat.blocks : []).map(b => [b.type, b]));
   const CATS = {touch: 'Touch and gesture', app: 'App and device', flow: 'Time and flow', screen: 'Screen aware'};
