@@ -1,11 +1,11 @@
 {
-  "version": "0.21.42",
-  "notes": "A Profile tab (your picture, name, credentials, About me and your own look, also in the phone app from your header picture). Activity moved into Settings as a compact log. The phone Studio has one white menu tab, a gold Magic tab (Teach, Stop and Falcor's AI) and widgets you move, snap and pin. Falcor.Hub keeps its window, popped-out windows and layout across restarts. The header reads WORKSPACE.",
-  "publishedAt": "2026-10-22T04:15:53.447Z",
+  "version": "0.21.43",
+  "notes": "The Sandbox opens on a start box over the workspace grid: a quick tour, Teach Falcor, the example, your drafts, or a blank workspace.",
+  "publishedAt": "2026-10-22T04:29:14.575Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "45c61409fa0caf3d95372122c9c6fce440096a16cca001c64623419d57f46580",
+      "sha256": "4c5dadadc4b46280764af2f9e5233f3c4749a8da427c5ae4232b839ebc22e4fa",
       "size": 1181030
     },
     {
@@ -160,13 +160,13 @@
     },
     {
       "path": "ui/sandbox.js",
-      "sha256": "f5db3b5a03d212d07c59e4369c88dd59b0068d8628f8dab20dc871d1c0ad136a",
-      "size": 104405
+      "sha256": "786534fe9dfff21fffb645a9ade3fdbcd8ea4043400d5fc51a6ba83ebc0a8b96",
+      "size": 108751
     },
     {
       "path": "ui/style.css",
-      "sha256": "b4347cfb8a4f891d919dc9a015ec3974b81b6283c807ca883299f9d8e070173c",
-      "size": 133262
+      "sha256": "e506bcbeb3dd6c3b6a03566a17b7daa5e533f92aa87d2edb6ce131dac74c7a15",
+      "size": 136956
     },
     {
       "path": "ui/tokens.css",

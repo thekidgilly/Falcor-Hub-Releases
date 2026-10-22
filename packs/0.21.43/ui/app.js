@@ -3,7 +3,8 @@
 // so animations never replay, and scroll and focus stay where they are.
 const P = window.Pixel; P.sprite();
 let polling = false, statusSeq = 0;   // the status poll: one at a time, and older answers dropped
-const $ = id => document.getElementById(id);
+// (a panel popped out into its own window (popout.js) is still found by its id)
+const $ = id => document.getElementById(id) || (window.__popFind ? window.__popFind(id) : null);
 const {esc, text, attr, cls, keyed, htmlOnce, roll, icon} = P;
 const time = at => new Date(at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
 const when = at => { if (!at) return ''; const m = Math.round((at - Date.now()) / 60000); return m <= 0 ? 'now' : m < 60 ? 'in ' + m + ' min' : m < 36 * 60 ? 'in ' + Math.round(m / 60) + ' h' : new Date(at).toLocaleDateString(); };
@@ -39,16 +40,18 @@ function numbers(root = document) {
 numbers();
 
 // ------------------------------------------------------------------ tabs, keys, intro
-// The tab bar (keys 1–5): Hub (internal id phone), Library (games), Sandbox, Activity (stats), Settings. Creations (tasks)
+// The tab bar (keys 1–5): Profile, Hub (internal id phone, where Falcor.Hub opens), Library (games), Sandbox, Settings (Activity is a page in Settings). Creations (tasks)
 // and the full-page Falcor chat (falcor) are pages without a tab: Creations opens from a creation's card in the Library
 // and lights Library; the chat opens from the floating Falcor's Full page button.
-const TABS = ['phone', 'games', 'sandbox', 'stats', 'settings'];
-const PAGES = [...TABS, 'tasks', 'falcor', 'knowledge'], LIT = {tasks: 'games'};
+const TABS = ['profile', 'phone', 'games', 'sandbox', 'settings'];
+const PAGES = [...TABS, 'stats', 'tasks', 'falcor', 'knowledge'], LIT = {tasks: 'games'};
 let dockOpen = false; // the floating Falcor's small chat is open
 // An app's guide (Knowledge) has no tab of its own: it opens from its game, a task or the chat,
 // lights the tab it came from, and Back returns there.
 let learnFrom = {tab: 'games', sub: null, pkg: null};
 function go(name, sub) {
+  // (Activity lives in Settings, the owner 2026-10-21: its own page there, no tab)
+  if (name === 'stats') { name = 'settings'; sub = 'activity'; }
   if (!PAGES.includes(name)) return;
   const changed = name !== tab;
   tab = name;
@@ -64,6 +67,7 @@ function go(name, sub) {
   if (changed) P.motion.enter(document.querySelector('[data-pane="' + tab + '"]'));
   document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tab === lit)));
   if (tab === 'falcor') openChat();
+  if (tab === 'profile' && window.renderProfile) renderProfile(); else if (window.profileLeave) profileLeave();
 }
 function placeTabline() { const b = document.querySelector('.tabs button.on'); $('tabline').hidden = !b; if (b) { $('tabline').style.width = b.offsetWidth + 'px'; $('tabline').style.transform = 'translateX(' + b.offsetLeft + 'px)'; } }
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => go(b.dataset.tab));
@@ -123,7 +127,8 @@ function render() {
   if (tab === 'tasks') renderTasks();
   if (chatShown()) renderChatMeta();
   if (tab === 'knowledge') renderLearn();
-  if (tab === 'stats' && window.renderActivity) renderActivity();
+  if (tab === 'settings' && sub === 'activity' && window.renderActivity) renderActivity();
+  if (tab === 'profile' && window.renderProfile) renderProfile();
   if (tab === 'tasks' && window.renderCreations) renderCreations();
   if (tab === 'settings') renderSettings();
 }
@@ -1476,7 +1481,7 @@ $('sessions').addEventListener('click', e => { const w = e.target.closest('[data
 
 // ------------------------------------------------------------------ settings
 let sub = 'ai';
-function setSub(name) { sub = name; document.querySelectorAll('#submenu button').forEach(b => cls(b, 'on', b.dataset.sub === sub)); document.querySelectorAll('.settingsgrid .panel[data-sub]').forEach(p => { p.hidden = p.dataset.sub !== sub; }); }
+function setSub(name) { sub = name; document.querySelectorAll('#submenu button').forEach(b => cls(b, 'on', b.dataset.sub === sub)); document.querySelectorAll('.settingsgrid .panel[data-sub]').forEach(p => { p.hidden = p.dataset.sub !== sub; }); if (sub === 'activity' && window.renderActivity) renderActivity(); }
 document.querySelectorAll('#submenu button').forEach(b => b.onclick = () => setSub(b.dataset.sub));
 let prevPhones = null;
 function renderSettings() {
