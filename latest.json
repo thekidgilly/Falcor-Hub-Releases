@@ -1,11 +1,11 @@
 {
-  "version": "0.21.52",
-  "notes": "Phone block editor: the Sandbox's white side menu with the editor's tools (Blocks, Step, Undo, Redo, Run, Stop all, Save, Schedule, Full, Outline).",
-  "publishedAt": "2026-10-22T06:33:41.157Z",
+  "version": "0.21.53",
+  "notes": "Phone app: alerts show near the top; End Teach can be cancelled while it analyses (the recording is discarded).",
+  "publishedAt": "2026-10-22T06:40:39.305Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "f211471a42cf21729329b62f702b12232d0f01858c12d22091333b4ad85e4394",
+      "sha256": "26ceeb0557a3e03c708f121a6650f630ddf33e58a5b66be036980a653fa35121",
       "size": 1182319
     },
     {
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-DZEbyzS0.css",
-      "sha256": "c121492edd807f10b39d1873898979561bc213fa2f2f59810b14e22919284bbe",
-      "size": 95164
+      "path": "remote-ui/assets/index-StORKFIJ.js",
+      "sha256": "599d205fa2a469a347f04589f1b4c11eb38396f76789df9e93c7244b2d1106d5",
+      "size": 269536
     },
     {
-      "path": "remote-ui/assets/index-Dd2YnwUQ.js",
-      "sha256": "1c220477173f7f1ebf526615028bc9b006bad96b066badc529fbe7113012a3f7",
-      "size": 269159
+      "path": "remote-ui/assets/index-u8RmZuSC.css",
+      "sha256": "d8d76d06909dae39ede699dea34fa0c2386430e1030e149b2bba47c4096f0836",
+      "size": 95321
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "75d1fcb75c0160bf9a081655bdaa73508c6f0549289c09383807d39d821aa03d",
+      "sha256": "af86c1cd463a4289f88cd2e24dd54b27404484c6575181c2bdab2b400ba65bdc",
       "size": 3773
     },
     {
