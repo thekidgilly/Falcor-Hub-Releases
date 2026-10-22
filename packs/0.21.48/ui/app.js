@@ -218,6 +218,8 @@ function renderPhone(d) {
   // The device frame: control (sand), recording (red), Falcor acting (brackets pulse).
   const devEl = $('device');
   cls(devEl, 'control', controlling && !S.teaching); cls(devEl, 'recording', !!S.teaching); cls(devEl, 'falcor-acting', !!(d.control && d.control.kind === 'agent'));
+  // The state glow (the owner, 2026-10-21), the same on the Hub, the Sandbox and the phone app: white at rest, red while Teach records, green while Falcor plays.
+  cls(devEl, 'automating', !S.teaching && !!(d.running || d.sandbox || (d.control && d.control.kind === 'agent')));
   $('devtag').hidden = !(controlling || S.teaching); text($('devtag'), S.teaching ? '● REC' : 'YOU HAVE CONTROL');
   renderEyes(d);
   // The current activity (the queue's, a task run when due, or a Sandbox run) and Today's Queue (queue.js).
@@ -402,6 +404,10 @@ let down = null;
 const fast = () => vid.on && vid.control && !S.teaching && !!window.hub.touch;
 const touch = (kind, p, extra) => window.hub.touch({deviceId, kind, ...(p ? {x: p.x, y: p.y} : {}), ...(extra || {})});
 let moveAt = 0;
+// The navigation bar helper (the owner, 2026-10-21): a short tap anywhere in the bottom strip of an upright phone presses
+// the nearest of Recent, Home and Back as a key (the small buttons are easy to miss); a swipe from there stays a swipe.
+const NAV_Y = 0.935, navKey = x => x < 0.37 ? 'APP_SWITCH' : x > 0.63 ? 'BACK' : 'HOME';
+const inNav = p => p.y >= NAV_Y && !document.body.classList.contains('phone-landscape');
 for (const surface of [$('mirror'), canvas]) {
   // The Sandbox's pointer modes (view, pick a target or a gesture, a run playing) take the mouse; Control and Teach touch.
   surface.addEventListener('pointermove', e => {
@@ -412,7 +418,7 @@ for (const surface of [$('mirror'), canvas]) {
   surface.addEventListener('pointerdown', e => {
     if (window.sbPointer && tab === 'sandbox' && sbPointer('down', at(e), e)) return;
     if (!controlling) { toast('Take Control first to touch the phone.', 'warn'); return; }
-    down = {...at(e), t: Date.now(), fast: fast()}; surface.setPointerCapture(e.pointerId);
+    const p0 = at(e); down = {...p0, t: Date.now(), fast: fast() && !inNav(p0), nav: inNav(p0)}; surface.setPointerCapture(e.pointerId);
     if (down.fast) touch('down', down);
   });
   surface.addEventListener('pointercancel', () => { if (down && down.fast) touch('up', down); down = null; });
@@ -424,6 +430,7 @@ for (const surface of [$('mirror'), canvas]) {
       lastTouch = {x: down.x * 100, y: down.y * 100}; down = null; return;
     }
     if (!down) return; const up = at(e), ms = Date.now() - down.t, moved = Math.hypot(up.x - down.x, up.y - down.y);
+    if (down.nav && moved <= 0.03 && ms <= 600) { P.tapMark($('overlay'), down.x * 100, down.y * 100, false); const key = navKey(down.x); down = null; void send({kind: 'key', key}); return; }
     const a = moved > 0.03 ? {kind: 'swipe', x: down.x, y: down.y, toX: up.x, toY: up.y, ms: Math.min(2000, Math.max(120, ms))} : ms > 600 ? {kind: 'long_press', x: down.x, y: down.y, ms: Math.min(3000, ms)} : {kind: 'tap', x: down.x, y: down.y};
     if (a.kind === 'swipe') P.trail($('overlay'), down.x * 100, down.y * 100, up.x * 100, up.y * 100); else P.tapMark($('overlay'), down.x * 100, down.y * 100, false);
     lastTouch = {x: down.x * 100, y: down.y * 100};
@@ -1512,7 +1519,6 @@ $('pair').onclick = async () => {
   const tickExp = () => { const left = Math.max(0, p.expiresAt - Date.now()), s = Math.round(left / 1000); $('paircount').style.width = (left / total * 100) + '%'; text($('pairexp'), s ? 'In Falcor.Hub Remote: Scan QR, or type the address and code. Expires in ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + '.' : 'Expired. Make a new code.'); if (!s) clearInterval(pairTimer); };
   tickExp(); pairTimer = setInterval(tickExp, 1000);
 };
-$('firewall').onclick = async () => toast(await call('firewall'));
 $('secretform').onsubmit = async e => { e.preventDefault(); const f = e.target; await call('setSecret', {name: f.name.value, value: f.value.value}); f.reset(); toast('Secret sealed on this computer.'); };
 $('updcheck').onclick = () => call('updateCheck').then(() => toast('Checked for updates.'));
 

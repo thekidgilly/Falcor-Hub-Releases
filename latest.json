@@ -1,11 +1,11 @@
 {
-  "version": "0.21.47",
-  "notes": "A web app opened from the phone's launcher (FireFaucet) is taught and played as itself, not as Chrome. The firewall button is gone: the rule is added by itself.",
-  "publishedAt": "2026-10-22T05:59:57.334Z",
+  "version": "0.21.48",
+  "notes": "Phone app: Profile tab on the bottom bar; arrange the Hub (drag panels, sizes S, M, L, Full); a premium full-screen block editor; while Teach records, the screen goes full size and locks, widgets tuck away, and a glowing Stop waits top right.",
+  "publishedAt": "2026-10-22T06:13:33.807Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "26e2d2a5da75f6cafcd9ffed3ee00b01c6d696861fef6e706281bbd431773854",
+      "sha256": "6f83345c7e90cad9e01dc0e185763f6996e2bae5e6de1def3133214627ff833a",
       "size": 1182319
     },
     {
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-B-oN97M9.css",
-      "sha256": "1eae815172c4629194651075a24ec293f5c99cbe4ebdbd5544e2ff7fef3e1b96",
-      "size": 88463
+      "path": "remote-ui/assets/index-DqmYaPvp.css",
+      "sha256": "63cf9cf10ccbd8036b36628786dd70f3e9d90037d9521f9a9141a26721c59341",
+      "size": 91724
     },
     {
-      "path": "remote-ui/assets/index-CewooZ5j.js",
-      "sha256": "8fcda9431160567cadbae144addde8a8c88c21574be5ebb363d93c344cb86c68",
-      "size": 263795
+      "path": "remote-ui/assets/index-ITLv6d1k.js",
+      "sha256": "13d873373079189ce55d7a5f0bce0113c43ff0188f9277b15d7df04c85095e57",
+      "size": 265845
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,8 +65,8 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "c89160359bd66e1f783926aa7c865597bc902b4c5ad5202e6cfcca31215de41c",
-      "size": 3678
+      "sha256": "cba4e5b25b705d8cb80139e4ab0f41f862bde84854a9e5305cbe4944335b419c",
+      "size": 3773
     },
     {
       "path": "ui/ai.js",

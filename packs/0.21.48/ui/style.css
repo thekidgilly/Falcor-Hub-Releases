@@ -1196,3 +1196,7 @@ section[data-pane="phone"] > .desk { z-index: 1; }
 .sbsopt[data-start="teach"] .ico { color: var(--green); filter: drop-shadow(0 0 3px rgba(92,229,154,.7)); }
 .sbsopt[data-start="example"] .ico { color: #F5B544; filter: drop-shadow(0 0 3px rgba(245,181,68,.7)); }
 .sbsopt[data-start="drafts"] .ico { color: #7AA7FF; filter: drop-shadow(0 0 3px rgba(122,167,255,.7)); }
+/* The state glow (Hub and Sandbox share this mirror): white at rest, red while Teach records, green while Falcor plays. */
+.device, .device.control { border-color: rgba(255,255,255,.42); box-shadow: inset 0 0 0 1px #000, 0 0 7px rgba(255,255,255,.5), 0 0 34px rgba(255,255,255,.2); }
+.device.automating { border-color: rgba(92,229,154,.8); box-shadow: inset 0 0 0 1px #000, 0 0 8px rgba(92,229,154,.6), 0 0 36px rgba(92,229,154,.25); }
+.device.recording { border-color: rgba(240,84,79,.85); box-shadow: inset 0 0 0 1px #000, 0 0 8px rgba(240,84,79,.6), 0 0 36px rgba(240,84,79,.25); }
