@@ -48,6 +48,7 @@ var CALLS = [
   "deleteApp",
   "exportApp",
   "setLimit",
+  "profile",
   "appIcon",
   "openApp",
   "setAds",

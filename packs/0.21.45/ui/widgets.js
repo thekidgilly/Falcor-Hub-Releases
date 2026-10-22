@@ -132,9 +132,10 @@
   // ------------------------------------------------------------------ Clock, AI meter, Phone vitals (once a second)
   function clock() {
     if (!seen('clockt')) return;
-    const now = new Date(), tz = S && S.queue && S.queue.tz || undefined;
-    P.text($('clockt'), now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23', timeZone: tz}));
-    P.text($('clockd'), now.toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric', timeZone: tz}).toUpperCase());
+    // (Minnesota time, 12-hour, the owner 2026-10-21)
+    const now = new Date(), tz = 'America/Chicago';
+    P.text($('clockt'), now.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true, timeZone: tz}));
+    P.text($('clockd'), (now.toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric', timeZone: tz}) + ' · Minnesota').toUpperCase());
     const q = S && S.queue && deviceId ? S.queue.devices[deviceId] || Object.values(S.queue.devices)[0] : S && S.queue ? Object.values(S.queue.devices)[0] : null;
     const nx = q && q.next, m = nx ? Math.round((nx.at - Date.now()) / 60000) : 0;
     P.text($('clockn'), !q ? 'No phone yet' : q.current ? 'NOW · ' + q.current.name : !nx ? 'Nothing more today' : (q.paused ? 'Queue paused · next ' : 'Next · ') + nx.name + (m > 0 ? ' · in ' + (m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + (m % 60) + ' min') : ' · now'));

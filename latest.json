@@ -1,12 +1,12 @@
 {
-  "version": "0.21.44",
-  "notes": "Phone app: one Studio menu that follows your finger, with a settings wheel (edge, position, width); new widgets (Teach & Stop, Player, Phone controls) and the Wizard's Kit; zoom and a layout lock in the corner; the Hub is customizable with an Autopilot switch and live mirror; Teach no longer times out. Every mirror glows white at rest, red while teaching, green while Falcor plays. Easier Recent/Home/Back taps. The firewall rule adds itself.",
-  "publishedAt": "2026-10-22T05:35:08.210Z",
+  "version": "0.21.45",
+  "notes": "Fixes Falcor.Hub not starting (revs is not iterable).",
+  "publishedAt": "2026-10-22T05:39:58.759Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "2f92182876e04fd376fb6fc089c049fd509f8bdbeb8b0b38be98f98fdcda6d51",
-      "size": 1181809
+      "sha256": "dee257b405c3e5be4157b24d5790af30357e0c08862d96adbe2026a1d356cc29",
+      "size": 1181969
     },
     {
       "path": "dist/preload.js",
