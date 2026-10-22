@@ -11,13 +11,32 @@
   const KIND = {game: ['game', 'Game'], task: ['tasks', 'Task'], sequence: ['sandbox', 'Sequence']};
   const MOOD = {SCHEDULED: 'muted', READY: 'ready', RUNNING: 'run', PAUSED: 'sand', BLOCKED: 'red', WAITING_FOR_USER: 'sand', COMPLETED: 'green', FAILED: 'red', SKIPPED: 'muted', MISSED: 'sand', CANCELLED: 'muted', INTERRUPTED: 'sand'};
   const ENDED = new Set(['COMPLETED', 'FAILED', 'SKIPPED', 'MISSED', 'CANCELLED', 'INTERRUPTED']);
+  // (what waits on the owner: shown in its own group, never in the line-up)
+  const ATTN = new Set(['WAITING_FOR_USER', 'BLOCKED', 'PAUSED']);
   const PRI = ['', 'Lowest', 'Low', 'Normal', 'High', 'Highest'];
   const hm = at => new Date(at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'});
   const dayOf = at => { const d = new Date(at), t = new Date(), y = new Date(Date.now() + 86_400_000); return d.toDateString() === t.toDateString() ? 'Today' : d.toDateString() === y.toDateString() ? 'Tomorrow' : d.toLocaleDateString([], {weekday: 'short', month: 'short', day: 'numeric'}); };
   const pad2 = n => String(n).padStart(2, '0');
   const tgt = v => { const i = String(v).indexOf(':'); return {type: v.slice(0, i), id: v.slice(i + 1)}; };
   const tv = t => t.type + ':' + t.id;
-  const kindIcon = (kind, pkg) => { const u = pkg && icons.get(pkg); return u ? '<img src="' + esc(u) + '" alt="">' : icon((KIND[kind] || KIND.task)[0]); };
+  // (a game's own launcher icon, asked for here if the Games tab has not yet: app.js#iconOf)
+  const gameOf = pkg => pkg ? (S.games || []).find(g => g.pkg === pkg) || null : null;
+  const kindIcon = (kind, pkg) => { const g = gameOf(pkg), u = g && window.iconOf ? iconOf(g) : null; return u ? '<img src="' + esc(u) + '" alt="">' : icon((KIND[kind] || KIND.task)[0]); };
+  // What the current activity is about, at a glance: for a game its level and the goal it plays to, the next milestone
+  // and its reward, the goals and rewards reached so far and the offer's time left; for a task its app and objective.
+  function infoHtml(cur) {
+    const g = gameOf(cur.pkg), t = cur.target && cur.target.type === 'mission' ? (S.tasks || []).find(x => x.id === cur.target.id) : null, facts = [];
+    if (g) {
+      if (g.level != null || t && t.targetLevel) facts.push(['Level', (g.level ?? '?') + (t && t.targetLevel ? ' → ' + t.targetLevel : '')]);
+      const nx = g.smart && g.smart.next;
+      if (nx) facts.push(['Next goal', nx.text + (nx.amount != null ? ' · ' + P.money(nx.amount, nx.unit) : '')]); else if (g.nextGoal) facts.push(['Next goal', g.nextGoal]);
+      if (g.goals && g.goals.of) facts.push(['Goals', g.goals.reached + ' of ' + g.goals.of + ' reached']);
+      const u = (g.totals || [])[0];
+      if (u && u.potential) facts.push(['Rewards', P.money((u.reached || 0) + (u.pending || 0) + (u.earned || 0), u.unit) + ' reached of ' + P.money(u.potential, u.unit)]);
+      if (g.deadline && g.deadline.text) facts.push(['Offer', g.deadline.text + (g.platforms && g.platforms.length ? ' · ' + g.platforms.join(', ') : '')]);
+    } else if (t) { facts.push(['App', t.app]); facts.push(['Task', t.objective]); }
+    return facts.length ? '<dl class="qinfo">' + facts.map(([k, v]) => '<dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd>').join('') + '</dl>' : '';
+  }
   const pill = (status, label) => '<span class="qpill s-' + (MOOD[status] || 'muted') + '">' + (status === 'RUNNING' ? '<i class="led active"></i>' : '') + esc(String(label || status).toUpperCase()) + '</span>';
   const minsOf = ms => Math.max(0, Math.floor(ms / 60000));
   // The run's step line; while Falcor AI is asked, how long it has been thinking, so a slow answer never looks frozen.
@@ -32,19 +51,17 @@
     const nextLine = next ? '<div class="qnext">Next: <b>' + esc(next.name) + '</b> · ' + (dayOf(next.at) === 'Today' ? '' : esc(dayOf(next.at)) + ' ') + esc(hm(next.at)) + ' <span class="muted">(' + esc(when(next.at)) + ')</span></div>' : '';
     let html;
     if (cur) {
-      const [ic, word] = KIND[cur.kind] || KIND.task, paused = cur.status === 'PAUSED' || cur.status === 'WAITING_FOR_USER';
+      const word = (KIND[cur.kind] || KIND.task)[1], paused = cur.status === 'PAUSED' || cur.status === 'WAITING_FOR_USER';
       const n = 20, on = cur.durationMin ? Math.round(Math.min(1, (Date.now() - cur.startedAt) / (cur.durationMin * 60000)) * n) : 0;
       html = '<div class="qcur s-' + (MOOD[cur.status] || 'run') + '"><div class="qhead"><span class="qico">' + kindIcon(cur.kind, cur.pkg) + '</span><b>' + esc(cur.name) + '</b><span class="qtime" data-start="' + cur.startedAt + '" data-dur="' + (cur.durationMin || '') + '"></span></div>'
-        + '<div class="qsub">' + pill(cur.status, cur.label) + '<span>' + esc(word) + ' · ' + esc(cur.triggerLabel) + (cur.attempt > 1 ? ' · attempt ' + cur.attempt : '') + '</span></div>'
+        + '<div class="qsub">' + pill(cur.status, cur.label) + '<span>' + esc(word) + ' · ' + esc(cur.triggerLabel) + (cur.attempt > 1 ? ' · attempt ' + cur.attempt : '') + '</span></div>' + infoHtml(cur)
         + (cur.durationMin ? '<div class="progress qprog" data-style="--n:' + n + '">' + Array.from({length: n}, (_, i) => '<i class="' + (i < on ? 'on' : '') + '"></i>').join('') + '</div>' : '')
         + stepLine(cur.reason || d.step || 'Working…') + perfLine(d.perf)
         // (Resume only for this activity itself paused; the schedule's own pause is the queue bar's switch)
         + '<div class="row qctl">' + (paused ? '<button class="small primary" data-qctl="resume">' + icon('play') + 'Resume</button>' : '<button class="small" data-qctl="pause">' + icon('pause') + 'Pause</button>')
         + (cur.key ? '<button class="small" data-qctl="skip" title="Skip it and go on with the next">' + icon('skip') + 'Skip</button>' : '')
         + '<button class="small danger" data-qctl="stop" title="Stop it' + (cur.key ? ' and the queue' : '') + '">' + icon('stop') + 'Stop</button>'
-        + (!controlling ? '<button class="small icon" data-qctl="take" title="Take control of the phone (the run pauses for you)">' + icon('control') + '</button>' : '') + '</div>' + nextLine + '</div>';
-      void ic;
-    } else if (run) {
+        + (!controlling ? '<button class="small icon" data-qctl="take" title="Take control of the phone (the run pauses for you)">' + icon('control') + '</button>' : '') + '</div>' + nextLine + '</div>';    } else if (run) {
       const n = run.targetLevel ? Math.min(20, run.targetLevel) : 10, done = run.targetLevel ? Math.round(Math.min(1, (run.level || 0) / run.targetLevel) * n) : 0;
       html = '<div class="mission"><div class="what"><b>' + esc(run.app) + '</b> · ' + esc(run.objective) + ' <span class="muted small">· when due</span></div>'
         + (run.targetLevel ? '<div class="progress" data-style="--n:' + n + '">' + Array.from({length: n}, (_, i) => '<i class="' + (i < done ? 'on' : '') + '"></i>').join('') + '</div><span class="muted small">Level ' + esc(run.level ?? '?') + ' of ' + esc(run.targetLevel) + '</span>' : '')
@@ -143,25 +160,40 @@
     } else {
       const items = v.items.slice().sort((a, b) => a.at - b.at), ended = items.filter(i => ENDED.has(i.status) && !i.live), left = items.length - ended.length;
       text($('qsum'), Q.view === 'today' ? (v.counts.total ? 'COMPLETED ' + v.counts.completed + ' / ' + v.counts.total + (v.doneBy ? ' · done ≈ ' + hm(v.doneBy) : '') : '') : items.length + ' planned');
-      const num = new Map(items.map((i, n) => [i.key, n + 1]));
-      if (Q.view === 'today' && ended.length && Q.fold) rows.push({k: 'fold', fold: ended});
-      let day = '';
-      for (const i of items) {
-        if (Q.view === 'today' && Q.fold && ENDED.has(i.status) && !i.live) continue;
-        if (Q.view === 'upcoming' && i.day !== day) { day = i.day; rows.push({k: 'd:' + day, head: dayOf(i.at)}); }
-        rows.push({k: i.key, i, n: num.get(i.key)});
+      if (Q.view === 'today') {
+        // The line-up (the owner, 2026-10-21): what plays now, then what is next in line, in order; what waits on the
+        // owner in its own group below; what finished folded away. No status boxes: the position says it.
+        const live = items.filter(i => i.live), wait = items.filter(i => !i.live && ATTN.has(i.status));
+        const next = items.filter(i => !i.live && !ENDED.has(i.status) && !ATTN.has(i.status));
+        const dueNow = v.whenDue.filter(w => w.state === 'RUNNING'), dueLater = v.whenDue.filter(w => w.state !== 'RUNNING' && w.state !== 'NEEDS_ATTENTION' && w.state !== 'ACTION_VERIFIED'), dueWait = v.whenDue.filter(w => w.state === 'NEEDS_ATTENTION');
+        let pos = 0;
+        for (const i of live) rows.push({k: i.key, i, pos: 'NOW'});
+        // (a Play now started by hand is no scheduled item: the current activity is shown as NOW all the same)
+        const cur = qdev() && qdev().current;
+        if (cur && !live.length && !dueNow.length) rows.push({k: 'cur:' + (cur.sessionId || cur.name), i: {key: 'cur', name: cur.name, kind: cur.kind, pkg: cur.pkg, at: cur.startedAt, live: true, status: 'RUNNING', label: cur.label, reason: '', durationMin: cur.durationMin, startedAt: cur.startedAt, elapsedMs: cur.elapsedMs}, pos: 'NOW'});
+        for (const w of dueNow) rows.push({k: 'w:' + w.id, w, pos: 'NOW'});
+        for (const i of next) rows.push({k: i.key, i, pos: ++pos === 1 ? 'NEXT' : '#' + pos});
+        for (const w of dueLater) rows.push({k: 'w:' + w.id, w, pos: ++pos === 1 ? 'NEXT' : '#' + pos});
+        if (wait.length || dueWait.length) { rows.push({k: 'g:wait', head: 'NEEDS YOU · ' + (wait.length + dueWait.length), tip: 'These stopped and wait for you: open one (click) to see why, or ··· to run it again or skip it.'}); for (const i of wait) rows.push({k: i.key, i, pos: 'WAITING'}); for (const w of dueWait) rows.push({k: 'w:' + w.id, w, pos: 'WAITING'}); }
+        if (ended.length) rows.push(Q.fold ? {k: 'fold', fold: ended} : {k: 'unfold', unfold: true});
+        if (!Q.fold) for (const i of ended) rows.push({k: i.key, i, pos: 'DONE'});
+      } else {
+        let day = '';
+        for (const i of items) {
+          if (Q.view === 'upcoming' && i.day !== day) { day = i.day; rows.push({k: 'd:' + day, head: dayOf(i.at)}); }
+          rows.push({k: i.key, i, pos: ''});
+        }
       }
-      if (Q.view === 'today' && ended.length && !Q.fold) rows.push({k: 'unfold', unfold: true});
-      if (Q.view === 'today' && v.whenDue.length) { rows.push({k: 'g:due', head: v.whenDue.every(w => w.state === 'RUNNING') ? 'PLAYING NOW' : 'READY · NO SET TIME · ' + v.whenDue.length, tip: 'Approved tasks with no time of their own: Play now or Resume schedule starts them; schedule one (···) to give it a time.'}); for (const w of v.whenDue) rows.push({k: 'w:' + w.id, w}); }
       if (!items.length && !v.whenDue?.length) rows.push({k: 'empty', empty: S.queue.schedules ? (Q.view === 'today' ? 'Nothing scheduled today.' : 'Nothing scheduled ' + (Q.view === 'tomorrow' ? 'tomorrow' : 'in the next 7 days') + '.') + (qdev() && qdev().next ? ' Next: ' + qdev().next.name + ', ' + dayOf(qdev().next.at).toLowerCase() + ' ' + hm(qdev().next.at) + '.' : '') : 'No activities scheduled yet. Press + (or Schedule on a game, a task or a sequence).'});
       else if (Q.view === 'today' && !left && items.length) rows.push({k: 'alldone', empty: 'All of today\'s activities are done.'});
     }
-    keyed(box, rows, r => r.k, r => P.el(r.i || r.h ? '<li class="qrow"><span class="qn"></span><span class="qico"></span><div class="qmain"><span class="qname"></span><span class="qmeta"></span><span class="qwhy"></span></div><span class="qst"></span><button class="ghost icon small qmore" title="Actions">' + icon('dots') + '</button></li>'
-      : r.w ? '<li class="qrow due"><span class="qn"></span><span class="qico"></span><div class="qmain"><span class="qname"></span><span class="qmeta"></span></div><span class="qst"></span><button class="ghost icon small qmore" title="Actions">' + icon('dots') + '</button></li>'
+    // (a row: the activity's icon, large, at the far left; its place in line and time; its title; one line about it)
+    const ROW = '<li class="qrow"><span class="qico"></span><div class="qmain"><span class="qpos"></span><span class="qname"></span><span class="qmeta"></span><span class="qwhy"></span></div><button class="ghost icon small qmore" title="Actions">' + icon('dots') + '</button></li>';
+    keyed(box, rows, r => r.k, r => P.el(r.i || r.h || r.w ? ROW
       : r.fold || r.unfold ? '<li class="qfold"><button class="ghost small"></button></li>' : r.head ? '<li class="qhead2"></li>' : '<li class="qempty"></li>'), (n, r) => {
-      if (r.i) drawItem(n, r.i, r.n);
+      if (r.i) drawItem(n, r.i, r.pos);
       else if (r.h) drawHist(n, r.h);
-      else if (r.w) { const qn = n.querySelector('.qn'); text(qn, r.w.state === 'RUNNING' ? 'NOW' : r.w.nextAt && r.w.nextAt > Date.now() ? hm(r.w.nextAt) : 'READY'); qn.classList.add('qtimecol'); htmlOnce(n.querySelector('.qico'), kindIcon(r.w.type === 'game_level' ? 'game' : 'task', r.w.pkg)); text(n.querySelector('.qname'), r.w.name); text(n.querySelector('.qmeta'), r.w.app + ' · ' + (r.w.nextAt && r.w.nextAt > Date.now() ? 'from ' + hm(r.w.nextAt) : 'no set time')); htmlOnce(n.querySelector('.qst'), pill(r.w.state === 'RUNNING' ? 'RUNNING' : r.w.state === 'NEEDS_ATTENTION' ? 'WAITING_FOR_USER' : r.w.state === 'ACTION_VERIFIED' ? 'COMPLETED' : 'SCHEDULED', r.w.state === 'NEEDS_ATTENTION' ? 'Waiting for user' : r.w.stateLabel)); n.dataset.w = r.w.id; }
+      else if (r.w) drawDue(n, r.w, r.pos);
       else if (r.fold) { const c = r.fold.filter(i => i.status === 'COMPLETED').length; htmlOnce(n.firstElementChild, icon('check') + esc(r.fold.length + ' finished today' + (c !== r.fold.length ? ' (' + c + ' completed)' : '') + ' · show')); }
       else if (r.unfold) htmlOnce(n.firstElementChild, icon('chevron') + 'Hide finished');
       else if (r.head) { text(n, r.head); n.title = r.tip || ''; }
@@ -171,27 +203,42 @@
     const notes = v.notes || [];
     htmlOnce($('qnotes'), notes.slice(0, 2).map(x => '<p class="qnote ' + esc(x.kind) + '"' + (x.key ? ' data-qkey="' + esc(x.key) + '"' : '') + ' title="' + esc(x.text) + '">' + icon(x.kind === 'overlap' || x.kind === 'long' ? 'clock' : x.kind === 'failing' ? 'stop' : 'lock') + '<span>' + esc(x.text) + '</span></p>').join('') + (notes.length > 2 ? '<p class="qnote more" data-allnotes>+' + (notes.length - 2) + ' more</p>' : ''));
   };
-  function drawItem(n, i, num) {
-    n.className = 'qrow s-' + (MOOD[i.status] || 'muted') + (i.live ? ' live' : '');
-    // (its time first and plain: when it runs, or NOW while it runs)
-    text(n.querySelector('.qn'), i.live ? 'NOW' : ENDED.has(i.status) ? pad2(num) : hm(i.at)); n.querySelector('.qn').classList.toggle('qtimecol', !ENDED.has(i.status) || i.live);
+  // A name "Word Yatzy - Fun Word Puzzler: Complete Level 6" read as its title (the goal) and its game; "(Game
+  // Autopilot)" and the like are dropped from titles (the icon says what it is).
+  const split = (name, app) => { const s = String(name || ''), i = s.lastIndexOf(': '), title = (i > 0 ? s.slice(i + 2) : s).replace(/\s*\((?:Game Autopilot|Smart Playbook)\)$/i, ''); return {title, app: app || (i > 0 ? s.slice(0, i) : '')}; };
+  const short = app => String(app || '').replace(/\s+-\s+.*$/, '');
+  function posLine(n, pos, when) { htmlOnce(n.querySelector('.qpos'), (pos ? '<b>' + esc(pos) + '</b>' : '') + (when ? (pos ? ' · ' : '') + esc(when) : '')); }
+  function drawItem(n, i, pos) {
+    n.className = 'qrow s-' + (MOOD[i.status] || 'muted') + (i.live ? ' live' : '') + (pos === 'WAITING' ? ' wait' : '') + (pos === 'DONE' ? ' done' : '');
+    if (i.key === 'cur') n.querySelector('.qmore').hidden = true;
     htmlOnce(n.querySelector('.qico'), kindIcon(i.kind, i.pkg)); n.querySelector('.qico').title = (KIND[i.kind] || KIND.task)[1];
-    text(n.querySelector('.qname'), i.name);
+    const {title, app} = split(i.name);
+    posLine(n, pos, (Q.view !== 'today' || dayOf(i.at) !== 'Today' ? dayOf(i.at) + ' ' : '') + hm(i.at));
+    text(n.querySelector('.qname'), title);
     const dep = (i.deps || []).filter(x => x.state !== 'ok').map(x => x.name);
-    htmlOnce(n.querySelector('.qmeta'), esc((Q.view === 'today' && dayOf(i.at) !== 'Today' ? dayOf(i.at) + ' ' : '') + i.time) + (i.durationMin ? ' · ' + i.durationMin + ' min' : i.estMin ? ' · ≈' + i.estMin + ' min' : '') + (i.priority > 3 ? ' · <span class="sand">' + icon('up', 'sand') + PRI[i.priority].toLowerCase() + '</span>' : i.priority < 3 ? ' · ' + icon('down') + PRI[i.priority].toLowerCase() : '') + (i.autoStart ? ' · auto' : '') + (i.adhoc ? ' · added' : '') + (dep.length ? ' · after ' + esc(dep.join(', ')) : '') + (i.live && i.elapsedMs !== null ? ' · <span class="qtime" data-start="' + i.startedAt + '" data-dur="' + (i.durationMin || '') + '"></span>' : ''));
-    const why = i.status === 'COMPLETED' ? (i.verified ? '✓ ' : '') + (i.result || i.reason) : i.status === 'SCHEDULED' && !i.reason ? '' : i.reason;
-    text(n.querySelector('.qwhy'), why || ''); n.querySelector('.qwhy').hidden = !why; n.title = i.name + ' · ' + i.label + (why ? ': ' + why : '');
-    htmlOnce(n.querySelector('.qst'), pill(i.status, i.label));
+    htmlOnce(n.querySelector('.qmeta'), esc([short(app) || short(gameOf(i.pkg)?.name) || (KIND[i.kind] || KIND.task)[1], i.durationMin ? i.durationMin + ' min' : i.estMin ? '≈' + i.estMin + ' min' : ''].filter(Boolean).join(' · ')) + (dep.length ? ' · after ' + esc(dep.join(', ')) : '') + (i.live && i.elapsedMs !== null ? ' · <span class="qtime" data-start="' + i.startedAt + '" data-dur="' + (i.durationMin || '') + '"></span>' : ''));
+    // (only what the owner should know: why it waits on them or failed; a finished one says what it did)
+    const why = pos === 'WAITING' || i.status === 'FAILED' || i.status === 'BLOCKED' ? i.reason : pos === 'DONE' && i.status === 'COMPLETED' ? (i.verified ? '✓ ' : '') + (i.result || '') : '';
+    text(n.querySelector('.qwhy'), why || ''); n.querySelector('.qwhy').hidden = !why; n.title = i.name + ' · ' + i.label + (i.reason ? ': ' + i.reason : '');
+  }
+  function drawDue(n, w, pos) {
+    n.className = 'qrow due' + (w.state === 'RUNNING' ? ' live' : '') + (pos === 'WAITING' ? ' wait' : '');
+    htmlOnce(n.querySelector('.qico'), kindIcon(w.type === 'game_level' ? 'game' : 'task', w.pkg));
+    const {title} = split(w.name, w.app);
+    posLine(n, pos, w.state === 'RUNNING' ? '' : w.nextAt && w.nextAt > Date.now() ? 'from ' + hm(w.nextAt) : 'any time');
+    text(n.querySelector('.qname'), title); text(n.querySelector('.qmeta'), short(w.app));
+    const why = pos === 'WAITING' ? (w.needs && w.needs.reason) || 'Stopped: open it to see why.' : '';
+    text(n.querySelector('.qwhy'), why); n.querySelector('.qwhy').hidden = !why; n.dataset.w = w.id; n.title = w.name;
   }
   function drawHist(n, h) {
     n.className = 'qrow hist s-' + (MOOD[h.status] || 'muted');
-    text(n.querySelector('.qn'), new Date(h.at).toLocaleDateString([], {month: 'numeric', day: 'numeric'}));
     htmlOnce(n.querySelector('.qico'), kindIcon(h.kind, h.pkg));
-    text(n.querySelector('.qname'), h.name);
-    text(n.querySelector('.qmeta'), hm(h.at) + ' · ' + h.triggerLabel + (h.durationMs !== null ? ' · ' + (h.durationMs < 60000 ? Math.max(1, Math.round(h.durationMs / 1000)) + ' s' : minsOf(h.durationMs) + ' min') : '') + (h.retries ? ' · retry ' + h.retries : ''));
+    const {title, app} = split(h.name);
+    posLine(n, String(h.label || h.status).toUpperCase(), new Date(h.at).toLocaleDateString([], {month: 'numeric', day: 'numeric'}) + ' ' + hm(h.at));
+    text(n.querySelector('.qname'), title);
+    text(n.querySelector('.qmeta'), [short(app), h.durationMs !== null ? (h.durationMs < 60000 ? Math.max(1, Math.round(h.durationMs / 1000)) + ' s' : minsOf(h.durationMs) + ' min') : '', h.retries ? 'retry ' + h.retries : ''].filter(Boolean).join(' · '));
     const why = h.status === 'COMPLETED' ? (h.verified ? '✓ ' : '') + (h.result || h.reason) : h.reason;
     text(n.querySelector('.qwhy'), why || ''); n.querySelector('.qwhy').hidden = !why; n.title = why || '';
-    htmlOnce(n.querySelector('.qst'), pill(h.status, h.label));
     n.querySelector('.qmore').hidden = !h.key;
   }
   $('qlist').addEventListener('click', e => {
@@ -215,10 +262,11 @@
     if (Q.menuFor === li.dataset.key && !menu.hidden) { closeMenu(); return; }
     Q.menuFor = li.dataset.key;
     const opt = (act, label, ic, extra = '') => '<button class="small ghost" data-m="' + act + '"' + extra + '>' + icon(ic) + esc(label) + '</button>';
-    if (w) menu.innerHTML = opt('wrun', 'Run now', 'play') + opt('wsched', 'Schedule…', 'calendar') + opt('wopen', 'Open in Tasks', 'tasks');
+    if (w) menu.innerHTML = (li.classList.contains('wait') ? opt('wadd', 'Add back to queue', 'plus') : '') + opt('wrun', 'Run now', 'play') + opt('wsched', 'Schedule…', 'calendar') + opt('wopen', 'Open in Tasks', 'tasks');
     else if (i) {
       const live = i.live, ended = ENDED.has(i.status) && i.status !== 'WAITING_FOR_USER', skipped = i.status === 'SKIPPED' && /today by you/.test(i.reason);
-      menu.innerHTML = opt('details', 'View details', 'eye') + (!live && !ended ? opt('run', 'Run now', 'play') : '') + (!i.adhoc ? opt('edit', 'Edit schedule', 'calendar') : '')
+      // (one that waits on the owner can go back in line: at the end of today's queue)
+      menu.innerHTML = (ATTN.has(i.status) && !live ? opt('requeue', 'Add back to queue', 'plus') : '') + opt('details', 'View details', 'eye') + (!live && !ended ? opt('run', 'Run now', 'play') : '') + (!i.adhoc ? opt('edit', 'Edit schedule', 'calendar') : '')
         + '<div class="qpri"><span class="muted small">Priority</span>' + [1, 2, 3, 4, 5].map(p => '<button class="small' + (p === i.priority ? ' on' : '') + '" data-m="pri" data-p="' + p + '" title="' + PRI[p] + '">' + p + '</button>').join('') + '</div>'
         + (!i.adhoc ? opt('skip', skipped ? 'Back in today\'s queue' : 'Skip today', 'skip') : '') + (!live && !ended ? opt('cancel', 'Remove from queue', 'close') : '')
         + (!i.adhoc ? opt('off', 'Disable schedule', 'pause') : '') + opt('history', 'View history', 'clock');
@@ -229,9 +277,11 @@
     menu.onclick = async e => {
       const b = e.target.closest('[data-m]'); if (!b) return;
       const a = b.dataset.m; closeMenu();
+      if (a === 'wadd') { await qcall('add', {target: {type: 'mission', id: w}, deviceId: (dev() || {}).id}); toast('Added back to today\'s queue.'); return; }
       if (a === 'wrun') return qRun({type: 'mission', id: w});
       if (a === 'wsched') return openScheduler({target: {type: 'mission', id: w}});
       if (a === 'wopen') return followLink('tasks', w);
+      if (a === 'requeue') { await qcall('requeue', {key: i.key, deviceId: (dev() || {}).id}); toast(i.name + ' is back in today\'s queue, at the end of the line.'); return; }
       if (a === 'details') return qDetails(i.key);
       if (a === 'run') return qRun(i.target, {key: i.key, name: i.name});
       if (a === 'edit') return openScheduler({target: i.target, scheduleId: i.scheduleId});
