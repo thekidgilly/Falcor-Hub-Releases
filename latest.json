@@ -1,11 +1,11 @@
 {
-  "version": "0.21.53",
-  "notes": "Phone app: alerts show near the top; End Teach can be cancelled while it analyses (the recording is discarded).",
-  "publishedAt": "2026-10-22T06:40:39.305Z",
+  "version": "0.21.54",
+  "notes": "Phone app: pressing Teach no longer shows a false can't-connect error while the phone goes Home.",
+  "publishedAt": "2026-10-22T06:44:34.919Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "26ceeb0557a3e03c708f121a6650f630ddf33e58a5b66be036980a653fa35121",
+      "sha256": "ee5e1c97ea104b7f68b3b634fbecc3c6f347850f5b12719027be56bf688d5727",
       "size": 1182319
     },
     {
@@ -29,9 +29,9 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-StORKFIJ.js",
-      "sha256": "599d205fa2a469a347f04589f1b4c11eb38396f76789df9e93c7244b2d1106d5",
-      "size": 269536
+      "path": "remote-ui/assets/index-BA6Xeg09.js",
+      "sha256": "e3cfeba311db2fe2a403aeb11cada0d0dfcf8885d0b5ff3f669d0295e052bbfd",
+      "size": 269661
     },
     {
       "path": "remote-ui/assets/index-u8RmZuSC.css",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "af86c1cd463a4289f88cd2e24dd54b27404484c6575181c2bdab2b400ba65bdc",
+      "sha256": "0b7d3dcfa1492c7f984cba5f6682f80d855dbed6e6b2f9a61977d33903c23faf",
       "size": 3773
     },
     {
