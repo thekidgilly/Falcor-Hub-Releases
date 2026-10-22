@@ -44,7 +44,7 @@ numbers();
 // and the full-page Falcor chat (falcor) are pages without a tab: Creations opens from a creation's card in the Library
 // and lights Library; the chat opens from the floating Falcor's Full page button.
 const TABS = ['profile', 'phone', 'games', 'sandbox', 'settings'];
-const PAGES = [...TABS, 'stats', 'tasks', 'falcor', 'knowledge'], LIT = {tasks: 'games'};
+const PAGES = [...TABS, 'stats', 'tasks', 'falcor', 'knowledge', 'lore'], LIT = {tasks: 'games', lore: 'settings'};
 let dockOpen = false; // the floating Falcor's small chat is open
 // An app's guide (Knowledge) has no tab of its own: it opens from its game, a task or the chat,
 // lights the tab it came from, and Back returns there.
@@ -212,7 +212,6 @@ function renderPhone(d) {
   text($('d-control'), d.control ? (d.control.kind === 'human' ? 'You' : 'Falcor') : 'Falcor idle');
   for (const p of [$('devicepanel'), $('mission')]) cls(p, 'shine', !!d.autopilot);
   $('take').hidden = controlling; $('release').hidden = !controlling || !!S.teaching;
-  $('teach').disabled = !!S.teaching || !!d.emergency || d.running;
   $('viewer').disabled = S.simulated || !S.scrcpy;
   $('hint').hidden = !controlling;
   // The device frame: control (sand), recording (red), Falcor acting (brackets pulse).
@@ -270,11 +269,11 @@ function renderEyes(d) {
 }
 
 // The live mirror (pictures), the fallback when the video mirror cannot start.
-let frameAt = 0, frameBusy = false, frameTimer = null, frames = 0, fpsAt = Date.now();
+let frameAt = 0, frameBusy = false, frameTimer = null, frames = 0, fpsAt = Date.now(), remoteMirrorAt = 0;
 function nextFrame(delay) { clearTimeout(frameTimer); frameTimer = setTimeout(pullFrame, delay); }
 async function pullFrame() {
   const d = dev();
-  if (!d || !d.connected || !d.authorized || document.hidden) { nextFrame(800); stopVideo(); return; }
+  if (!d || !d.connected || !d.authorized || (document.hidden && Date.now() - remoteMirrorAt > 3500)) { nextFrame(800); stopVideo(); return; }
   // (the video keeps running on every tab while the window shows: its decoded frames are the engine's looks during a
   // run, ~50 ms each instead of a 2 s screen capture; only the picture mirror is for the Phone and Sandbox tabs)
   if (vid.on) { nextFrame(800); return; }
@@ -368,6 +367,10 @@ let shotCanvas = null;
 if (window.hub.onFrameWanted) window.hub.onFrameWanted(async p => {
   const reply = r => { try { window.hub.frameTaken({req: p.req, ...r}); } catch { /* the engine falls back to a capture */ } };
   try {
+    if (p.mime === 'image/jpeg') {
+      remoteMirrorAt = Date.now();
+      if (p.deviceId === deviceId && !vid.on && !vid.starting && !vid.failed && S && !S.simulated && S.scrcpy) void startVideo(deviceId);
+    }
     if (!vid.on || !vid.decoder || vid.decoder.state !== 'configured' || !frameAt || canvas.hidden || p.deviceId !== vid.deviceId || !canvas.width || !canvas.height) { reply({png: null}); return; }
     const w = Math.min(canvas.width, 576), h = Math.round(canvas.height * w / canvas.width);
     if (!shotCanvas) shotCanvas = new OffscreenCanvas(w, h);
@@ -421,7 +424,7 @@ for (const surface of [$('mirror'), canvas]) {
     const p0 = at(e); down = {...p0, t: Date.now(), fast: fast() && !inNav(p0), nav: inNav(p0)}; surface.setPointerCapture(e.pointerId);
     if (down.fast) touch('down', down);
   });
-  surface.addEventListener('pointercancel', () => { if (down && down.fast) touch('up', down); down = null; });
+  surface.addEventListener('pointercancel', e => { if (window.sbPointer && tab === 'sandbox') sbPointer('cancel', at(e), e); if (down && down.fast) touch('up', down); down = null; });
   surface.addEventListener('pointerup', e => {
     if (window.sbPointer && tab === 'sandbox' && sbPointer('up', at(e), e)) return;
     if (down && down.fast) {
@@ -438,10 +441,24 @@ for (const surface of [$('mirror'), canvas]) {
   });
 }
 let lastTouch = {x: 50, y: 50}, wheelAt = 0;
-$('mirrorbox').addEventListener('wheel', e => { if (!controlling) return; e.preventDefault();
+$('mirrorbox').addEventListener('wheel', e => {
+  if (tab === 'sandbox' && window.sbManualMode && !sbManualMode()) {
+    e.preventDefault();
+    if (Date.now() - wheelAt >= 400) { wheelAt = Date.now(); window.sbBuildAction?.({kind: 'scroll', direction: e.deltaY > 0 ? 'down' : 'up'}); }
+    return;
+  }
+  if (!controlling) return; e.preventDefault();
   if (fast()) { const t = e.target === canvas || e.target === $('mirror') ? at({currentTarget: e.target, clientX: e.clientX, clientY: e.clientY}) : {x: 0.5, y: 0.5}; touch('wheel', t, {dir: e.deltaY > 0 ? 'down' : 'up'}); return; }
   if (Date.now() - wheelAt < 400) return; wheelAt = Date.now(); void send({kind: 'scroll', direction: e.deltaY > 0 ? 'down' : 'up'}); }, {passive: false});
 $('mirrorbox').addEventListener('keydown', e => {
+  if (tab === 'sandbox' && window.sbManualMode && !sbManualMode()) {
+    const key = {Enter: 'ENTER', Backspace: 'DEL', Tab: 'TAB', Escape: 'BACK'}[e.key];
+    if (key || e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault(); e.stopPropagation();
+      window.sbBuildAction?.(key ? {kind: 'key', key} : {kind: 'type', text: e.key});
+    }
+    return;
+  }
   if (!controlling) return;
   const k = {Enter: 'ENTER', Backspace: 'DEL', Tab: 'TAB', Escape: 'BACK'}[e.key];
   if (k) { e.preventDefault(); if (fast()) touch('key', null, {key: k}); else void send({kind: 'key', key: k}); }
@@ -464,8 +481,7 @@ function renderTeach() {
 }
 function tickRec() { if (!teachSeen) return; text($('rectime'), clock(teachSeen.ms + (teachSeen.state === 'recording' ? Date.now() - teachSeen.at : 0))); }
 setInterval(tickRec, 500);
-// Teach lives in the Sandbox (it is the Sandbox's recording mode): the Phone tab's Teach opens it there.
-$('teach').onclick = () => { go('sandbox'); openTeach(); };
+// The detailed recording form lives in Sandbox; the Hub mirror has no Teach entry point.
 async function openTeach() {
   const t = await call('teachTarget', {deviceId});
   // On the home screen: Falcor records how the owner opens the app too, and learns the app from the first one opened.
@@ -545,7 +561,7 @@ const icons = new Map();   // pkg → data URL ('' while loading, null when ther
 // (iconOf: the picture's data URL for a game, asked for once; the Current activity window uses it too)
 function iconOf(g) {
   const k = g.pkg + '@' + (g.iconAt || 0);
-  if (g.icon && !icons.has(k)) { icons.set(k, ''); window.hub.call('appIcon', {pkg: g.pkg}).then(u => P.normIcon(u)).then(u => { icons.set(k, u || null); if (tab === 'games') renderGames(true); else if (tab === 'phone') render(); }).catch(() => icons.set(k, null)); }
+  if (g.icon && !icons.has(k)) { icons.set(k, ''); window.hub.call('appIcon', {pkg: g.pkg}).then(u => P.normIcon(u)).then(u => { icons.set(k, u || null); if (tab === 'games') renderGames(true); else if (tab === 'phone') render(); else if (tab === 'profile') renderProfile(); }).catch(() => icons.set(k, null)); }
   return icons.get(k) || null;
 }
 function iconHtml(g) {
@@ -662,7 +678,7 @@ function renderGame(g) {
   renderAds(g);
   const k = g.learned, moves = g.moves ? '<p class="small green">' + g.moves + ' step' + (g.moves === 1 ? '' : 's') + ' Falcor presses here without asking (from your teaching and its own runs).</p>' : '';
   htmlOnce($('gpknowbody'), moves + (k ? '<p>' + esc(k.summary || (k.hasGuide ? 'Guide ready.' : 'Recorded; no guide written yet.')) + '</p><p class="muted small">' + k.sessions + ' teaching session' + (k.sessions === 1 ? '' : 's') + ' · last ' + new Date(k.lastSessionAt).toLocaleDateString() + '</p><button class="small" data-link="knowledge" data-ref="' + esc(g.pkg) + '">' + icon('book') + 'Read the guide</button>'
-    : '<p class="muted small">' + (g.note ? esc(g.note) + '.' : 'Falcor has not learned this ' + (g.kind === 'app' ? 'app yet. Press Teach Falcor and use it on the mirror once.' : 'game yet. Press Teach again (or Teach on the Phone tab) and play it on the mirror.')) + '</p>'));
+    : '<p class="muted small">' + (g.note ? esc(g.note) + '.' : 'Falcor has not learned this ' + (g.kind === 'app' ? 'app yet. Press Teach Falcor and use it on the mirror once.' : 'game yet. Press Teach in Sandbox and play it on the mirror.')) + '</p>'));
 }
 // Game Autopilot: the goal (next level, an offer milestone that is a level, level N, or one of its tasks), Start / Pause /
 // Stop, and what is true now: the verified level, the live step, inputs the phone accepted, the next return and what
@@ -1169,7 +1185,7 @@ $('dnext').onclick = async () => {
 // ------------------------------------------------------------------ Falcor chat (the conductor)
 // It opens on a new chat with Falcor's greeting; the chat is kept only once something is sent (the first message makes
 // it, with the focus chosen before). Notices are in the bell, never here.
-const chat = {id: null, rev: 0, msgs: new Map(), focus: null, poll: null, ctx: true, greeted: null, threads: [], q: ''};
+const chat = {id: null, rev: 0, msgs: new Map(), focus: null, poll: null, greeted: null, threads: [], q: ''};
 const QUICK = ['What\'s running?', 'What needs me?', 'What did you learn today?', 'How does the Daily Queue work?', 'Create a daily check-in task'];
 function chatReset() { chat.rev = 0; chat.shown = 0; chat.msgs.clear(); $('msglist').innerHTML = ''; delete $('msglist').dataset.ready; }
 // A new chat, not kept until the first message. focus: an app to talk about (from a game's or a guide's page).
@@ -1195,12 +1211,12 @@ function placeChat() {
   const convo = document.querySelector('.convo'), dock = $('fdock'), grid = $('chatgrid');
   if (!convo || !dock || !grid) return;
   const full = tab === 'falcor';
-  if (full && convo.parentNode !== grid) grid.insertBefore(convo, $('context'));
+  if (full && convo.parentNode !== grid) grid.appendChild(convo);
   if (!full && convo.parentNode !== dock) dock.appendChild(convo);
   dock.hidden = full || !dockOpen;
   $('fbtn').hidden = full;
   cls($('fbtn'), 'on', dockOpen && !full);
-  $('docknew').hidden = $('dockclose').hidden = full; $('ctxtoggle').hidden = !full;
+  $('docknew').hidden = $('dockclose').hidden = full;
   $('chatsize').title = full ? 'Small chat' : 'Full page';
   $('chattext').placeholder = full ? 'Ask Falcor anything, or say what to do. Enter sends · Shift+Enter new line' : 'Ask Falcor anything…';
   $('chatsize').querySelector('use').setAttribute('href', full ? '#i-restore' : '#i-max');
@@ -1228,7 +1244,7 @@ function placeFbtn(x, y) {
   let saved = null; try { saved = JSON.parse(localStorage.getItem(FPOS) || 'null'); } catch { /* no storage */ }
   const fromSaved = () => saved && placeFbtn(saved.fx * innerWidth, saved.fy * innerHeight);
   requestAnimationFrame(() => { if (!fromSaved()) placeFbtn(innerWidth - 56 - 24, innerHeight - 56 - 24); });
-  window.addEventListener('resize', () => { const r = f.getBoundingClientRect(); if (!fromSaved()) placeFbtn(r.left, r.top); if (dockOpen) placeDock(); });
+  window.addEventListener('resize', () => { if (!fromSaved()) placeFbtn(innerWidth - 56 - 24, innerHeight - 56 - 24); if (dockOpen) placeDock(); });
   let drag = null;
   f.addEventListener('pointerdown', e => { if (e.button !== 0) return; const r = f.getBoundingClientRect(); drag = {id: e.pointerId, dx: e.clientX - r.left, dy: e.clientY - r.top, x0: e.clientX, y0: e.clientY, moved: false}; f.setPointerCapture(e.pointerId); });
   f.addEventListener('pointermove', e => {
@@ -1272,10 +1288,13 @@ function renderThreads() {
   for (const t of list) { const g = t.pinned ? 'PINNED' : dayOf(t.updatedAt); if (!seen.has(g)) { seen.add(g); rows.push({group: g}); } rows.push(t); }
   if (!rows.length) { htmlOnce($('threadlist'), '<li class="tnone">' + (q ? 'No chat matches “' + esc(chat.q.trim()) + '”.' : 'Your chats with Falcor are kept here.') + '</li>'); return; }
   if ($('threadlist').querySelector('.tnone')) $('threadlist').innerHTML = '';
-  keyed($('threadlist'), rows, r => r.group ? 'g:' + r.group : r.id, r => r.group ? P.el('<li class="tgroup"></li>') : P.el('<li class="th"><span class="t"></span><time></time><span class="p"></span><span class="tacts"><button class="ghost icon small" data-pin title="Pin">' + icon('pin') + '</button><button class="ghost icon small" data-ren title="Rename">' + icon('edit') + '</button><button class="ghost icon small" data-del title="Delete">' + icon('trash') + '</button></span></li>'), (li, r) => {
+  keyed($('threadlist'), rows, r => r.group ? 'g:' + r.group : r.id, r => r.group ? P.el('<li class="tgroup"></li>') : P.el('<li class="th" tabindex="0"><span class="t"></span><time></time><span class="p"></span><span class="tacts"><button class="ghost icon small" data-pin title="Pin" aria-label="Pin chat">' + icon('pin') + '</button><button class="ghost icon small" data-ren title="Rename" aria-label="Rename chat">' + icon('edit') + '</button><button class="ghost icon small" data-del title="Delete" aria-label="Delete chat">' + icon('trash') + '</button></span></li>'), (li, r) => {
     if (r.group) { text(li, r.group); return; }
-    cls(li, 'on', r.id === chat.id); cls(li, 'pinned', r.pinned); text(li.querySelector('.t'), r.title); text(li.querySelector('time'), shortAgo(r.updatedAt)); text(li.querySelector('.p'), r.preview || '');
+    cls(li, 'on', r.id === chat.id); cls(li, 'pinned', r.pinned);
+    if (!li.querySelector('.t').isContentEditable) text(li.querySelector('.t'), r.title);
+    text(li.querySelector('time'), shortAgo(r.updatedAt)); text(li.querySelector('.p'), r.preview || '');
     li.querySelector('[data-pin]').title = r.pinned ? 'Unpin' : 'Pin';
+    li.querySelector('[data-pin]').setAttribute('aria-label', r.pinned ? 'Unpin chat' : 'Pin chat');
   });
 }
 $('threadsearch').oninput = () => { chat.q = $('threadsearch').value; renderThreads(); };
@@ -1283,11 +1302,24 @@ $('threadlist').onclick = async e => {
   const li = e.target.closest('li.th'); if (!li) return; const id = li.dataset.key;
   if (e.target.closest('[data-pin]')) { const t = chat.threads.find(x => x.id === id); await call('chatPin', {id, pinned: !(t && t.pinned)}); return loadThreads(); }
   if (e.target.closest('[data-del]')) { if (confirm('Delete this chat?')) { await call('chatDelete', {id}); if (chat.id === id) chatFresh(); else await loadThreads(); } return; }
-  if (e.target.closest('[data-ren]')) { const t = li.querySelector('.t'); t.contentEditable = 'true'; t.focus(); document.getSelection().selectAllChildren(t); t.onkeydown = async ev => { if (ev.key === 'Enter') { ev.preventDefault(); t.contentEditable = 'false'; await call('chatRename', {id, title: t.textContent}); loadThreads(); } if (ev.key === 'Escape') { t.contentEditable = 'false'; loadThreads(); } }; t.onblur = () => { if (t.contentEditable === 'true') { t.contentEditable = 'false'; loadThreads(); } }; return; }
+  if (e.target.closest('[data-ren]')) {
+    const t = li.querySelector('.t'); t.contentEditable = 'true'; t.setAttribute('role', 'textbox'); t.setAttribute('aria-label', 'Chat name'); t.focus(); document.getSelection().selectAllChildren(t);
+    const finish = () => { t.contentEditable = 'false'; t.removeAttribute('role'); t.removeAttribute('aria-label'); };
+    t.onkeydown = async ev => {
+      if (ev.key === 'Enter') {
+        ev.preventDefault(); const title = t.textContent.trim();
+        if (!title) { toast('Give this chat a name.', 'warn'); return; }
+        finish(); await call('chatRename', {id, title}); await loadThreads(); if (chat.id === id) await pullChat(true);
+      }
+      if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); finish(); void loadThreads(); }
+    };
+    t.onblur = () => { if (t.isContentEditable) { finish(); void loadThreads(); } }; return;
+  }
+  if (e.target.closest('.t[contenteditable="true"]')) return;
   void openChat(id);
 };
+$('threadlist').onkeydown = e => { if (e.target.matches('li.th') && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); void openChat(e.target.dataset.key); } };
 $('newchat').onclick = () => { chatFresh(); $('chattext').focus(); };
-$('ctxtoggle').onclick = () => { chat.ctx = !chat.ctx; cls($('chatgrid'), 'noctx', !chat.ctx); };
 function renderMsgs() {
   const box = $('msgs'), lbox = $('msglist'), stick = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
   const list = [...chat.msgs.values()].filter(m => m.role !== 'note').sort((a, b) => a.seq - b.seq);
@@ -1304,7 +1336,6 @@ function renderMsgs() {
   if (list.length && (stick || grew)) box.scrollTop = box.scrollHeight; else if (!list.length) box.scrollTop = 0;
   cls($('threadlist'), 'fresh', !chat.id);
   renderThreads();
-  renderContext(list);
 }
 function drawMsg(node, m) {
   cls(node, 'thinking', !!m.pending); cls(node, 'error', !!m.error);
@@ -1370,13 +1401,6 @@ function openAt() {
 $('atmenu').onclick = e => { const li = e.target.closest('[data-focus]'); if (li) { setFocus(li.dataset.focus); const v = $('chattext').value; $('chattext').value = v.replace(/@$/, ''); } $('atmenu').hidden = true; $('chattext').focus(); };
 document.addEventListener('click', e => { if (!e.target.closest('.focusrow')) $('atmenu').hidden = true; });
 function renderChatMeta() { void loadThreads(); }
-function renderContext(list) {
-  const d = dev(), k = chat.focus && S.knowledge.find(x => x.pkg === chat.focus), last = [...list].reverse().find(m => m.role === 'falcor' && m.used && m.used.length);
-  htmlOnce($('ctxbody'), (chat.focus ? '<div class="item"><b>' + esc(k ? k.name : appName(chat.focus)) + '</b><p class="muted small">' + (k ? (k.hasGuide ? 'Guide ready · ' : 'No guide yet · ') + k.sessions + ' session(s)' : 'Not learned yet') + '</p><a data-link="knowledge" data-ref="' + esc(chat.focus) + '">Open guide →</a></div>' : '')
-    + '<div class="item"><b>Phone</b><p class="small"><span class="led ' + (d && d.connected ? 'on' : '') + '"></span> ' + esc(d ? d.label + ' · ' + (d.foregroundName || 'home') : 'not plugged in') + '<br>Autopilot ' + (d && d.autopilot ? 'on' : 'off') + (d && d.running ? ' · running a task' : '') + '</p></div>'
-    + (last ? '<div class="item"><b>Last answer used</b>' + last.used.map(u => '<p class="small"><a data-link="' + esc(u.tab) + '" data-ref="' + esc(u.ref) + '">' + esc(u.label) + '</a></p>').join('') + '</div>' : ''));
-}
-$('ctxbody').onclick = e => { const l = e.target.closest('[data-link]'); if (l) followLink(l.dataset.link, l.dataset.ref); };
 
 // ------------------------------------------------------------------ Knowledge: guides
 let learnPkg = null, learnSig = '', L = null, editing = false;
@@ -1521,4 +1545,3 @@ $('pair').onclick = async () => {
 };
 $('secretform').onsubmit = async e => { e.preventDefault(); const f = e.target; await call('setSecret', {name: f.name.value, value: f.value.value}); f.reset(); toast('Secret sealed on this computer.'); };
 $('updcheck').onclick = () => call('updateCheck').then(() => toast('Checked for updates.'));
-

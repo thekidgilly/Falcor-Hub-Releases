@@ -1,17 +1,17 @@
 {
-  "version": "0.21.56",
-  "notes": "Build sequences and custom blocks with Falcor AI without losing current edits. Improved desktop and phone block editing and playback, 100 pixel icons for Library sequences, desktop chat history controls and white glow, phone chat navigation, shared fast desktop video for all phone mirrors, four-card Sandbox start, compact panels, and a lore-filled Keeper hall in About.",
-  "publishedAt": "2026-10-22T18:36:24.106Z",
+  "version": "0.21.57",
+  "notes": "Sandbox now has a full zoomable block grid, horizontal Flow and vertical Tree views, and a floating phone window with lock, move, resize, maximize, popout and dock controls. Build mode turns accepted phone inputs into editable blocks while keeping Teach, custom writing, AI drafting and playback. Phone Sandbox adds a vertical blocks-first grid, expanded Build view, block count and independent pinch zoom. Phone Profile opens from your top-right photo; five bottom tabs remain Hub, Library, Sandbox, Falcor and Settings. Hub shows the centered, uncropped mirror first with equal stat tiles and migrates saved layouts. Fixed Teach analyze and discard access.",
+  "publishedAt": "2026-10-22T19:41:57.313Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "4ff11a13a3ad31f3bb4fefd18b549cd39d46dbb3fd8b2011980ec4f817f10deb",
-      "size": 1194248
+      "sha256": "1d63a53930c7c9cdd7550a377cd8ff51ce4f6ec384efdf24dca5f595e6a61865",
+      "size": 1195103
     },
     {
       "path": "dist/preload.js",
-      "sha256": "33b116a15b6a69ac07d92501ab16858554bcf2000d1a0591d168704499090176",
-      "size": 2223
+      "sha256": "f3308335a63240c659aae7a02797538323579b083dc6bf74b21938ae3119fe2a",
+      "size": 2259
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-Bz0R5vtV.js",
-      "sha256": "6f4c2f95651fdd8d21061b6f0188c0b64729753227f44d6cfdd50da02cc6031b",
-      "size": 296074
+      "path": "remote-ui/assets/index-DbR7jXAL.js",
+      "sha256": "8220ea88d716754832dd1e34ddcb16d4714f789ad3c2fe2272f0a0e377627a92",
+      "size": 264644
     },
     {
-      "path": "remote-ui/assets/index-C2sGbHrn.css",
-      "sha256": "8133d463a2ed713462dd2a2795f3d277b6df9e8deb1739dce5320449ad90995c",
-      "size": 102843
+      "path": "remote-ui/assets/index-ZtEEYcCH.css",
+      "sha256": "5ae37cc5aae0b70a48f9705d52ad05c10e1cb6a0ea722d572ec95949a96f92d9",
+      "size": 107163
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,8 +65,8 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "087b0647aeba643a61e554109776e291ad6a577141dcdefdd7bf43ec11a167e8",
-      "size": 3793
+      "sha256": "9ab17c5afc397d63f5d02a3a2c30d59c874b191ce58fa16388e82ab98ffda035",
+      "size": 3885
     },
     {
       "path": "ui/ai.js",
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "20c6361306b6edfd30909a62a12f66ef167aada5c0aa9cf0623274895b87a28e",
-      "size": 151023
+      "sha256": "b204889d64e8948e420fe6c37a7a035670caafbc808aca51554a8535ac01b94e",
+      "size": 151742
     },
     {
       "path": "ui/app.png",
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "5759d995295a6189c7aece306c5de01136d3f6176a8655efa1de2ffcfd0d5dfc",
-      "size": 69057
+      "sha256": "fdc265c61c8d2a4962893e634ae96f003759bd325150b0cac074642305d5f868",
+      "size": 70570
     },
     {
       "path": "ui/motion.css",
@@ -159,9 +159,19 @@
       "size": 56748
     },
     {
+      "path": "ui/sandbox-workspace.css",
+      "sha256": "d305bdd77ef8b1835a5967c34951972fdacd1706ab739b3c1daf41917351a8eb",
+      "size": 5665
+    },
+    {
+      "path": "ui/sandbox-workspace.js",
+      "sha256": "bf052d7da627b2702e3ca7aa9b9b3a59637e09dcee1e59bf137277ac13b2fdb2",
+      "size": 9763
+    },
+    {
       "path": "ui/sandbox.js",
-      "sha256": "895da93d3429a6d778b84783df1d424872d0de8a7bd61c765c947f0a8d916528",
-      "size": 118376
+      "sha256": "6fd3e6e18cfe0627d1a1af676044d6fbea93244985a9e48ec045439b996ac795",
+      "size": 124141
     },
     {
       "path": "ui/sequence-icons.css",
