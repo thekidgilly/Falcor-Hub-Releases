@@ -42,7 +42,7 @@
       case 'scroll': return 'Scroll ' + p.direction + (Number(p.amount) > 1 ? ' ×' + p.amount : '');
       case 'multiTap': return 'Tap ' + (p.points || []).length + ' points in order';
       case 'key': return 'Press ' + (KEYNAME[p.key] || p.key);
-      case 'typeText': return 'Enter text (' + String(p.text || '').length + ' characters)';
+      case 'typeText': { const n = String(p.text || '').length; return 'Enter text (' + n + ' character' + (n === 1 ? '' : 's') + ')'; }
       case 'clearText': return 'Clear ' + p.count + ' characters';
       case 'launchApp': return 'Open ' + (appName(p.packageName) || '…');
       case 'waitForApp': return 'Wait for ' + (appName(p.packageName) || '…') + ' (up to ' + fmtMs(p.timeoutMs) + ')';
@@ -62,7 +62,7 @@
     }
     const b = BLOCKS().get(s.type); return b ? b.name : s.type;
   }
-  function appName(pkg) { if (!pkg) return ''; const d = sdev(); return (d && d.installedNames && d.installedNames[pkg]) || pkg; }
+  function appName(pkg) { if (!pkg) return ''; const d = sdev(); return (d && d.installedNames && d.installedNames[pkg]) || (/^[\w.]+\.\w+$/.test(pkg) ? pkg.split('.').pop().replace(/[_-]+/g, ' ').replace(/^\w/, c => c.toUpperCase()) : pkg); }
   function meta(s) {
     const m = [];
     if (s.waitBeforeMs) m.push('wait ' + fmtMs(s.waitBeforeMs) + ' first'); if (s.waitAfterMs) m.push('then ' + fmtMs(s.waitAfterMs));
@@ -209,6 +209,8 @@
     if (S.teaching && SB.mode !== 'teach' && !l) setMode('teach', true); else if (!S.teaching && SB.mode === 'teach') setMode('view', true);
     if (!S.teaching && !l && SB.mode === 'view' && controlling) setMode('control', true);
     drawHead(); drawRunbar(); marks(); devFrame(d);
+    text($('sbteachlbl'), S.teaching ? 'End Teach' : 'Teach'); cls($('sbteach'), 'on', !!S.teaching);
+    $('sbteach').disabled = SB.ending || !!l || (!S.teaching && !d);
   };
   function devFrame(d) {
     const devEl = $('device');
@@ -230,12 +232,10 @@
     if (document.activeElement !== $('sbtitle')) $('sbtitle').value = q ? def().title : '';
     $('sbtitle').disabled = !q; $('sbdirty').hidden = !SB.dirty; text($('sbrev'), q ? 'v' + q.revision.number + (SB.dirty ? ' · unsaved' : '') : '');
     htmlOnce($('sbdev'), (S.devices.length ? S.devices : [{id: '', label: 'No phone'}]).map(x => '<option value="' + esc(x.id) + '"' + (d && x.id === d.id ? ' selected' : '') + '>' + esc(x.label) + '</option>').join(''));
-    // Connection, the picture's age, rotation.
+    // Connection and rotation (the picture's age is gone: the owner found it noise, and it redrew the header every second).
     if (d) SB.deviceSeen.add(d.id);
     const conn = !d ? (SB.deviceSeen.size ? ['bad', 'Disconnected'] : ['bad', 'No phone']) : !d.connected ? ['warn', 'Reconnecting'] : !d.authorized ? ['bad', 'Input unavailable · allow USB debugging'] : d.locked ? ['warn', 'Input unavailable · unlock it'] : d.emergency ? ['bad', 'Emergency Stop'] : ['ok', 'Connected'];
-    const age = frameAt ? Math.round((Date.now() - frameAt) / 1000) : null;
     htmlOnce($('sbchips'), '<span class="' + conn[0] + '"><i class="led ' + (conn[0] === 'ok' ? 'on' : conn[0]) + '"></i>' + esc(conn[1]) + '</span>'
-      + (age !== null ? '<span class="' + (age > 5 ? 'warn' : '') + '">Frame ' + (age < 1 ? 'live' : age + ' s old') + '</span>' : '')
       + (d ? '<span>' + (d.rotation % 2 ? 'Landscape' : 'Portrait') + '</span>' : '')
       + (q && def().target.rotation !== null && d && def().target.rotation !== d.rotation ? '<span class="warn">Drawn ' + (def().target.rotation % 2 ? 'landscape' : 'portrait') + '</span>' : ''));
     const l = liveRun(), mine = l && q && l.sequenceId === q.id;
@@ -322,10 +322,14 @@
     if (!SB.seq) { htmlOnce(box, '<div class="empty">No sequence open. <button class="small primary" data-do="new">' + icon('plus') + 'New sequence</button> <button class="small" data-do="open">' + icon('book') + 'Open</button> <button class="small" data-do="example">Try the example</button></div>'); return; }
     const B = BLOCKS();
     const dz = (into, at) => '<i class="dz" data-into="' + into + '" data-at="' + at + '"></i>';
-    const lane = (list, into) => { let h = dz(into, 0); list.forEach((s, i) => { h += block(s) + dz(into, i + 1); }); return h; };
-    const block = s => {
-      const b = B.get(s.type) || {icon: 'sandbox', name: s.type};
-      const card = '<div class="blk' + (SB.sel.includes(s.id) ? ' sel' : '') + (s.enabled === false ? ' off' : '') + (s.color ? ' c-' + s.color : '') + '" data-id="' + esc(s.id) + '" draggable="true" title="' + esc(b.name + (s.note ? ' · ' + s.note : '')) + '">' + icon(b.icon) + '<span class="w">' + esc(words(s)) + '</span><span class="m">' + esc(meta(s)) + '</span></div>';
+    const lane = (list, into) => { let h = dz(into, 0); list.forEach((s, i) => { h += block(s, i) + dz(into, i + 1); }); return h; };
+    // A card per step: its number, a glowing icon in its kind's colour (touch, app, flow, screen), what it does in its own
+    // words, its details, and one line on what this kind of step is for (the catalog's help, first sentence).
+    const about = b => String(b.help || '').split(/(?<=\.)\s/)[0].slice(0, 90);
+    const block = (s, i) => {
+      const b = B.get(s.type) || {icon: 'sandbox', name: s.type, cat: 'flow', help: ''};
+      const card = '<div class="blk cat-' + esc(b.cat || 'flow') + (SB.sel.includes(s.id) ? ' sel' : '') + (s.enabled === false ? ' off' : '') + (s.color ? ' c-' + s.color : '') + '" data-id="' + esc(s.id) + '" draggable="true" title="' + esc(b.name + (s.note ? ' · ' + s.note : '')) + '">'
+        + '<span class="bn">' + String(i + 1).padStart(2, '0') + '</span><span class="bico"><span class="tile">' + icon(s.type === 'key' ? ({HOME: 'home', BACK: 'back', APP_SWITCH: 'apps', ENTER: 'check', DEL: 'close'})[s.params && s.params.key] || b.icon : b.icon) + '</span></span><span class="w">' + esc(words(s)) + '</span><span class="m">' + esc(meta(s)) + '</span><span class="bd">' + esc(about(b)) + '</span></div>';
       if (!b.group) return card;
       return '<div class="grp" data-g="' + esc(s.id) + '">' + card + '<div class="lane" data-l="' + (b.group === 'branch' ? 'THEN' : 'DO') + '">' + lane(s.children || [], s.id + ':children') + '</div>' + (b.group === 'branch' ? '<div class="lane" data-l="ELSE">' + lane(s.else || [], s.id + ':else') + '</div>' : '') + '</div>';
     };
@@ -494,6 +498,10 @@
         + '<label>Note<textarea rows="2" maxlength="300" data-k="note">' + esc(s.note || '') + '</textarea></label>';
     }
     if (SB.error) h += '<p class="err">' + esc(SB.error) + '</p>';
+    // Reteach from here: this step and the ones after it are replaced by what the owner shows next (top-level steps only).
+    const at = locate(s.id), top = !!at && at.list === def().steps;
+    h += '<div class="reteach"><button class="sbteachbtn" data-do="reteach"' + (top && !S.teaching && !liveRun() ? '' : ' disabled') + ' title="' + esc(top ? 'Remove this step and the ones after it, then show Falcor again from here' : 'Reteach works on steps outside groups and loops') + '">' + icon('rec') + 'Reteach from here</button>'
+      + '<p class="muted small">' + (top ? 'Steps ' + (at.i + 1) + ' to ' + def().steps.length + ' are replaced by what you show. Teach starts at once, from the screen the phone is on now (no Home step).' : 'Reteach works on steps outside groups and loops.') + '</p></div>';
     h += '<div class="acts"><button class="small" data-do="test">' + icon('target') + 'Test step</button><button class="small" data-do="dup">' + icon('copy') + 'Duplicate</button><button class="small" data-do="group">Group</button><button class="small" data-do="preset">Save as preset</button><button class="small danger" data-do="del">' + icon('trash') + 'Delete</button></div>';
     box.innerHTML = h;
   }
@@ -547,7 +555,7 @@
     const pg = e.target.closest('[data-pickg]'); if (pg) { setMode('gesture'); return; }
     const n = e.target.closest('[data-nudge]'); if (n) { const k = n.dataset.nudge, dx = Number(n.dataset.dx || 0) * 0.005, dy = Number(n.dataset.dy || 0) * 0.005; edit(() => { const s = locate(SB.focus).step, p = s.params[k] || [0.5, 0.5], lo = k === 'offset' ? -0.2 : 0, hi = k === 'offset' ? 0.2 : 1; s.params[k] = [Math.min(hi, Math.max(lo, Math.round((p[0] + dx) * 10000) / 10000)), Math.min(hi, Math.max(lo, Math.round((p[1] + dy) * 10000) / 10000))]; }, {merge: 'nudge' + k}); return; }
     const d = e.target.closest('[data-do]'); if (!d) return;
-    ({test: () => start('test'), dup: duplicate, group, del: removeSel, preset: presetSheet, sched: () => schedule(), history: historySheet, export: () => sb('export', {id: SB.seq.id}).then(ok => ok && toast('Exported.')), new: newSheet, open: openSheet})[d.dataset.do]();
+    ({test: () => start('test'), reteach: () => reteach(SB.focus), dup: duplicate, group, del: removeSel, preset: presetSheet, sched: () => schedule(), history: historySheet, export: () => sb('export', {id: SB.seq.id}).then(ok => ok && toast('Exported.')), new: newSheet, open: openSheet})[d.dataset.do]();
   });
 
   // ------------------------------------------------------------------ the mirror: modes, picking, pins
@@ -555,7 +563,7 @@
     if (m === SB.mode && !auto) { if (m === 'target' || m === 'gesture') return; }
     const l = liveRun();
     if (l && m !== 'run') { if (!auto) toast('A run is playing: pause or stop it first.', 'warn'); return; }
-    if (m === 'teach' && !auto && !S.teaching) { openTeach(); }
+    if (m === 'teach' && !auto) { void toggleTeach(); return; }
     if (m === 'control' && !auto && !controlling) { const d = sdev(); if (d) void call('take', {deviceId: d.id}).then(() => toast('You have control. Click to tap, drag to swipe, wheel to scroll.')); }
     if (!auto && SB.mode === 'control' && m !== 'control' && controlling && !S.teaching) { const d = sdev(); if (d) void call('release', {deviceId: d.id}); }
     SB.mode = m; SB.draw = null;
@@ -678,19 +686,118 @@
   // Teach records into the open sequence (app.js's Teach form asks first).
   window.sbRecordTarget = () => SB.seq && !SB.home ? {id: SB.seq.id, title: def().title} : null;
   window.sbBeforeTeach = async () => { if (!SB.seq) return null; if (SB.dirty) await save({silent: true}); return SB.seq.id; };
-  window.sbAfterTeach = async r => {
-    if (r.error) { toast('The recorded blocks were not added: ' + r.error, 'bad'); return; }
-    if (SB.seq && SB.seq.id === r.sequenceId) {
-      const before = new Set(flat().map(s => s.id));
-      await open(r.sequenceId, {keepSel: true, discardDraft: true});
-      const added = flat().filter(s => !before.has(s.id));
-      SB.sel = added.map(s => s.id); draw();
-      for (const s of added) { const el = $('sbsteps').querySelector('.blk[data-id="' + s.id + '"]'); if (el && !P.reduced()) el.classList.add('dropin'); }
-      if (added[0]) { const el = $('sbsteps').querySelector('.blk[data-id="' + added[0].id + '"]'); if (el) el.scrollIntoView({block: 'nearest', inline: 'nearest'}); }
+
+  // ------------------------------------------------------------------ Teach → a run, in one press each way
+  // Teach (its own glowing button): Falcor watches the phone on the mirror at once, no form. It records into the open
+  // sequence while that is still empty, else into a new one. End Teach stops it: a progress bar follows the engine's real
+  // stages (engine.ts#teachWork), then the panel says what Falcor saw (the app, taps, typing, pauses, swipes) beside the
+  // blocks it built in the timeline, where each can be edited, moved or deleted, and Save to Library names and keeps it.
+  const pause = ms => new Promise(r => setTimeout(r, ms));
+  async function toggleTeach() { if (SB.ending) return; if (S.teaching) await endTeach(); else await beginTeach(); }
+  // Reteach from a step: it and the steps after it are removed (a new version, so History can bring them back), then
+  // Teach starts at once on the screen the phone is on, without going Home and without opening the app again; End Teach
+  // adds what was shown where the removed steps were.
+  async function reteach(stepId) {
+    const d = sdev(); if (!d) { toast('Plug in the phone first.', 'warn'); return; }
+    if (liveRun() || S.teaching) return;
+    const at = locate(stepId); if (!at || at.list !== def().steps) return;
+    const n = def().steps.length - at.i;
+    if (!window.confirm('Reteach from step ' + (at.i + 1) + '? ' + n + ' step' + (n === 1 ? '' : 's') + ' (this one and after) will be replaced by what you show next. History keeps the old version.')) return;
+    edit(x => { x.steps.splice(at.i); }); SB.sel = []; SB.focus = null; SB.reteachFrom = at.i + 1;
+    await save({force: true, silent: true});
+    $('sbtaught').hidden = true;
+    try { S.teaching = await call('teachStart', {deviceId: d.id, name: '', intent: '', home: false, sandbox: {sequenceId: SB.seq.id, launch: false, waits: true, check: true}}); } catch { return; }
+    setMode('teach', true); render(); draw();
+    $('mirrorbox').focus();
+    toast('Reteaching from step ' + (at.i + 1) + ': carry on from this screen on the mirror. Press End Teach when you are done.');
+  }
+  async function beginTeach() {
+    const d = sdev(); if (!d) { toast('Plug in the phone first.', 'warn'); return; }
+    if (liveRun()) { toast('A run is playing: pause or stop it first.', 'warn'); return; }
+    SB.reteachFrom = null;
+    let id = SB.seq && !SB.home && !flat().length ? SB.seq.id : null;
+    if (id && SB.dirty) await save({silent: true});
+    if (!id) {
+      if (SB.seq && SB.dirty && !confirmLeave()) return;
+      const r = await sb('create', {title: 'Taught run ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}), deviceId: d.id, template: 'blank'});
+      await refresh(); await open(r.id); id = r.id;
     }
-    toast(r.added ? 'Added ' + r.added + ' block' + (r.added === 1 ? '' : 's') + ' from what you showed (version ' + r.revision + '). Press Preview to watch them play.' + (r.skipped.length ? ' Left out: ' + r.skipped.join(', ') + '.' : '') : 'Nothing to add: no touches were recorded in the app.', r.added ? 'ok' : 'warn');
-    setMode('view', true);
+    $('sbtaught').hidden = true;
+    // (the phone goes to its home screen first, and the run will start there too)
+    try { S.teaching = await call('teachStart', {deviceId: d.id, name: '', intent: '', home: true, sandbox: {sequenceId: id, launch: true, waits: true, check: true}}); } catch { return; }
+    setMode('teach', true); render();
+    $('mirrorbox').focus();
+    toast('Teaching from the home screen: open an app on the mirror, then tap, swipe, type. Press End Teach when you are done.');
+  }
+  function workHtml(stage, pct) {
+    return '<p class="eyebrow">// ANALYZING YOUR RECORDING</p><h2>' + icon('rec') + 'Building your run</h2><div class="tbar"><i id="sbtbar"></i></div><p class="small" id="sbtstage">' + esc(stage) + '</p>';
+  }
+  async function endTeach() {
+    SB.ending = true; render();
+    const box = $('sbtaught'); box.innerHTML = workHtml('Stopping the recording', 4); box.hidden = false;
+    const paint = (stage, pct) => { const b = $('sbtbar'); if (b) b.style.width = Math.max(4, Math.min(100, pct)) + '%'; text($('sbtstage'), stage); };
+    paint('Stopping the recording', 4);
+    let done = false, shown = 0;
+    // (each stage stays up long enough to read: a quick analysis still shows its steps)
+    const poll = (async () => { while (!done) { const w = await window.hub.call('teachProgress').catch(() => null); if (w && w.pct > shown && w.pct < 100) { shown = w.pct; paint(w.stage, w.pct); await pause(350); } else await pause(120); } })();
+    let r = null;
+    try { r = await call('teachStop'); } catch { /* call showed it */ }
+    S.teaching = null;
+    done = true; await poll;
+    // A quick analysis is over before the bar could show it: each stage it went through is still shown, briefly.
+    for (const [st, pct] of [['Reading your touches, taps and typing', 30], ['Learning the screens of ' + ((r && r.name) || 'the app'), 55], ['Building the steps', 82]]) if (pct > shown) { paint(st, pct); await pause(380); }
+    paint('Done', 100); await pause(450);
+    SB.ending = false;
+    await showTaught(r);
+    render();
+  }
+  window.sbEndTeach = endTeach;
+  $('sbteach').onclick = () => void toggleTeach();
+  async function showTaught(r) {
+    const box = $('sbtaught'), s = r && r.sandbox;
+    if (!r || !r.pkg || !s) { box.innerHTML = '<p class="eyebrow">// TEACH</p><h2>Nothing was recorded</h2><p class="muted small">' + (r ? 'No app was opened on the mirror. Press Teach, open an app, use it, then End Teach.' : 'The recording could not be stopped cleanly.') + '</p><div class="row"><button data-t="close">Close</button></div>'; box.hidden = false; setMode('view', true); return; }
+    if (s.error) { box.innerHTML = '<p class="eyebrow">// TEACH</p><h2>The run was not built</h2><p class="red small">' + esc(s.error) + '</p><div class="row"><button data-t="close">Close</button></div>'; box.hidden = false; setMode('view', true); return; }
+    let added = [];
+    if (!SB.seq || SB.seq.id !== s.sequenceId) await open(s.sequenceId);
+    else { const before = new Set(flat().map(x => x.id)); await open(s.sequenceId, {keepSel: true, discardDraft: true}); added = flat().filter(x => !before.has(x.id)); }
+    if (!added.length) added = flat();
+    SB.sel = added.map(x => x.id); draw();
+    added.forEach((x, i) => { const el = $('sbsteps').querySelector('.blk[data-id="' + x.id + '"]'); if (el && !P.reduced()) { el.style.animationDelay = Math.min(i * 60, 900) + 'ms'; el.classList.add('dropin'); } });
+    if (added[0]) { const el = $('sbsteps').querySelector('.blk[data-id="' + added[0].id + '"]'); if (el) el.scrollIntoView({block: 'nearest', inline: 'nearest'}); }
+    const f = s.found || {}, n = (k, one, many) => f[k] ? '<li>' + f[k] + ' ' + (f[k] === 1 ? one : many) + '</li>' : '';
+    const secs = ms => ms >= 60000 ? Math.round(ms / 60000) + ' min' : Math.round(ms / 1000) + ' s';
+    const from = SB.reteachFrom; SB.reteachFrom = null;
+    const seen = (from ? '<li>Carried on in <b>' + esc(f.app || r.name) + '</b> from step ' + from + '</li>' : '<li>Opened <b>' + esc(f.app || r.name) + '</b></li>') + n('taps', 'tap', 'taps') + n('holds', 'long press', 'long presses') + n('swipes', 'swipe', 'swipes') + n('scrolls', 'scroll', 'scrolls')
+      + n('typed', 'text typed', 'texts typed') + n('keys', 'key (Back, Enter…)', 'keys (Back, Enter…)') + (f.waits ? '<li>' + f.waits + ' pause' + (f.waits === 1 ? '' : 's') + ' kept as waits (' + secs(f.waitedMs) + ')</li>' : '') + (f.check ? '<li>A check that it ends like you showed</li>' : '');
+    const title = /^Taught run /.test(def().title) ? (f.app || r.name) + ' run' : def().title;
+    box.innerHTML = '<p class="eyebrow">// TAUGHT RUN · ' + esc(secs(s.ms || 0)) + ' recorded</p><h2>' + icon('check') + 'Your run is ready</h2>'
+      + '<p class="small">Falcor saw:</p><ul class="taughtlist">' + seen + '</ul>'
+      + '<p class="muted small">' + s.added + ' step' + (s.added === 1 ? ' is' : 's are') + ' in the timeline below. Click one to change it, drag to reorder, Delete removes it, Preview plays it.</p>'
+      + (s.skipped && s.skipped.length ? '<p class="sand small">Left out: ' + esc(s.skipped.join(', ')) + '.</p>' : '')
+      + '<label>Name<input id="sbtname" maxlength="80" value="' + esc(title) + '"></label>'
+      + '<div class="row"><button class="primary" data-t="publish">' + icon('check') + 'Save to Library</button><button data-t="close">' + icon('edit') + 'Edit steps</button><button class="ghost danger" data-t="discard">' + icon('trash') + 'Discard</button></div>';
+    box.hidden = false; setMode('view', true);
+  }
+  $('sbtaught').onclick = async e => {
+    const b = e.target.closest('[data-t]'); if (!b) return;
+    const act = b.dataset.t;
+    if (act === 'close') { $('sbtaught').hidden = true; return; }
+    if (act === 'library') { $('sbtaught').hidden = true; go('games'); const c = document.querySelector('#libfilter [data-f="creations"]'); if (c) c.click(); return; }
+    if (!SB.seq) return;
+    if (act === 'discard') {
+      if (!window.confirm('Discard "' + def().title + '"? It is removed from the Sandbox and the Library.')) return;
+      const id = SB.seq.id; await sb('remove', {id}); local.set('draft.' + id, null); SB.seq = null; local.set('last', null);
+      $('sbtaught').hidden = true; await refresh(); goHome('mine'); toast('Discarded.'); return;
+    }
+    if (act === 'publish') {
+      const name = ($('sbtname').value || '').trim().slice(0, 80) || def().title;
+      if (name !== def().title) edit(d => { d.title = name; }, {merge: 'title', insp: false});
+      await save({force: true, silent: true});
+      $('sbtaught').innerHTML = '<p class="eyebrow">// SAVED</p><h2>' + icon('check') + 'In your Library</h2><p class="small">"' + esc(name) + '" is saved under Creations in the Library. Run it, schedule it or edit it any time.</p><div class="row"><button class="primary" data-t="library">Open Library</button><button data-t="close">Keep editing</button></div>';
+      P.burst($('sbtaught'));
+    }
   };
+  window.sbAfterTeach = r => showTaught({pkg: 'x', name: '', sandbox: r});
 
   // ------------------------------------------------------------------ the header's buttons
   $('sbtitle').oninput = e => { if (def()) edit(d => { d.title = e.target.value.slice(0, 80) || 'Untitled'; }, {merge: 'title', insp: false}); };
@@ -715,7 +822,7 @@
     if (mod && k === 'enter') { e.preventDefault(); void start('run'); return; }
     if (mod && k === 'n') { e.preventDefault(); newSheet(); return; }
     if (mod && k === 'o') { e.preventDefault(); openSheet(); return; }
-    if (typing() || document.activeElement === $('mirrorbox') && controlling) return;
+    if (typing() || document.activeElement === $('mirrorbox') && (controlling || S.teaching)) return;
     if (mod && k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
     else if (mod && (k === 'y' || k === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
     else if (mod && k === 'c') { e.preventDefault(); copySel(false); }
@@ -874,6 +981,4 @@
 
   // Installed apps for the app fields.
   const dl = document.createElement('datalist'); dl.id = 'sbapps'; document.body.appendChild(dl);
-  setInterval(() => { const d = sdev(); if (!d || tab !== 'sandbox') return; const html = Object.entries(d.installedNames || {}).map(([p, n]) => '<option value="' + esc(p) + '">' + esc(n) + '</option>').join(''); if (dl.dataset.h !== html) { dl.dataset.h = html; dl.innerHTML = html; } }, 3000);
-  setInterval(() => { if (tab === 'sandbox' && S) drawHead(); }, 1000);
-})();
+  setInterval(() => { const d = sdev(); if (!d || tab !== 'sandbox') return; const html = Object.entries(d.installedNames || {}).map(([p, n]) => '<option value="' + esc(p) + '">' + esc(n) + '</option>').join(''); if (dl.dataset.h !== html) { dl.dataset.h = html; dl.innerHTML = html; } }, 3000);})();

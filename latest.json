@@ -1,17 +1,17 @@
 {
-  "version": "0.21.28",
-  "notes": "Falcor.Hub 0.21.28: the owner's manual and two messages use the new names (Hub, Library, Creations in the Library, the floating Falcor chat, Capture)",
-  "publishedAt": "2026-10-22T00:08:26.633Z",
+  "version": "0.21.29",
+  "notes": "Falcor.Hub 0.21.29: Sandbox Teach as its own glowing button: it starts on the home screen, End Teach shows the analysis as a progress bar, then what Falcor saw and a ready run (Home, Open app, your taps, typing and pauses) to edit, Save to Library or discard; Reteach from here on any step; timeline steps as roomy cards with glowing pixel icons; typing during Teach is in order, one Type block, Backspace kept; your own typing is never refused; the mirror has room for its corner marks and a soft glow on Hub and Sandbox; the FRAME age chip and the Library tab badge are gone",
+  "publishedAt": "2026-10-22T00:58:04.475Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "c39233c9c264c734988891951e1b08d61294be0cf46c34944733eecc366c5456",
-      "size": 1168172
+      "sha256": "cd52375694fdb0008817f200b8a3c9422860897a8946884a18ef30c9921deb8a",
+      "size": 1171301
     },
     {
       "path": "dist/preload.js",
-      "sha256": "cd16b7a2ea898bc5f12f33370d9c088e67b00804497f2d244f332d2a9c73cce1",
-      "size": 2191
+      "sha256": "f8e7cc05fb2efd425a76cb142d8ab8f38d3ca12d272cfa9c7ad38bb91c0f9896",
+      "size": 2210
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "af77fd3ac8db345d61c48be89f73649e85dbf65fd9980a26eb7ab64265cc5953",
-      "size": 149465
+      "sha256": "7b66b30796d3872b68ea0db027732b8cfa896493450e4d7f9a40903c0c660c2d",
+      "size": 149827
     },
     {
       "path": "ui/app.png",
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "7e5cfa8906947dbb8ab31e54d23a46fea660df9cd926430b2b5b674fe74be937",
-      "size": 56370
+      "sha256": "9b7c3174249c77340bb0d2b644e4c163518516c60e4c238e36f0c2c8096e776d",
+      "size": 56618
     },
     {
       "path": "ui/motion.css",
@@ -150,13 +150,13 @@
     },
     {
       "path": "ui/sandbox.js",
-      "sha256": "b7a32a997e510703403d4ac00f24aead2d0d1c8a946fc47aa095a9440f3d3b32",
-      "size": 91256
+      "sha256": "e659c1ab26276a77e8ede5e81ab81d4a2d3e56f20d5cfbbaa99ef1348263a3e7",
+      "size": 101669
     },
     {
       "path": "ui/style.css",
-      "sha256": "cd050a108cc427593c514794dda0e011c6760ff284954ba405e2ab0b83d10337",
-      "size": 99138
+      "sha256": "44ac3dbdfe0f3c6d630431a22349539fae6b8e3424a0eb18c3637191f715dacc",
+      "size": 106400
     },
     {
       "path": "ui/tokens.css",

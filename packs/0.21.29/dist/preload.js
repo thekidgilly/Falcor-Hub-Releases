@@ -37,6 +37,7 @@ var CALLS = [
   "teachPause",
   "teachMark",
   "teachStop",
+  "teachProgress",
   "teachEstimate",
   "teachWrite",
   "learned",
@@ -61,7 +62,6 @@ var CALLS = [
   "captureCancel",
   "captureAuto",
   "captureStop",
-  "watchOffers",
   "views",
   "installedApps",
   "saveOffer",
@@ -97,6 +97,10 @@ import_electron.contextBridge.exposeInMainWorld("hub", {
     import_electron.ipcRenderer.on("video", (_e, p) => fn(p));
   },
   // The engine asks the window for its decoded video frame (a look's picture without a screen capture); the window answers.
+  // The owner's fast touches (main.ts 'touch'): fire and forget, many a second while a finger moves.
+  touch: (p) => {
+    import_electron.ipcRenderer.send("touch", p);
+  },
   onFrameWanted: (fn) => {
     import_electron.ipcRenderer.on("frameWanted", (_e, p) => fn(p));
   },

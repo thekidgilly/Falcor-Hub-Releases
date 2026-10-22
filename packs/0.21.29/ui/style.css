@@ -530,7 +530,12 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .qcount:empty { display: none; }
 .qmode { font: 10px var(--voice); letter-spacing: .12em; color: var(--muted); } .qmode.on { color: var(--accent); } .qmode.sand { color: var(--sand); }
 .qcur { display: grid; gap: 6px; }
-.qcur .qhead { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: var(--s2); align-items: center; }
+.qcur .qhead { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: var(--s2); align-items: center; }
+.qcur .qico, .qcur .qico img { width: 36px; height: 36px; border-radius: 6px; }
+/* What the activity is about: level, next goal, goals, rewards, the offer's time left */
+.qinfo { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px var(--s3); margin: var(--s2) 0 0; font-size: var(--t11); }
+.qinfo dt { color: var(--muted); }
+.qinfo dd { margin: 0; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qcur .qhead b { font: var(--t14) var(--voice); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qtime { font: var(--t12) var(--voice); font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
 .qsub { display: flex; gap: var(--s2); align-items: center; flex-wrap: wrap; font-size: var(--t11); color: var(--muted); }
@@ -549,15 +554,19 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .qbar .seg button { padding: 3px 7px; font-size: var(--t11); }
 .qbar #qadd { padding: 4px; }
 .qlist { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; min-height: 0; display: grid; align-content: start; gap: 1px; }
-.qrow { display: grid; grid-template-columns: 40px 20px minmax(0, 1fr) auto 20px; gap: 6px; align-items: center; padding: 4px 2px 4px 5px; border-left: 2px solid transparent; border-radius: 3px; cursor: pointer; }
+/* A queue row: the activity's icon, large, far left; its place in line and time; its title; one line about it */
+.qrow { display: grid; grid-template-columns: 40px minmax(0, 1fr) 20px; gap: 8px; align-items: center; padding: 5px 2px 5px 4px; border-left: 2px solid transparent; border-radius: 3px; cursor: pointer; }
+.qrow .qico, .qrow .qico img { width: 40px; height: 40px; border-radius: 8px; }
+.qrow .qico .ico { width: 22px; height: 22px; }
+.qpos { font: 10px var(--voice); letter-spacing: .08em; color: var(--muted); font-variant-numeric: tabular-nums; }
+.qpos b { font-weight: 400; color: var(--text); }
+.qrow.live .qpos b { color: var(--green); }
+.qrow.wait .qpos b { color: var(--sand); }
+.qrow.wait { border-left-color: rgba(220,196,154,.45); }
 .qrow:hover { background: var(--panel-2); }
 .qrow.live { background: rgba(var(--accent-rgb), .07); border-left-color: var(--accent); }
 .qrow.s-red { border-left-color: rgba(255,119,113,.55); } .qrow.s-sand:not(.live) { border-left-color: rgba(220,196,154,.45); }
-.qrow.s-green .qname, .qrow.s-muted .qname { color: var(--muted); }
-.qn { font: var(--t11) var(--voice); color: var(--muted); font-variant-numeric: tabular-nums; }
-.qrow.hist .qn { font-size: 10px; }
-.qn.qtimecol { color: #F2F2F2; font-size: 13px; }
-.qrow.live .qn.qtimecol { color: #5CE59A; }
+.qrow.done .qname, .qrow.hist.s-muted .qname { color: var(--muted); }
 .qmain { display: grid; min-width: 0; }
 .qname { font: var(--t13) var(--voice); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qmeta, .qwhy { font-size: var(--t11); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -594,7 +603,7 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .qexisting { margin-top: 0; }
 .tsched { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 4px; } .tsched label { align-items: center; color: var(--muted); font-size: var(--t12); } .tsched .ico { width: 12px; height: 12px; color: var(--accent); }
 /* A narrow queue or Device window (each window body is a size container, desk.js): tighter rows, the note goes. */
-@container (max-width: 280px) { .qrow { grid-template-columns: 38px 18px minmax(0, 1fr) auto 18px; gap: 4px; } .qbar .seg button { padding: 3px 5px; } .qmodes #autonote { display: none; } }
+@container (max-width: 280px) { .qrow { grid-template-columns: 34px minmax(0, 1fr) 18px; gap: 6px; } .qrow .qico, .qrow .qico img { width: 34px; height: 34px; } .qbar .seg button { padding: 3px 5px; } .qmodes #autonote { display: none; } }
 .gpap .gpaphead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; } .gpap .gpaphead .row { flex-wrap: wrap; gap: 6px; } .gpap select { max-width: 280px; } .gpap input[type=number] { width: 90px; }
 .gpapstate { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin-top: 8px; font-size: var(--t12); } .gpapstate em { font-style: normal; color: var(--muted); margin-right: 4px; }
 .gpapreview { margin-top: 8px; font-size: var(--t12); } .gpapreview ul { margin: 4px 0; padding-left: 16px; } .gpapreview li { margin: 2px 0; }
@@ -607,14 +616,8 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .sbhomebody .seqlist { max-height: none; } .sbabout h2 { margin: 4px 0 8px; }
 .ofphone { display: flex; flex-direction: column; gap: 6px; } .ofphone .lbl { color: var(--muted); font-size: var(--t12); } #offerphone { display: flex; gap: 8px; align-items: center; min-height: 34px; flex-wrap: wrap; }
 .research ul.tips { margin: 4px 0 8px; padding-left: 18px; display: grid; gap: 4px; } .research ul.tips.warn li::marker { color: var(--sand, #F5B544); } .research p { margin: 4px 0; }
-/* The Phone tab's Capture Game: neutral; electric blue when Falcor spots a new game offer on the phone. */
-.capwrap { position: relative; display: inline-flex; }
-#phonecap { transition: background-color .18s steps(3), border-color .18s steps(3), box-shadow .18s steps(3), color .18s steps(3); letter-spacing: .04em; }
-#phonecap.hot { background: #1F5BFF; border-color: #7FA8FF; color: #FFFFFF; box-shadow: 0 0 0 1px rgba(31,91,255,.45), 0 0 16px rgba(31,91,255,.45); }
-#phonecap.hot .ico { color: #FFFFFF; }
-#phonecap.saved { border-color: rgba(245,181,68,.55); }
-.capsense { margin: 4px 0 0; min-height: 16px; text-align: center; font: var(--t11, 11px) var(--voice); letter-spacing: .06em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; } .capsense:empty { visibility: hidden; }
-.capsense.hot { color: #7FA8FF; } .capsense.hot::before { content: ''; display: inline-block; width: 6px; height: 6px; background: #1F5BFF; margin-right: 6px; vertical-align: 1px; box-shadow: 0 0 6px #1F5BFF; }
+/* The Phone tab's Capture: a plain button (nothing reads the phone before it is pressed). */
+#phonecap { letter-spacing: .04em; }
 
 /* A game played sideways: the frame turns (speaker on the left); the Phone tab's windows take their sideways places. */
 .device.landscape { padding: 10px 14px 10px 26px; }
@@ -879,3 +882,82 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 #gpnotes .notes li:first-child { border-top: 0; }
 #gpnoteform { margin-top: var(--s2); }
 #gpnoteform input { flex: 1; min-width: 0; }
+
+/* The floating Falcor: a square with his picture, dragged anywhere; its small chat holds the conversation panel. */
+.fbtn { position: fixed; z-index: 900; width: 56px; height: 56px; padding: 0; display: grid; place-items: center; background: #111; border: 2px solid var(--accent); border-radius: 0; box-shadow: 4px 4px 0 rgba(0,0,0,.6); cursor: grab; touch-action: none; user-select: none; }
+.fbtn img { width: 40px; height: 40px; image-rendering: pixelated; pointer-events: none; }
+.fbtn:hover, .fbtn.on { background: #142019; } .fbtn.drag { cursor: grabbing; opacity: .9; }
+.fbtn .badge { position: absolute; top: -8px; right: -8px; }
+.fdock { position: fixed; z-index: 899; display: flex; flex-direction: column; padding: 0; overflow: hidden; border: 2px solid var(--accent); box-shadow: 6px 6px 0 rgba(0,0,0,.6); animation: rise .2s steps(4) both; }
+.fdock .convo { flex: 1; min-height: 0; border: 0; box-shadow: none; }
+.fdock .msgs { padding: var(--s3); }
+.fdock .convohead .top { gap: var(--s1); } .fdock .ctitle h2 { font-size: var(--t14); }
+.fdock .composer textarea { min-height: 44px; }.fdock .chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; } .fdock .chips > * { flex: none; }
+/* the small chat: the conversation only (no suggestion chips, no big portrait) */
+.fdock .chips, .fdock .fhero { display: none; }
+/* the floating Falcor: slightly rounded, with a green LED glow that breathes */
+.fbtn { border-radius: 10px; box-shadow: 0 0 6px rgba(92,229,154,.75), 0 0 18px rgba(92,229,154,.35), 4px 4px 0 rgba(0,0,0,.6); animation: fglow 2.4s steps(8) infinite alternate; }
+.fbtn img { border-radius: 6px; }
+.fbtn:hover, .fbtn.on { box-shadow: 0 0 8px rgba(92,229,154,.95), 0 0 26px rgba(92,229,154,.5), 4px 4px 0 rgba(0,0,0,.6); }
+@keyframes fglow { from { box-shadow: 0 0 4px rgba(92,229,154,.6), 0 0 12px rgba(92,229,154,.25), 4px 4px 0 rgba(0,0,0,.6); } to { box-shadow: 0 0 8px rgba(92,229,154,.9), 0 0 24px rgba(92,229,154,.45), 4px 4px 0 rgba(0,0,0,.6); } }
+@media (prefers-reduced-motion: reduce) { .fbtn { animation: none; } }
+.fdock { border-radius: 10px; }.fbtn { border-color: var(--green); }
+
+/* Sandbox Teach: its own button, set apart in a softly glowing box; End Teach while it records */
+.sbteachbtn { margin-left: var(--s2); padding: 6px 14px; border: 1px solid var(--green); border-radius: 8px; color: var(--green); background: rgba(92,229,154,.06); box-shadow: 0 0 6px rgba(92,229,154,.45), 0 0 16px rgba(92,229,154,.18); animation: fglow 2.4s steps(8) infinite alternate; }
+.sbteachbtn:hover { background: rgba(92,229,154,.12); }
+.sbteachbtn.on { color: var(--red); border-color: var(--red); background: rgba(240,84,79,.08); box-shadow: 0 0 8px rgba(240,84,79,.6), 0 0 20px rgba(240,84,79,.25); animation: none; }
+.sbteachbtn:disabled { animation: none; box-shadow: none; opacity: .5; }
+@media (prefers-reduced-motion: reduce) { .sbteachbtn { animation: none; } }
+/* End Teach: the analysis bar, then what Falcor saw */
+.sbtaught { display: flex; flex-direction: column; gap: var(--s2); margin-bottom: var(--s3); border-color: var(--green); }
+.sbtaught h2 .ico { color: var(--green); }
+.tbar { height: 12px; border: 1px solid var(--line-strong); background: #0d0d0d; }
+.tbar i { display: block; height: 100%; width: 4%; background: var(--green); transition: width .35s steps(5); }
+.taughtlist { margin: 0; padding-left: 18px; font-size: var(--t13); display: grid; gap: 2px; }
+.taughtlist b { color: var(--green); font-weight: 400; }
+/* The mirror's frame (Hub and Sandbox share it): corner marks stand off the phone with a gap, and a soft glow around it. */
+.device .brackets, .device.landscape .brackets { inset: -7px; }
+.device .brackets i { width: 12px; height: 12px; }
+.device { border-color: #2c3a32; box-shadow: inset 0 0 0 1px #000, 0 0 5px rgba(92,229,154,.38), 0 0 30px rgba(92,229,154,.16); }
+.device.control { box-shadow: inset 0 0 0 1px #000, 0 0 0 3px rgba(220,196,154,.18), 0 0 22px rgba(245,181,68,.14); }
+.device.recording { box-shadow: inset 0 0 0 1px #000, 0 0 4px rgba(240,84,79,.4), 0 0 24px rgba(240,84,79,.16); }
+/* Sandbox timeline cards (Flow): roomy cards with a glowing icon tile in the step's colour, its words, details and what
+   the kind of step is for. Tree keeps compact rows. */
+.blk.cat-touch { --cc: 92,229,154; } .blk.cat-app { --cc: 245,181,68; } .blk.cat-flow { --cc: 122,167,255; } .blk.cat-screen { --cc: 232,121,249; }
+.sbtl { height: 210px; }
+.steps.flow .blk { grid-template-columns: 38px 1fr; grid-template-rows: auto auto 1fr; align-items: start; gap: 3px 10px; width: 224px; min-width: 224px; max-width: 224px; min-height: 104px; padding: 12px 12px 10px; border-radius: 8px; border-color: rgba(var(--cc, 122,167,255), .28); background: linear-gradient(180deg, rgba(var(--cc, 122,167,255), .07), rgba(255,255,255,.01) 70%), var(--panel-2); }
+.steps.flow .blk:hover { border-color: rgba(var(--cc, 122,167,255), .6); }
+.blk .bn { display: none; }
+.steps.flow .blk .bn { display: block; position: absolute; top: 6px; right: 9px; font: 10px var(--voice); letter-spacing: .08em; color: var(--muted); }
+.blk .bico { display: contents; }
+.blk .bico .ico { color: rgb(var(--cc, 122,167,255)); }
+.steps.flow .blk .bico { display: grid; place-items: center; grid-row: 1 / span 3; width: 38px; height: 38px; border-radius: 9px; border: 1px solid rgba(var(--cc, 122,167,255), .55); background: rgba(var(--cc, 122,167,255), .10); box-shadow: 0 0 8px rgba(var(--cc, 122,167,255), .45), inset 0 0 8px rgba(var(--cc, 122,167,255), .18); }
+.steps.flow .blk .bico .ico { width: 18px; height: 18px; filter: drop-shadow(0 0 3px rgba(var(--cc, 122,167,255), .8)); }
+.steps.flow .blk .w { font-size: var(--t13); color: var(--text); white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; padding-right: 18px; line-height: 1.3; }
+.steps.flow .blk .m { grid-column: 2; font-size: var(--t11); }
+.blk .bd { display: none; }
+.steps.flow .blk .bd { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; grid-column: 2; font-size: 11px; line-height: 1.35; color: var(--muted); opacity: .8; }
+.steps.flow .blk.sel { border-color: rgb(var(--cc, 122,167,255)); box-shadow: 0 0 0 1px rgba(var(--cc, 122,167,255), .7), 0 0 14px rgba(var(--cc, 122,167,255), .25); background: linear-gradient(180deg, rgba(var(--cc, 122,167,255), .14), rgba(255,255,255,.02) 70%), var(--panel-2); }
+.steps.flow .dz { align-self: stretch; }/* The step's icon as a pixel cartridge: a notched pixel tile, the 12×12 sprite drawn two screen pixels per pixel, and a
+   soft glow in the step's colour around the whole tile. */
+.blk .tile { display: contents; }
+.steps.flow .blk .bico { width: 44px; height: 44px; border: 0; border-radius: 0; background: none; box-shadow: none; filter: drop-shadow(0 0 4px rgba(var(--cc, 122,167,255), .55)); }
+.steps.flow .blk .tile { position: relative; display: grid; place-items: center; width: 44px; height: 44px; background: rgba(var(--cc, 122,167,255), .75);
+  clip-path: polygon(0 4px, 4px 4px, 4px 0, calc(100% - 4px) 0, calc(100% - 4px) 4px, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 4px calc(100% - 4px), 0 calc(100% - 4px)); }
+.steps.flow .blk .tile::before { content: ''; position: absolute; inset: 2px; background: repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 2px, transparent 2px 4px), linear-gradient(180deg, rgba(var(--cc, 122,167,255), .26), rgba(10,10,10,.92) 85%);
+  clip-path: polygon(0 2px, 2px 2px, 2px 0, calc(100% - 2px) 0, calc(100% - 2px) 2px, 100% 2px, 100% calc(100% - 2px), calc(100% - 2px) calc(100% - 2px), calc(100% - 2px) 100%, 2px 100%, 2px calc(100% - 2px), 0 calc(100% - 2px)); }
+.steps.flow .blk .tile .ico { position: relative; width: 28px; height: 28px; shape-rendering: crispEdges; color: rgb(var(--cc, 122,167,255)); filter: drop-shadow(0 0 2px rgba(var(--cc, 122,167,255), .9)); }
+.steps.flow .blk.sel .bico { filter: drop-shadow(0 0 6px rgba(var(--cc, 122,167,255), .85)); }
+.steps.flow .blk { grid-template-columns: 44px 1fr; }.reteach { display: grid; gap: 6px; margin: var(--s3) 0 var(--s2); padding-top: var(--s3); border-top: 1px dashed var(--line-strong); } .reteach .sbteachbtn { margin-left: 0; justify-self: start; }
+/* (the sprite pinned to the tile's centre: the general icon margins pushed it right and down) */
+.steps.flow .blk .tile .ico { position: absolute; left: 50%; top: 50%; margin: 0; transform: translate(-50%, -50%); }
+/* (rounded tiles: the notched corners read as black square edges) */
+.steps.flow .blk .tile { clip-path: none; border-radius: 11px; overflow: hidden; }
+.steps.flow .blk .tile::before { clip-path: none; border-radius: 9px; }
+/* (no tile: the pixel icon alone, in its colour with a glow, centred on the card's left side) */
+.steps.flow .blk .bico { align-self: center; filter: none; }
+.steps.flow .blk .tile { background: none; border-radius: 0; overflow: visible; }
+.steps.flow .blk .tile::before { content: none; }
+.steps.flow .blk .tile .ico { width: 34px; height: 34px; filter: drop-shadow(0 0 3px rgba(var(--cc, 122,167,255), .9)) drop-shadow(0 0 8px rgba(var(--cc, 122,167,255), .45)); }
+.steps.flow .blk.sel .bico { filter: none; } .steps.flow .blk.sel .tile .ico { filter: drop-shadow(0 0 4px rgba(var(--cc, 122,167,255), 1)) drop-shadow(0 0 12px rgba(var(--cc, 122,167,255), .6)); }
