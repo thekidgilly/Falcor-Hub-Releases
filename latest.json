@@ -1,12 +1,12 @@
 {
-  "version": "0.21.38",
-  "notes": "Falcor.Hub 0.21.38: Hub windows move freely (Snap is off by default; turn it on in Layout or hold Shift); windows can go over the heading",
-  "publishedAt": "2026-10-22T02:50:43.873Z",
+  "version": "0.21.39",
+  "notes": "Pop any Hub window or Sandbox panel out into its own window for a second monitor; Falcor's picture is the new app icon (desktop shortcut, taskbar and the phone app); small vibrations on the phone app (needs the 0.3.3 phone app).",
+  "publishedAt": "2026-10-22T03:14:56.896Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "02285e4db89e9ff84bcce2c5cadc7ba9d5a72d210b711ca63a628cb0602716fe",
-      "size": 1176346
+      "sha256": "92f188cc75a3c07adbc428b49f487f07bf6898ea8477f0c9793e7a51d763a43c",
+      "size": 1177697
     },
     {
       "path": "dist/preload.js",
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-CCiN3qlh.js",
-      "sha256": "b5cc176def51918e3d3d05a9f3ddd0695b07431251c2d30db17aafdb929f8240",
-      "size": 198073
-    },
-    {
       "path": "remote-ui/assets/index-D5uyNwRY.css",
       "sha256": "41bf797c525ab68f097f9ab8e2a494265f4aeea22582de64b8323763f1d1ec45",
       "size": 71086
+    },
+    {
+      "path": "remote-ui/assets/index-DxnaYGn_.js",
+      "sha256": "3d024a36bb108fdefd5a0a287a203da60beb17dd5bb495821c771c996ead3503",
+      "size": 198589
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -60,12 +60,12 @@
     },
     {
       "path": "remote-ui/icon.png",
-      "sha256": "77ebee6c9a57fff6b7807a76da322ecee830e0ae590545b1364fe867199ebe05",
-      "size": 5353
+      "sha256": "74d930ea93368c44311fc19d33eff932f56845bf8e186bf1a74a5ed87d30511d",
+      "size": 140839
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "9826f093f987b4fb815df17d9174f4f16eadb6a4bdb9eb1805ab558915e91eef",
+      "sha256": "5db08e791d1488e67fdc360906e3f5ddbfbc28c4024430848d97c8543ea46196",
       "size": 3845
     },
     {
@@ -75,18 +75,18 @@
     },
     {
       "path": "ui/app.ico",
-      "sha256": "62e8a8aef198cedf95a47a1080d39488e28a747dc08949a4a55a46fa6abc8e33",
-      "size": 40679
+      "sha256": "a2931cd9f5da7f92d8712b7eaaa6aca5ba6825c265dd22f3bf05371cc2d8517c",
+      "size": 102336
     },
     {
       "path": "ui/app.js",
-      "sha256": "6ccd3c5789014f5ba46914c286ae23d4d940217d9186cddb3d9b2522d09c6064",
-      "size": 149906
+      "sha256": "296f095761380b63af42989dc949f0aab862f3ff5a1ca19d9c2e3a5cd3764589",
+      "size": 150039
     },
     {
       "path": "ui/app.png",
-      "sha256": "77ebee6c9a57fff6b7807a76da322ecee830e0ae590545b1364fe867199ebe05",
-      "size": 5353
+      "sha256": "a0786f56b86b8879b26c74c826239c41ab9ac0e2b69072babd9941e7323f84e2",
+      "size": 183293
     },
     {
       "path": "ui/boot-flight.png",
@@ -100,8 +100,8 @@
     },
     {
       "path": "ui/desk.js",
-      "sha256": "20c890089376d095f895953c46894193fc45061e4cc7b2a5626387579e5bff61",
-      "size": 46174
+      "sha256": "3ce96d1ef8096290e47e878fdf6274e6e25719f9da79de4293cb94e13c5049b5",
+      "size": 46518
     },
     {
       "path": "ui/dragon.png",
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "2c4d0fb6d7bffed3ac91df6c263497bba77ae7ec44bb781b78f77d81a228e7a7",
-      "size": 59632
+      "sha256": "0c07a0d1fb5d27807879551977cca80388d653e3c42814deb0b900ea55cff0b0",
+      "size": 60331
     },
     {
       "path": "ui/motion.css",
@@ -142,6 +142,11 @@
       "path": "ui/pixel.js",
       "sha256": "fe067417dd83b09641062ee9186b6a4dc236998b7373d721e1654e55d02d100e",
       "size": 65190
+    },
+    {
+      "path": "ui/popout.js",
+      "sha256": "b6c0891beb056932ac92d64e56513787053ec74b29b9407977f7cbb0b12ab5b8",
+      "size": 4202
     },
     {
       "path": "ui/queue.js",
@@ -155,8 +160,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "0d06be4d57dde3a4ed28020aa3c23bd8da0e7877182a696082d11742fca97ef2",
-      "size": 115505
+      "sha256": "6fd8b42c9ee3af3d25b793a7f71b07550675cb632d9af19a9a7b74b52e82a5fe",
+      "size": 117639
     },
     {
       "path": "ui/tokens.css",

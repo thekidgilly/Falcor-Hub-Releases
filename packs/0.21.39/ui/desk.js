@@ -27,7 +27,7 @@
   };
   // Classic's two columns: where each panel goes, before the columns are evened out.
   const LEFT = ['device', 'current', 'needs', 'today', 'link'], RIGHT = ['queue', 'log', 'creations', 'apps'];
-  const blank = () => ({v: 1, visible: Object.fromEntries(WINS.map(w => [w.id, !!w.core])), z: [...WINS.map(w => w.id).filter(id => id !== 'mirror'), 'mirror'], locked: false, snap: true, maxed: null,
+  const blank = () => ({v: 1, visible: Object.fromEntries(WINS.map(w => [w.id, !!w.core])), z: [...WINS.map(w => w.id).filter(id => id !== 'mirror'), 'mirror'], locked: false, snap: false, snapV: 1, maxed: null,
     slots: {upright: {preset: 'classic', rects: {}}, sideways: {preset: 'focus', rects: {}}}});
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const desk = $('phonegrid'), wins = Object.fromEntries(WINS.map(w => [w.id, desk.querySelector('[data-win="' + w.id + '"]')]));
@@ -41,7 +41,8 @@
       if (!s || s.v !== 1) return d;
       for (const w of WINS) if (typeof (s.visible || {})[w.id] === 'boolean') d.visible[w.id] = !!w.fixed || s.visible[w.id];
       if (Array.isArray(s.z)) d.z = [...new Set([...s.z.filter(id => byId[id]), ...d.z])];
-      d.locked = s.locked === true; d.snap = s.snap !== false; d.maxed = byId[s.maxed] && d.visible[s.maxed] ? s.maxed : null;
+      // (windows move freely by default, the owner 2026-10-21: a snap setting kept from before is turned off once)
+      d.locked = s.locked === true; d.snap = s.snapV === 1 ? s.snap === true : false; d.snapV = 1; d.headV = s.headV === 1 ? 1 : 0; d.maxed = byId[s.maxed] && d.visible[s.maxed] ? s.maxed : null;
       for (const k of ['upright', 'sideways']) {
         const sl = (s.slots || {})[k]; if (!sl) continue;
         d.slots[k].preset = LAYOUTS[sl.preset] ? sl.preset : null;
@@ -59,7 +60,7 @@
     bar.tabIndex = 0; bar.setAttribute('role', 'group');
     bar.setAttribute('aria-label', w.name + ' window: Enter maximizes it, the arrow keys move it, Shift with the arrows resizes it');
     bar.insertAdjacentHTML('afterbegin', '<span class="wingrip" aria-hidden="true"></span>');
-    bar.insertAdjacentHTML('beforeend', '<span class="winbtns"><button type="button" data-wact="max" title="Maximize" aria-label="Maximize ' + esc(w.name) + '">' + icon('max') + '</button>'
+    bar.insertAdjacentHTML('beforeend', '<span class="winbtns">' + (w.id === 'mirror' ? '' : '<button type="button" data-wact="pop" title="Pop out to its own window (put it on another monitor)" aria-label="Pop out ' + esc(w.name) + '">' + icon('popout') + '</button>') + '<button type="button" data-wact="max" title="Maximize" aria-label="Maximize ' + esc(w.name) + '">' + icon('max') + '</button>'
       + (w.fixed ? '' : '<button type="button" data-wact="hide" title="Hide it (Windows shows it again)" aria-label="Hide ' + esc(w.name) + '">' + icon('close') + '</button>') + '</span>');
     el.insertAdjacentHTML('beforeend', ['n', 'e', 's', 'w', 'ne', 'nw', 'se', 'sw'].map(k => '<i class="rz ' + k + '" data-rz="' + k + '" aria-hidden="true"></i>').join(''));
     el.hidden = !D.visible[w.id];
@@ -72,6 +73,7 @@
     bar.addEventListener('keydown', e => keys(w.id, e));
     bar.querySelector('.winbtns').addEventListener('click', e => {
       const b = e.target.closest('[data-wact]'); if (!b) return;
+      if (b.dataset.wact === 'pop') { if (window.popOut) window.popOut('hub-' + w.id, el.querySelector('.winbody'), w.name); return; }
       if (b.dataset.wact === 'max') toggleMax(w.id);
       else { show(w.id, false); $('deskwins').focus(); }
     });
@@ -110,7 +112,13 @@
     cls(desk, 'locked', D.locked); attr($('desklock'), 'aria-pressed', String(D.locked));
     if (desk.hidden || !W || !H) return false;
     const sl = D.slots[slot];
-    if (sl.preset) LAYOUTS[sl.preset].make(W, H);
+    // The desk runs up behind the tab's heading, so a window can be moved over it; a layout still as a preset starts
+    // below the heading (its windows are laid out in the height under it, then moved down by it).
+    const head = desk.parentElement && desk.parentElement.querySelector(':scope > .pagehead'), top = head && head.offsetHeight ? Math.min(H / 3, head.offsetHeight + GAP) : 0;
+    const under = rects => { for (const r of Object.values(rects)) { r.y = (r.y * (H - top) + top) / H; r.h = r.h * (H - top) / H; } };
+    // (once: an arrangement kept from before the desk ran up behind the heading moves down by it, so nothing jumps over it)
+    if (!D.headV && top) { for (const k of ['upright', 'sideways']) if (!D.slots[k].preset) under(D.slots[k].rects); D.headV = 1; save(); }
+    if (sl.preset) { LAYOUTS[sl.preset].make(W, H - top); if (top) under(sl.rects); }
     for (const id of shown()) if (!sl.rects[id]) place(id, W, H);
     if (anim && laid && !P.reduced()) { desk.classList.add('anim'); clearTimeout(animT); animT = setTimeout(() => desk.classList.remove('anim'), 340); }
     for (const id of shown()) { frame(id); put(id, D.maxed === id ? {x: 0, y: 0, w: W, h: H} : px(id, W, H)); }
@@ -274,7 +282,8 @@
       drag.moved = true; desk.classList.add(drag.kind === 'move' ? 'dragging' : 'resizing');
       if (D.maxed === drag.id) unmax(drag);
     }
-    const snap = D.snap && !e.altKey;
+    // Free by default; Snap on (Layout menu) catches edges, Alt then moves freely; Shift snaps while it is held.
+    const snap = (D.snap && !e.altKey) || e.shiftKey;
     drag.r = drag.kind === 'move' ? moveTo(drag, dx, dy, snap) : sizeTo(drag, dx, dy, snap);
     put(drag.id, drag.r);
   });
@@ -387,7 +396,7 @@
     } else {
       const cur = D.slots[slot].preset;
       pop.innerHTML = group('Layout · ' + (slot === 'sideways' ? 'sideways game' : 'upright') + (cur ? '' : ' · arranged by you'), Object.entries(LAYOUTS).map(([k, l]) => '<button type="button" role="menuitemradio" data-k="l:' + k + '" aria-checked="' + (cur === k) + '">' + box.replace('box', 'box dot') + line(l.name, l.about) + '</button>').join(''))
-        + '<hr><button type="button" role="menuitemcheckbox" data-k="snap" aria-checked="' + D.snap + '">' + box + line('Snap', 'Edges catch the desk and other windows (hold Alt to move freely)') + '</button>'
+        + '<hr><button type="button" role="menuitemcheckbox" data-k="snap" aria-checked="' + D.snap + '">' + box + line('Snap', 'Edges catch the desk and other windows. Off: windows move freely (hold Shift to snap once)') + '</button>'
         + '<button type="button" role="menuitem" data-k="reset">' + line('Reset', 'The usual five windows in the classic layout, upright and sideways') + '</button>';
     }
     if (had) { const f = pop.querySelector('[data-k="' + had + '"]'); if (f) f.focus(); }
