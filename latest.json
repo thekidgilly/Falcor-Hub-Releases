@@ -1,11 +1,11 @@
 {
-  "version": "0.21.51",
-  "notes": "Phone block editor: Full shows every block top to bottom on the workspace grid (pinch to zoom, scroll, tap a block for its settings); Dock puts it back under the phone.",
-  "publishedAt": "2026-10-22T06:29:03.828Z",
+  "version": "0.21.52",
+  "notes": "Phone block editor: the Sandbox's white side menu with the editor's tools (Blocks, Step, Undo, Redo, Run, Stop all, Save, Schedule, Full, Outline).",
+  "publishedAt": "2026-10-22T06:33:41.157Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "4ab6c836f2ead378ce81903158a1bbe52b610d24bc40de396f8d46b72c04454b",
+      "sha256": "f211471a42cf21729329b62f702b12232d0f01858c12d22091333b4ad85e4394",
       "size": 1182319
     },
     {
@@ -29,14 +29,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-Bkv0AFQS.js",
-      "sha256": "0a2b70e7b347a9f1361dc7efbbb226ab9beb35f79837aa95db2c30b3a233c487",
-      "size": 266677
+      "path": "remote-ui/assets/index-DZEbyzS0.css",
+      "sha256": "c121492edd807f10b39d1873898979561bc213fa2f2f59810b14e22919284bbe",
+      "size": 95164
     },
     {
-      "path": "remote-ui/assets/index-vd2BEUjZ.css",
-      "sha256": "c4c9200a51bfb7697fc28de1905eed7b4d6b6d797ba26dffbf438287e9bf14db",
-      "size": 94919
+      "path": "remote-ui/assets/index-Dd2YnwUQ.js",
+      "sha256": "1c220477173f7f1ebf526615028bc9b006bad96b066badc529fbe7113012a3f7",
+      "size": 269159
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "5fc7c12d4f3fd60d1c649a6cf05d47ad136b67767ea4c07ae50bf662ab6c3e6f",
+      "sha256": "75d1fcb75c0160bf9a081655bdaa73508c6f0549289c09383807d39d821aa03d",
       "size": 3773
     },
     {
