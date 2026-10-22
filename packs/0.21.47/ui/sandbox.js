@@ -130,7 +130,7 @@
       const [cat, data] = await Promise.all([sb('catalog'), sb('list')]);
       SB.cat = cat; SB.data = data;
       drawLib();
-      if (!SB.seq && SB.home === undefined) SB.home = data.sequences.length ? 'mine' : 'create';
+      if (!SB.seq && SB.home === undefined) SB.home = 'start';   // (the owner, 2026-10-21: the tab opens on the start box, never on Drafts)
       draw();
     })();
     return SB.loading.catch(() => { SB.loading = null; });
@@ -933,14 +933,51 @@
     const on = !!SB.home; cls(document.querySelector('[data-pane="sandbox"]'), 'home', on); $('sbhome').hidden = !on;
     if (!on || !SB.cat || !SB.data) return;
     text($('sbminecount'), '· ' + SB.data.sequences.filter(s => !s.published).length);
+    $('sbhometabs').parentElement.hidden = SB.home === 'start'; cls($('sbhome'), 'start', SB.home === 'start');
     document.querySelectorAll('#sbhometabs button').forEach(x => cls(x, 'on', x.dataset.home === SB.home));
     const b = $('sbhomebody');
     if (!force && SB.homeDrawn === SB.home) return;
     if (!force || !b.contains(document.activeElement)) SB.homeDrawn = SB.home; else return;
+    if (SB.home === 'start') { startBox(b); return; }
     if (SB.home === 'create') {
       newSheet(b);
       // (the tab's own heading, // SANDBOX, introduces it: no second heading here)
     } else openSheet(b);
+  }
+  // The start box (the owner, 2026-10-21): what the Sandbox opens on, over the workspace grid. A quick tour, Teach, the
+  // example, the drafts, or a blank workspace that skips all of it.
+  function startBox(b) {
+    const drafts = SB.data.sequences.filter(s => !s.published).length;
+    const opt = (k, ic, t, sub, cls = '') => '<button class="sbsopt ' + cls + '" data-start="' + k + '">' + icon(ic) + '<span><b>' + esc(t) + '</b><small>' + esc(sub) + '</small></span></button>';
+    b.innerHTML = '<div class="sbstart rise"><p class="eyebrow">// SANDBOX</p><h2>What do you want to create?</h2><p class="muted small">Build a run from blocks or show Falcor once on the phone. New here? Take the one-minute tour.</p>'
+      + '<div class="sbsopts">' + opt('tour', 'help', 'Quick tour', 'A blank run and a one-minute walk through the workspace', 'tour') + opt('teach', 'rec', 'Teach Falcor', 'Use the phone on the mirror; Falcor builds the run') + opt('example', 'book', 'Start from the example', 'A finished run to look at and change')
+      + opt('drafts', 'sandbox', 'Your drafts' + (drafts ? ' · ' + drafts : ''), drafts ? 'Pick up where you left off' : 'Nothing saved yet') + '</div>'
+      + '<button class="sbsblank" data-start="blank">' + icon('plus') + 'Blank workspace<small>skip all of this</small></button></div>';
+    b.onclick = async e => {
+      const o = e.target.closest('[data-start]'); if (!o) return; const k = o.dataset.start;
+      if (k === 'drafts') { goHome('mine'); return; }
+      const d = sdev(), r = await sb('create', {title: '', deviceId: d ? d.id : null, template: k === 'example' ? 'starter' : 'blank'});
+      await refresh(); await open(r.id);
+      if (k === 'tour') tour(0);
+      if (k === 'teach') { const t = $('sbteach'); if (t && !t.disabled) t.click(); else toast('Plug in the phone, then press Teach.', 'warn'); }
+    };
+  }
+  // The quick tour: a light on each part of the editor in turn, with Back, Next and Skip.
+  const TOUR = [['sblib', 'Blocks', 'Click a block to add it to your run, or drag it onto the timeline.'], ['sbstage', 'Your phone, live', 'Pick target and Pick gesture place a step where you point; Control lets you use the phone yourself.'],
+    ['sbteach', 'Teach', 'Use the phone here and Falcor turns what you do into blocks for you.'], ['sbtl', 'The timeline', 'Your run, step by step. Click a step for its settings, or drag it to move it.'],
+    ['sbstart', 'Run and publish', 'Preview or Run it on the phone, then Publish to put it in your Library, where it can be scheduled.']];
+  function tour(i) {
+    let ov = document.getElementById('sbtour'); if (!ov) { ov = document.createElement('div'); ov.id = 'sbtour'; ov.className = 'sbtour'; document.body.appendChild(ov); }
+    const step = TOUR[i], el = step && document.getElementById(step[0]);
+    if (!step) { ov.remove(); toast('That is the tour. Add your first block, or press Teach.'); return; }
+    if (!el || !el.offsetParent) { tour(i + 1); return; }
+    const r = el.getBoundingClientRect(), W = innerWidth, H = innerHeight, cw = 320;
+    const below = r.bottom + 190 < H, x = Math.min(Math.max(12, r.left + r.width / 2 - cw / 2), W - cw - 12), y = below ? r.bottom + 12 : Math.max(12, r.top - 182);
+    ov.innerHTML = '<i class="sbtourlight" data-style="left:' + (r.left - 6) + 'px;top:' + (r.top - 6) + 'px;width:' + (r.width + 12) + 'px;height:' + (r.height + 12) + 'px"></i>'
+      + '<div class="sbtourcard" data-style="left:' + x + 'px;top:' + y + 'px;width:' + cw + 'px"><p class="eyebrow">// TOUR · ' + (i + 1) + ' OF ' + TOUR.length + '</p><b>' + esc(step[1]) + '</b><p class="small">' + esc(step[2]) + '</p>'
+      + '<div class="row"><button class="small ghost" data-t="skip">Skip</button><span class="grow"></span>' + (i ? '<button class="small" data-t="back">Back</button>' : '') + '<button class="small primary" data-t="next">' + (i === TOUR.length - 1 ? 'Done' : 'Next') + '</button></div></div>';
+    P.fix(ov);
+    ov.onclick = e => { const t = e.target.closest('[data-t]'); if (!t) return; if (t.dataset.t === 'skip') ov.remove(); else tour(i + (t.dataset.t === 'next' ? 1 : -1)); };
   }
   $('sbhometabs').onclick = e => { const t = e.target.closest('[data-home]'); if (t) goHome(t.dataset.home); };
   $('sbtohome').onclick = () => goHome('mine');

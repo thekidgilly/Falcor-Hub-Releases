@@ -1,12 +1,12 @@
 {
-  "version": "0.21.46",
-  "notes": "Fixes Falcor.Hub not starting when an older saved record had another shape.",
-  "publishedAt": "2026-10-22T05:44:10.191Z",
+  "version": "0.21.47",
+  "notes": "A web app opened from the phone's launcher (FireFaucet) is taught and played as itself, not as Chrome. The firewall button is gone: the rule is added by itself.",
+  "publishedAt": "2026-10-22T05:59:57.334Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "bc374f29564b1c99a154142882deef4f0babae8153cc9db56b61d74b3b3efe2d",
-      "size": 1182073
+      "sha256": "26e2d2a5da75f6cafcd9ffed3ee00b01c6d696861fef6e706281bbd431773854",
+      "size": 1182319
     },
     {
       "path": "dist/preload.js",
@@ -34,9 +34,9 @@
       "size": 88463
     },
     {
-      "path": "remote-ui/assets/index-RTjYr2Xc.js",
-      "sha256": "5627636484f03bb19f0aa3fdaf86483d97173751eb4544d0d7b5b8c6f20c233c",
-      "size": 263867
+      "path": "remote-ui/assets/index-CewooZ5j.js",
+      "sha256": "8fcda9431160567cadbae144addde8a8c88c21574be5ebb363d93c344cb86c68",
+      "size": 263795
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "06d59552ec53a3b8608ed1cd128ed56e0340786311e2c5632b970ff314c13117",
+      "sha256": "c89160359bd66e1f783926aa7c865597bc902b4c5ad5202e6cfcca31215de41c",
       "size": 3678
     },
     {
@@ -80,8 +80,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "96469b77b3616bf91e7c9700bc72cb52b9413b30aaac9bb45daae97c53d0673c",
-      "size": 151455
+      "sha256": "b1f22ec3f6ea815c6a2484e67d940b8600621da72661f35c7ed15eee7b16fe15",
+      "size": 151388
     },
     {
       "path": "ui/app.png",
@@ -130,8 +130,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "934630ed1fd93aa3e89ef5c2116f0b1cec45adc21c9c51229f8bb926e111fe09",
-      "size": 66505
+      "sha256": "0e1d66d68b14b8437c9bfef13d71f527481a7f3b22f20a2f0f7fa80f6347a3af",
+      "size": 66254
     },
     {
       "path": "ui/motion.css",

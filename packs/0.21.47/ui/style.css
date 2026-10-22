@@ -1167,3 +1167,36 @@ section[data-pane="phone"] > .desk { z-index: 1; }
 /* Recommended: two even columns, the words wrap inside each card */
 .profrecl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .prec { white-space: normal; align-items: start; } .prec span { min-width: 0; } .prec b, .prec small { white-space: normal; overflow-wrap: anywhere; line-height: 1.35; } .prec .ico { margin-top: 2px; }
+
+/* The Sandbox's start box (sandbox.js#startBox): one glowing card over the workspace grid. */
+.sbhome.start .pagehead { display: none; }
+.sbhome.start .sbhomebody { min-height: calc(100vh - 220px); display: grid; place-items: center; }
+.sbstart { width: min(620px, 100%); padding: 26px 28px 22px; border-radius: 16px; background: rgba(10,12,11,.92); border: 1px solid rgba(92,229,154,.45); box-shadow: 0 0 18px rgba(92,229,154,.16), 0 18px 48px rgba(0,0,0,.55); display: grid; gap: 12px; }
+.sbstart h2 { margin: 0; font: 20px var(--voice); letter-spacing: .06em; text-transform: uppercase; } .sbstart .eyebrow { margin: 0; } .sbstart > p.muted { margin: 0; }
+.sbsopts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 4px; }
+.sbsopt { display: grid; grid-template-columns: 26px 1fr; align-items: start; gap: 12px; min-height: 0; padding: 14px; border-radius: 12px; text-align: left; white-space: normal; background: rgba(255,255,255,.02); border: 1px solid var(--line); }
+.sbsopt:hover { border-color: rgba(92,229,154,.5); background: rgba(92,229,154,.05); }
+.sbsopt .ico { width: 22px; height: 22px; color: var(--green); filter: drop-shadow(0 0 3px rgba(92,229,154,.6)); margin-top: 2px; }
+.sbsopt span { display: grid; gap: 3px; min-width: 0; } .sbsopt b { font: 13px var(--voice); font-weight: 400; letter-spacing: .04em; } .sbsopt small { font-size: 11px; color: var(--muted); line-height: 1.4; }
+.sbsopt.tour { border-color: rgba(92,229,154,.55); box-shadow: 0 0 10px rgba(92,229,154,.15); }
+.sbsblank { justify-self: center; display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; min-height: 40px; padding: 6px 18px; border-radius: 10px; background: transparent; border: 1px dashed rgba(255,255,255,.3); color: var(--text); font: 13px var(--voice); }
+.sbsblank small { color: var(--muted); font: 11px var(--read); } .sbsblank:hover { border-color: rgba(255,255,255,.6); }
+/* The quick tour: a light around one part of the editor and a card beside it. */
+.sbtour { position: fixed; inset: 0; z-index: 950; }
+.sbtourlight { position: fixed; border-radius: 12px; border: 2px solid var(--green); box-shadow: 0 0 0 9999px rgba(0,0,0,.6), 0 0 18px rgba(92,229,154,.6); pointer-events: none; transition: all .25s steps(5); }
+.sbtourcard { position: fixed; display: grid; gap: 8px; padding: 14px 16px; border-radius: 12px; background: #0d100e; border: 1px solid rgba(92,229,154,.55); box-shadow: 0 0 16px rgba(92,229,154,.25), 0 12px 32px rgba(0,0,0,.6); }
+.sbtourcard .eyebrow { margin: 0; } .sbtourcard b { font: 15px var(--voice); letter-spacing: .05em; } .sbtourcard p.small { margin: 0; line-height: 1.5; }
+.sbhome.start, .sbhome.start .sbhomebody { width: 100%; max-width: none; } .sbhome.start .sbhomebody { justify-items: center; }
+
+/* white glow, the owner 2026-10-21 */
+.sbstart { border-color: rgba(255,255,255,.55); box-shadow: 0 0 10px rgba(255,255,255,.18), 0 0 26px rgba(255,255,255,.08), 0 18px 48px rgba(0,0,0,.55); }
+.sbsopt:hover { border-color: rgba(255,255,255,.5); background: rgba(255,255,255,.04); } .sbsopt.tour { border-color: rgba(255,255,255,.45); box-shadow: 0 0 10px rgba(255,255,255,.12); }
+/* each start option its own glow: the tour white, Teach green, the example gold, drafts blue */
+.sbsopt[data-start="tour"] .ico { color: #EDEDED; filter: drop-shadow(0 0 3px rgba(255,255,255,.7)); }
+.sbsopt[data-start="teach"] .ico { color: var(--green); filter: drop-shadow(0 0 3px rgba(92,229,154,.7)); }
+.sbsopt[data-start="example"] .ico { color: #F5B544; filter: drop-shadow(0 0 3px rgba(245,181,68,.7)); }
+.sbsopt[data-start="drafts"] .ico { color: #7AA7FF; filter: drop-shadow(0 0 3px rgba(122,167,255,.7)); }
+/* The state glow (Hub and Sandbox share this mirror): white at rest, red while Teach records, green while Falcor plays. */
+.device, .device.control { border-color: rgba(255,255,255,.42); box-shadow: inset 0 0 0 1px #000, 0 0 7px rgba(255,255,255,.5), 0 0 34px rgba(255,255,255,.2); }
+.device.automating { border-color: rgba(92,229,154,.8); box-shadow: inset 0 0 0 1px #000, 0 0 8px rgba(92,229,154,.6), 0 0 36px rgba(92,229,154,.25); }
+.device.recording { border-color: rgba(240,84,79,.85); box-shadow: inset 0 0 0 1px #000, 0 0 8px rgba(240,84,79,.6), 0 0 36px rgba(240,84,79,.25); }
