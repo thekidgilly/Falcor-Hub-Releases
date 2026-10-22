@@ -1,11 +1,11 @@
 {
-  "version": "0.21.49",
-  "notes": "Phone app: while Teach records, the screen sits centred with an even gap above and below.",
-  "publishedAt": "2026-10-22T06:20:03.936Z",
+  "version": "0.21.50",
+  "notes": "Phone app block editor: a tidy control bar, Stop all as a small pill, and chunky block tiles.",
+  "publishedAt": "2026-10-22T06:22:40.385Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "c9d4216c86968ff64e50c6cfe57cfc4557d98a885aa648a80d248d34d044e476",
+      "sha256": "4d491e5468bf0e1ad7169c7020bfe663e8eee93abf75cf906de1df118b4c37c2",
       "size": 1182319
     },
     {
@@ -29,12 +29,12 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-B8N9kwy1.css",
-      "sha256": "4008d513d27db05e6fe10086141f070dc0361c5bfb5dfc8b6afb0458d7d998f7",
-      "size": 91828
+      "path": "remote-ui/assets/index-BcfQDoGw.css",
+      "sha256": "d70bfd696e3006dce24ac1c8f349132972c3d3985046427c3c0352279d7af19f",
+      "size": 93399
     },
     {
-      "path": "remote-ui/assets/index-BMUpw53o.js",
+      "path": "remote-ui/assets/index-CXY5979f.js",
       "sha256": "194e25179fe01335a9818416eed93af32057ebbe7e483b7ea6ed355125c3cee6",
       "size": 265845
     },
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "238c38ad1e0cd756b85d10457f9aaf8666b5e196f7f32411c7fb0d8982c0e5a0",
+      "sha256": "65268781f7a24a8aad98371491abaf940b202a744bf04250f8c9d098298f8692",
       "size": 3773
     },
     {
