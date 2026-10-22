@@ -1,11 +1,11 @@
 {
-  "version": "0.21.48",
-  "notes": "Phone app: Profile tab on the bottom bar; arrange the Hub (drag panels, sizes S, M, L, Full); a premium full-screen block editor; while Teach records, the screen goes full size and locks, widgets tuck away, and a glowing Stop waits top right.",
-  "publishedAt": "2026-10-22T06:13:33.807Z",
+  "version": "0.21.49",
+  "notes": "Phone app: while Teach records, the screen sits centred with an even gap above and below.",
+  "publishedAt": "2026-10-22T06:20:03.936Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "6f83345c7e90cad9e01dc0e185763f6996e2bae5e6de1def3133214627ff833a",
+      "sha256": "c9d4216c86968ff64e50c6cfe57cfc4557d98a885aa648a80d248d34d044e476",
       "size": 1182319
     },
     {
@@ -29,13 +29,13 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-DqmYaPvp.css",
-      "sha256": "63cf9cf10ccbd8036b36628786dd70f3e9d90037d9521f9a9141a26721c59341",
-      "size": 91724
+      "path": "remote-ui/assets/index-B8N9kwy1.css",
+      "sha256": "4008d513d27db05e6fe10086141f070dc0361c5bfb5dfc8b6afb0458d7d998f7",
+      "size": 91828
     },
     {
-      "path": "remote-ui/assets/index-ITLv6d1k.js",
-      "sha256": "13d873373079189ce55d7a5f0bce0113c43ff0188f9277b15d7df04c85095e57",
+      "path": "remote-ui/assets/index-BMUpw53o.js",
+      "sha256": "194e25179fe01335a9818416eed93af32057ebbe7e483b7ea6ed355125c3cee6",
       "size": 265845
     },
     {
@@ -65,7 +65,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "cba4e5b25b705d8cb80139e4ab0f41f862bde84854a9e5305cbe4944335b419c",
+      "sha256": "238c38ad1e0cd756b85d10457f9aaf8666b5e196f7f32411c7fb0d8982c0e5a0",
       "size": 3773
     },
     {
