@@ -337,7 +337,32 @@
   const GSTATUS = {active: ['ACTIVE', 'green'], completed: ['COMPLETED', 'accent'], expired: ['EXPIRED', 'red'], none: ['TRACKED', 'muted']};
   // A game's library card: artwork, name, platform, what its offers advertise and paid, goals reached as blocks, status
   // and the soonest known deadline. icon: the card's picture (the app's icon, the offer's artwork, or the monogram).
+  // An app's card (a reward app or a routine, not a game): how it repeats, its next run, today's runs and its last result.
+  const OUT = {ACTION_VERIFIED: ['done', 'green'], REWARD_VERIFIED: ['rewarded', 'green'], CREDIT_PENDING: ['pending', 'sand'], RECEIVED: ['received', 'green'], NO_CHANGE: ['nothing new', 'muted'], NEEDS_ATTENTION: ['needs you', 'sand'], FAILED: ['failed', 'red'], BLOCKED: ['blocked', 'red'], STOPPED: ['stopped', 'muted']};
+  const hhmm = t => new Date(t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'});
+  const appCardHtml = (g, icon) => {
+    const a = g.app || {}, last = a.lastOutcome ? OUT[a.lastOutcome] || [a.lastOutcome.toLowerCase().replace(/_/g, ' '), 'muted'] : null;
+    const st = g.tasks.some(t => t.state === 'RUNNING') ? ['RUNNING', 'green'] : g.needsYou ? ['NEEDS YOU', 'sand'] : g.active ? ['ACTIVE', 'green'] : ['IDLE', 'muted'];
+    return '<span class="gicon">' + icon + '</span><span class="gc"><span class="gtop"><b class="nm">' + esc(g.name) + '</b><span class="pill ' + st[1] + '">' + st[0] + '</span></span>'
+      + '<span class="m">' + esc(['App', a.repeat].filter(Boolean).join(' · ')) + '</span>'
+      + '<span class="gnums"><span><em>NEXT RUN</em><b>' + (a.nextAt ? esc(hhmm(a.nextAt)) : '—') + '</b></span><span><em>TODAY</em><b class="' + (a.okToday ? 'green' : 'muted') + '">' + esc(a.okToday + ' of ' + a.runsToday) + '</b></span></span>'
+      + '<span class="lad none"></span>'
+      + '<span class="gfoot"><span>' + (last ? 'last run: <span class="' + last[1] + '">' + esc(last[0]) + '</span>' : 'not run yet') + '</span><span class="muted">' + (a.lastAt ? esc(hhmm(a.lastAt)) : '') + '</span></span></span>';
+  };
+  // A creation's card (a Sandbox sequence the owner built): its steps, its schedule, whether it can run and its last run.
+  const CROUT = {completed: ['done', 'green'], attention: ['needs you', 'sand'], failed: ['failed', 'red'], stopped: ['stopped', 'muted'], interrupted: ['interrupted', 'sand'], waiting: ['waiting', 'muted'], running: ['running', 'green'], skipped: ['did not run', 'muted']};
+  const creationCardHtml = (c, iconHtml) => {
+    const st = c.live ? ['RUNNING', 'green'] : c.needsSetup ? ['NEEDS SETUP', 'sand'] : c.needsAttention ? ['NEEDS YOU', 'sand'] : c.nextRunAt ? ['SCHEDULED', 'accent'] : ['READY', 'muted'];
+    const last = c.last ? CROUT[c.last.outcome] || [c.last.label, 'muted'] : null;
+    return '<span class="gicon">' + iconHtml + '</span><span class="gc"><span class="gtop"><b class="nm">' + esc(c.title) + '</b><span class="pill ' + st[1] + '">' + st[0] + '</span></span>'
+      + '<span class="m">' + esc(['Creation', c.steps + ' step' + (c.steps === 1 ? '' : 's'), c.description].filter(Boolean).join(' · ')) + '</span>'
+      + '<span class="gnums"><span><em>NEXT RUN</em><b>' + (c.nextRunAt ? esc(hhmm(c.nextRunAt)) : '—') + '</b></span><span><em>PHONE</em><b class="' + (c.device && c.device.state === 'ready' ? 'green' : 'muted') + '">' + esc(c.device ? (c.device.state === 'ready' ? 'ready' : c.device.state === 'busy' ? 'busy' : 'not ready') : '—') + '</b></span></span>'
+      + '<span class="lad none"></span>'
+      + '<span class="gfoot"><span>' + (last ? 'last run: <span class="' + last[1] + '">' + esc(last[0]) + '</span>' : 'not run yet') + '</span><span class="muted">' + (c.last ? esc(hhmm(c.last.at)) : '') + '</span></span></span>';
+  };
   const cardHtml = (g, icon) => {
+    if (g.kind === 'creation') return creationCardHtml(g.creation, icon);
+    if (g.kind === 'app') return appCardHtml(g, icon);
     const totals = g.totals || [], st = GSTATUS[g.status] || GSTATUS.none, goals = g.goals || {reached: 0, of: 0};
     // Without an earning-app offer: what its challenges offer, and what the game showed collected.
     const pot = totals.length ? totals.filter(t => t.potential).map(t => money(t.potential, t.unit)) : Object.entries(g.offers || {}).filter(([, a]) => a).map(([u, a]) => money(a, u));
@@ -353,7 +378,8 @@
   };
   // The library's filters and sorts, the same on both apps.
   const cashFirst = g => { const t = (g.totals || []).map(x => ({c: CASH[x.unit] ? 1 : 0, a: x.potential})).sort((a, b) => b.c - a.c || b.a - a.a)[0]; return t ? [t.c, t.a] : [0, 0]; };
-  const library = (list, filter, sort) => list.filter(g => filter === 'all' || !filter || (filter === 'active' ? g.status === 'active' || g.status === 'none' : g.status === filter)).slice().sort((a, b) =>
+  // (games / apps: by kind; active, completed, expired: a game's offer status)
+  const library = (list, filter, sort) => list.filter(g => filter === 'all' || !filter || (filter === 'games' ? !g.kind || g.kind === 'game' : filter === 'apps' ? g.kind === 'app' : filter === 'creations' ? g.kind === 'creation' : g.kind === 'creation' ? false : filter === 'active' ? g.status === 'active' || g.status === 'none' : g.status === filter)).slice().sort((a, b) =>
     sort === 'deadline' ? ((a.deadline && a.deadline.at) || Infinity) - ((b.deadline && b.deadline.at) || Infinity) || b.updatedAt - a.updatedAt
     : sort === 'reward' ? cashFirst(b)[0] - cashFirst(a)[0] || cashFirst(b)[1] - cashFirst(a)[1]
     : sort === 'progress' ? ((b.goals || {}).of ? b.goals.reached / b.goals.of : -1) - ((a.goals || {}).of ? a.goals.reached / a.goals.of : -1)
@@ -423,7 +449,7 @@
   const setDragon = u => { dragonUrl = u; }, dragonSrc = () => dragonUrl;
   const avatarHtml = (cls = '') => '<span class="favatar' + (cls ? ' ' + cls : '') + '"><img src="' + esc(dragonSrc()) + '" alt="Falcor"></span>';
   // A new chat opens with this, before anything is sent; it is not kept in the chat.
-  const INTRO = {hello: 'Well met, friend. I am Falcor.', text: 'I keep watch over this Hub and conduct all that moves in it: your phone and its mirror, the Daily Queue, your games and their rewards, and every task you have approved. Ask me anything about the tool, how a thing works, what runs today or what waits on you, or tell me what you would have done. I shall see to it, or tell you plainly why I will not.', stop: 'Say "stop" at any hour, and all falls still.'};
+  const INTRO = {hello: 'Well met, friend. I am Falcor.', text: 'Ask me anything, or tell me what to do.', stop: 'Say "stop" and all falls still.'};
   const introHtml = () => '<div class="fhero" data-intro>' + avatarHtml('big') + '<b class="fname">FALCOR</b><span class="frole">Keeper of the Hub · your conductor</span></div>'
     + '<div class="msg falcor intro" data-intro>' + avatarHtml() + '<div class="body"><div class="bubble"><b class="fhello">' + esc(INTRO.hello) + '</b><p>' + esc(INTRO.text) + '</p><p class="fstop">' + esc(INTRO.stop) + '</p></div></div></div>';
   // ---------------------------------------------------------------- the bell (both apps): what Falcor told the owner on

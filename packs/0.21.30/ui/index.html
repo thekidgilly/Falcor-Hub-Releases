@@ -29,13 +29,11 @@
 <div class="ebar" id="ebar" hidden><span class="led bad"></span><span>Emergency Stop is on. Autopilot and tasks are stopped.</span><button id="clear">Clear</button></div>
 <div class="tabrow">
 <nav class="tabs" id="tabs">
-  <button data-tab="phone" title="Key 1" class="on"><svg class="ico"><use href="#i-phone"></use></svg>Phone</button>
-  <button data-tab="sandbox" title="Key 2"><svg class="ico"><use href="#i-sandbox"></use></svg>Sandbox<span class="badge" id="badge-sandbox" hidden></span></button>
-  <button data-tab="games" title="Key 3"><svg class="ico"><use href="#i-game"></use></svg>Games</button>
-  <button data-tab="tasks" title="Key 4"><svg class="ico"><use href="#i-tasks"></use></svg>Creations<span class="badge" id="badge-tasks" hidden></span></button>
-  <button data-tab="falcor" title="Key 5"><img class="tabdragon" src="dragon.png" alt="">Falcor<span class="badge" id="badge-falcor" hidden></span></button>
-  <button data-tab="stats" title="Key 6"><svg class="ico"><use href="#i-stats"></use></svg>Activity</button>
-  <button data-tab="settings" title="Key 7"><svg class="ico"><use href="#i-settings"></use></svg>Settings</button>
+  <button data-tab="phone" title="Key 1" class="on"><svg class="ico"><use href="#i-phone"></use></svg>Hub</button>
+  <button data-tab="games" title="Key 2"><svg class="ico"><use href="#i-game"></use></svg>Library</button>
+  <button data-tab="sandbox" title="Key 3"><svg class="ico"><use href="#i-sandbox"></use></svg>Sandbox<span class="badge" id="badge-sandbox" hidden></span></button>
+  <button data-tab="stats" title="Key 4"><svg class="ico"><use href="#i-stats"></use></svg>Activity</button>
+  <button data-tab="settings" title="Key 5"><svg class="ico"><use href="#i-settings"></use></svg>Settings</button>
   <span class="tabline" id="tabline"></span>
 </nav>
 <div class="deskmenu" id="deskmenu" hidden>
@@ -90,12 +88,10 @@
             <span class="sep"></span>
             <button id="take" class="primary"><svg class="ico"><use href="#i-control"></use></svg>Take Control</button><button id="release" hidden><svg class="ico"><use href="#i-control"></use></svg>Release</button>
             <button id="teach" title="Play an app on the mirror while Falcor watches and learns it"><svg class="ico"><use href="#i-rec"></use></svg>Teach</button>
-            <span class="capwrap"><button id="phonecap" title="Read the game's offer page open on the phone (Games opens and Falcor reads the whole page)"><svg class="ico"><use href="#i-camera"></use></svg><span id="phonecaplbl">CAPTURE GAME</span></button></span>
+            <button id="phonecap" title="Read the offer page open on the phone"><svg class="ico"><use href="#i-camera"></use></svg><span id="phonecaplbl">CAPTURE</span></button>
             <button class="icon" id="viewer" title="Open a second display of the phone: its own window you can drag anywhere, even outside Falcor.Hub"><svg class="ico"><use href="#i-popout"></use></svg></button>
             <button class="icon" id="askfalcor" title="Ask Falcor about the app in front"><svg class="ico"><use href="#i-chat"></use></svg></button>
-          </div>
-          <p class="capsense" id="capsense" aria-live="polite"></p>
-          <p class="hint" id="hint" hidden>Click tap · drag swipe · hold press · wheel scroll</p>
+          </div>          <p class="hint" id="hint" hidden>Click tap · drag swipe · hold press · wheel scroll</p>
           <form class="typeform" id="typeform" hidden><input id="typetext" placeholder="Type into the phone" maxlength="500" autocomplete="off"><button>Send</button></form>
         </div>
       </section>
@@ -164,19 +160,20 @@
   <!-- SANDBOX -->
   <section data-pane="sandbox" class="pane sandbox" hidden>
     <div class="sbhome" id="sbhome" hidden>
-      <div class="sbhometop"><div class="seg" id="sbhometabs"><button data-home="create"><svg class="ico"><use href="#i-plus"></use></svg>Create</button><button data-home="mine"><svg class="ico"><use href="#i-sandbox"></use></svg>My sequences <span id="sbminecount"></span></button></div></div>
+      <div class="sbhometop"><div class="seg" id="sbhometabs"><button data-home="create"><svg class="ico"><use href="#i-plus"></use></svg>Create</button><button data-home="mine"><svg class="ico"><use href="#i-sandbox"></use></svg>Drafts <span id="sbminecount"></span></button></div></div>
       <div class="sbhomebody" id="sbhomebody"></div>
     </div>
     <div class="sbhead" id="sbhead">
-      <button class="small ghost" id="sbtohome" title="Back to My sequences"><svg class="ico"><use href="#i-back"></use></svg>My sequences</button>
+      <button class="small ghost" id="sbtohome" title="Back to Drafts"><svg class="ico"><use href="#i-back"></use></svg>Drafts</button>
       <div class="sbname"><svg class="ico"><use href="#i-sandbox"></use></svg><input id="sbtitle" maxlength="80" placeholder="No sequence open" aria-label="Sequence name"><span class="dirty" id="sbdirty" title="Unsaved changes" hidden></span><span class="muted small" id="sbrev"></span></div>
       <select id="sbdev" title="The phone it runs on"></select>
       <span class="grow"></span>
       <div class="sbacts"><button class="small" id="sbfocus" aria-pressed="false">Focus</button><button class="small danger" id="sbstudio-stop">Stop all</button><button class="small" id="sbpanels">Panels</button><button class="small" id="sbfeedback">Feedback: Off</button>
         <button class="small" id="sbnew" title="New sequence (Ctrl+N)"><svg class="ico"><use href="#i-plus"></use></svg>New</button>
-        <button class="small" id="sbopen" title="My sequences (Ctrl+O)"><svg class="ico"><use href="#i-book"></use></svg>Open</button>
+        <button class="small" id="sbopen" title="Drafts and published (Ctrl+O)"><svg class="ico"><use href="#i-book"></use></svg>Open</button>
         <button class="small" id="sbsave" title="Save a new version (Ctrl+S)"><svg class="ico"><use href="#i-check"></use></svg>Save</button>
         <button class="small" id="sbsaveas" title="Save as a new sequence">Save As</button>
+        <button class="small pubbtn" id="sbpublish" title="Put it in the Library, where it can be scheduled"><svg class="ico"><use href="#i-check"></use></svg>Publish</button>
         <button class="small" id="sbsavetask" title="Save it and list it in Tasks, with Run now, Schedule and its history"><svg class="ico"><use href="#i-tasks"></use></svg>Save as task</button>
         <button class="small icon" id="sbundo" title="Undo (Ctrl+Z)"><svg class="ico"><use href="#i-undo"></use></svg></button>
         <button class="small icon" id="sbredo" title="Redo (Ctrl+Y)"><svg class="ico"><use href="#i-redo"></use></svg></button>
@@ -216,9 +213,9 @@
             <button data-mode="control" title="Touch the phone yourself (C)"><svg class="ico"><use href="#i-control"></use></svg>Control</button>
             <button data-mode="target" title="Click the mirror to set the selected step's point (P)"><svg class="ico"><use href="#i-target"></use></svg>Pick target</button>
             <button data-mode="gesture" title="Drag on the mirror to draw a swipe or path (G)"><svg class="ico"><use href="#i-swipe"></use></svg>Pick gesture</button>
-            <button data-mode="teach" title="Record what you do as blocks (R)"><svg class="ico"><use href="#i-rec"></use></svg>Teach</button>
             <button data-mode="run" title="A run is playing" disabled><svg class="ico"><use href="#i-play"></use></svg>Run</button>
           </div>
+          <button class="sbteachbtn" id="sbteach" title="Use the phone on the mirror while Falcor watches; End Teach builds a run from it (R)"><svg class="ico"><use href="#i-rec"></use></svg><span id="sbteachlbl">Teach</span></button>
           <div class="sbchips" id="sbchips"></div>
           <span class="grow"></span>
           <button class="small icon" data-sbkey="BACK" title="Back"><svg class="ico"><use href="#i-back"></use></svg></button>
@@ -230,6 +227,8 @@
         <p class="hint" id="sbhint"></p>
       </div>
       <aside class="panel sbinsp" id="sbinsp">
+        <!-- End Teach: the analysis as a progress bar, then what Falcor saw and the run it built (sandbox.js#endTeach) -->
+        <div class="panel sbsheetpanel rise sbtaught" id="sbtaught" hidden></div>
         <form class="panel teachform sbsheetpanel rise" id="teachform" hidden>
           <p class="eyebrow">// TEACH FALCOR</p>
           <h2>Teach Falcor</h2>
@@ -239,7 +238,7 @@
           <label>What are you about to show? (optional)<input id="teachintent" maxlength="300" placeholder="e.g. the daily check-in, how to finish a level"></label>
           <label class="check"><input type="checkbox" id="teachcustom"> Save it as a custom task: Falcor repeats these taps until it ends the way you show</label>
           <div class="customopts" id="customopts" hidden>
-            <div class="row"><label>Rounds<input id="customtimes" type="number" min="1" max="50" value="1"></label><label>Runs<select id="customrepeat"><option value="once">once</option><option value="daily">every day</option></select></label></div>
+            <div class="row"><label>Rounds<input id="customtimes" type="number" min="1" max="50" value="1"></label><label>Runs<select id="customrepeat"><option value="once">once</option><option value="daily">every day</option><option value="every">every … minutes</option></select></label><label>Minutes<input id="customevery" type="number" min="15" max="1440" value="30" title="With every … minutes: how often (15 minutes at most often)"></label></div>
             <label>Stop early when the screen says (optional)<input id="customuntil" maxlength="80" placeholder="e.g. No energy left"></label>
             <label class="check"><input type="checkbox" id="customhome" checked> Go back to the phone's home screen when done</label>
           </div>
@@ -268,10 +267,10 @@
   <!-- GAMES -->
   <section data-pane="games" class="pane" hidden>
     <div id="gamesview">
-      <div class="toolrow"><div><p class="eyebrow">// GAMES</p><h2>Your game library</h2></div><span class="grow"></span><button class="primary" id="capgame" title="Read the game's offer page open in your earning app on the phone"><svg class="ico"><use href="#i-camera"></use></svg>Capture game</button><button id="offeradd"><svg class="ico"><use href="#i-reward"></use></svg>Add offer</button><button id="gamenew"><svg class="ico"><use href="#i-plus"></use></svg>New task</button></div>
-      <div class="toolrow libbar"><div class="seg" id="libfilter"><button data-f="all" class="on">All</button><button data-f="active">Active</button><button data-f="completed">Completed</button><button data-f="expired">Expired</button></div><span class="grow"></span><label class="inline small muted">Sort<select id="libsort"><option value="updated">Recently updated</option><option value="deadline">Deadline</option><option value="reward">Advertised reward</option><option value="progress">Progress</option></select></label></div>
+      <div class="toolrow"><div><p class="eyebrow">// LIBRARY</p><h2>Your games and apps</h2></div><span class="grow"></span><button class="primary" id="capgame" title="Read the offer page open in your earning app on the phone"><svg class="ico"><use href="#i-camera"></use></svg>Capture</button><button id="offeradd"><svg class="ico"><use href="#i-reward"></use></svg>Add offer</button><button id="gamenew"><svg class="ico"><use href="#i-plus"></use></svg>New task</button></div>
+      <div class="toolrow libbar"><div class="seg" id="libfilter"><button data-f="all" class="on">All</button><button data-f="games">Games</button><button data-f="apps">Apps</button><button data-f="creations">Creations</button><button data-f="active">Active</button><button data-f="completed">Completed</button><button data-f="expired">Expired</button></div><span class="grow"></span><label class="inline small muted">Sort<select id="libsort"><option value="updated">Recently updated</option><option value="deadline">Deadline</option><option value="reward">Advertised reward</option><option value="progress">Progress</option></select></label></div>
       <div class="panel capbox" id="capbox" hidden>
-        <div class="caphead"><span class="gicon" id="capart"></span><div class="grow"><p class="eyebrow">// CAPTURE GAME · <span id="capsrc"></span></p><h3 id="capname">Reading…</h3><p class="small" id="capline"></p></div>
+        <div class="caphead"><span class="gicon" id="capart"></span><div class="grow"><p class="eyebrow">// CAPTURE · <span id="capsrc"></span></p><h3 id="capname">Reading…</h3><p class="small" id="capline"></p></div>
           <div class="capstats"><span><em>SCREENS</em><b id="capscreens">0</b></span><span><em>MILESTONES</em><b id="capcount">0</b></span></div></div>
         <div class="capprog" id="capprog" hidden><div class="capbar" id="capbar"></div><div class="capprogrow"><span class="small" id="capprogline"></span><span class="grow"></span><b id="cappct">0%</b><button type="button" class="small" id="capstop">Stop</button></div></div>
         <ol class="ladder mini" id="caplast"></ol>
@@ -279,7 +278,7 @@
       </div>
       <form class="panel offerform" id="offerform" hidden>
         <p class="eyebrow">// OFFER FROM AN EARNING APP</p>
-        <div class="row" id="offerstart"><button type="button" class="primary" id="offercapture"><svg class="ico"><use href="#i-camera"></use></svg>Capture game from the phone</button><button type="button" id="offerhand"><svg class="ico"><use href="#i-edit"></use></svg>Enter by hand</button><span class="muted small">Open the game's offer in your earning app on the phone, then Capture.</span></div>
+        <div class="row" id="offerstart"><button type="button" class="primary" id="offercapture"><svg class="ico"><use href="#i-camera"></use></svg>Capture from the phone</button><button type="button" id="offerhand"><svg class="ico"><use href="#i-edit"></use></svg>Enter by hand</button><span class="muted small">Open the game's offer in your earning app on the phone, then Capture.</span></div>
         <div id="offerfields" hidden>
           <p class="muted small" id="offerwhere"></p>
           <div class="offerdiff" id="offerdiff" hidden></div>
@@ -354,6 +353,7 @@
   <!-- TASKS -->
   <section data-pane="tasks" class="pane crpane" hidden>
     <div class="crhead">
+      <button class="ghost" data-go="games" title="Back to the Library"><svg class="ico"><use href="#i-back"></use></svg>Library</button>
       <div><p class="eyebrow">// CREATIONS</p><h2>Creations</h2><p class="muted small">Your custom automations, built in Sandbox.</p></div>
       <span class="grow"></span>
       <div class="seg" id="crview" role="tablist" aria-label="Creations or other automations"><button data-v="creations" class="on" role="tab" aria-selected="true">Creations <span class="cnt" id="crcount"></span></button><button data-v="other" role="tab" aria-selected="false">Other automations <span class="cnt" id="crothercount"></span></button></div>
@@ -409,7 +409,7 @@
         <ul class="threadlist" id="threadlist"></ul>
       </div>
       <div class="panel convo">
-        <div class="convohead"><div class="top"><span class="favatar xs" id="chatavatar"><img src="dragon.png" alt=""></span><div class="ctitle"><h2 id="chattitle">New chat</h2><span class="csub" id="chatsub">Falcor · your conductor</span></div><button class="icon" id="ctxtoggle" title="What Falcor is looking at"><svg class="ico"><use href="#i-eye"></use></svg></button></div></div>
+        <div class="convohead"><div class="top"><span class="favatar xs" id="chatavatar"><img src="dragon.png" alt=""></span><div class="ctitle"><h2 id="chattitle">New chat</h2><span class="csub" id="chatsub">Falcor · your conductor</span></div><button class="icon" id="ctxtoggle" title="What Falcor is looking at"><svg class="ico"><use href="#i-eye"></use></svg></button><button class="icon" id="docknew" title="New chat"><svg class="ico"><use href="#i-plus"></use></svg></button><button class="icon" id="chatsize" title="Full page"><svg class="ico"><use href="#i-max"></use></svg></button><button class="icon" id="dockclose" title="Close"><svg class="ico"><use href="#i-close"></use></svg></button></div></div>
         <div class="msgs" id="msgs"><div id="chatintro"></div><div class="msglist" id="msglist"></div></div>
         <div class="chips" id="quick"></div>
         <form class="composer" id="composer">
@@ -423,6 +423,11 @@
       </div>
     </div>
   </section>
+
+  <!-- FALCOR, floating: a square with his picture, dragged anywhere; a press opens the small chat (the same conversation
+       panel, moved here), whose Full page button opens the chat page above. -->
+  <button id="fbtn" class="fbtn" title="Falcor · press to chat, drag to move (Ctrl+K)" aria-label="Chat with Falcor"><img src="dragon.png" alt=""><span class="badge" id="badge-falcor" hidden></span></button>
+  <div id="fdock" class="panel fdock" hidden role="dialog" aria-label="Falcor chat"></div>
 
   <!-- KNOWLEDGE -->
   <section data-pane="knowledge" class="pane" hidden>
