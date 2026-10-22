@@ -80,6 +80,75 @@
     max: ['............', '############', '############', '#..........#', '#..........#', '#..........#', '#..........#', '#..........#', '#..........#', '#..........#', '############', '............'],
     restore: ['...#########', '...#########', '...#.......#', '#########..#', '#########..#', '#.......#..#', '#.......#..#', '#.......####', '#.......#...', '#.......#...', '#########...', '............'],
   };
+  // Original eight-pixel glyphs expanded onto the app's twelve-pixel grid, keeping every edge on a whole pixel.
+  const EXTRA_ICONS = [
+    ['heart', 'Heart', 'Nature', '0066ffffff7e3c18'],
+    ['sun', 'Sun', 'Nature', '18995a3c3c5a9918'],
+    ['moon', 'Moon', 'Nature', '1c3060c0c0e0713e'],
+    ['cloud', 'Cloud', 'Nature', '001c224181817e00'],
+    ['rain', 'Rain', 'Nature', '1c2241817e002448'],
+    ['snow', 'Snowflake', 'Nature', '995a3cff3c5a9918'],
+    ['leaf', 'Leaf', 'Nature', '01071f3f7af4e840'],
+    ['flower', 'Flower', 'Nature', '183c7e7e3c185a3c'],
+    ['tree', 'Tree', 'Nature', '183c7e3c7eff1818'],
+    ['mountain', 'Mountain', 'Nature', '081c365b91a1c1ff'],
+    ['flame', 'Flame', 'Nature', '081c1a3a7e7a663c'],
+    ['water', 'Water drop', 'Nature', '08181c3c7e7e663c'],
+    ['anchor', 'Anchor', 'Travel', '1824187e18995a3c'],
+    ['key', 'Key', 'Objects', '704848702824120e'],
+    ['shield', 'Shield', 'Adventure', 'ff81818142241800'],
+    ['trophy', 'Trophy', 'Adventure', '7effdb5a3c18187e'],
+    ['crown', 'Crown', 'Adventure', '8142a5a5ff7e427e'],
+    ['rocket', 'Rocket', 'Travel', '0c1e3b7ba7e66418'],
+    ['plane', 'Airplane', 'Travel', '1818187eff183c24'],
+    ['car', 'Car', 'Travel', '003c427eff81a542'],
+    ['train', 'Train', 'Travel', '7e42427e5a7e2466'],
+    ['boat', 'Boat', 'Travel', '103058507eff663c'],
+    ['bike', 'Bicycle', 'Travel', '00181c245af5a55a'],
+    ['compass', 'Compass', 'Travel', '3c428995a991423c'],
+    ['globe', 'Globe', 'Travel', '3c5a99ffff995a3c'],
+    ['map', 'Map', 'Travel', '004aeedbdbdb6e44'],
+    ['folder', 'Folder', 'Objects', '0070607f818181ff'],
+    ['document', 'Document', 'Objects', '784c467e42427e00'],
+    ['pen', 'Pen', 'Objects', '03070e1c3870e0c0'],
+    ['brush', 'Paintbrush', 'Objects', '03060c18306cf8f0'],
+    ['palette', 'Palette', 'Creative', '3c42a5a181867830'],
+    ['music', 'Music note', 'Creative', '1f1111117171e060'],
+    ['headphones', 'Headphones', 'Creative', '3c428181c3c3c300'],
+    ['microphone', 'Microphone', 'Creative', '3c42425a423c187e'],
+    ['speaker', 'Speaker', 'Creative', '02162bcbcb2b1602'],
+    ['video', 'Video camera', 'Creative', '0078cbddeedccb78'],
+    ['mail', 'Envelope', 'Objects', '00ff81c3a59981ff'],
+    ['link', 'Link', 'Objects', '0e19317e7e8c9870'],
+    ['lightbulb', 'Light bulb', 'Objects', '3c42424224181818'],
+    ['coffee', 'Coffee', 'Food', '0054507edbd97e3c'],
+    ['cake', 'Cake', 'Food', '2424247eff817eff'],
+    ['apple', 'Apple', 'Food', '0c1866ffdbff7e66'],
+    ['pizza', 'Pizza slice', 'Food', 'fffe7e7c3c381810'],
+    ['paw', 'Paw print', 'Nature', '0066e7e77e3c7e66'],
+    ['fish', 'Fish', 'Nature', '003864f3f3643800'],
+    ['cat', 'Cat', 'Nature', '8166ffdbff7e423c'],
+    ['smile', 'Smile', 'Nature', '3c4281a581a55a3c'],
+    ['mushroom', 'Mushroom', 'Adventure', '3c7e5affff18183c'],
+    ['sword', 'Sword', 'Adventure', '0103070e9c786c46'],
+    ['castle', 'Castle', 'Adventure', 'a5e7a5ff818999ff'],
+  ];
+  for (const [id, , , bits] of EXTRA_ICONS) {
+    const rows = bits.match(/../g).map(row => parseInt(row, 16).toString(2).padStart(8, '0'));
+    MAPS['px' + id] = Array.from({length: 12}, (_, y) => Array.from({length: 12}, (_, x) => rows[Math.floor(y * 2 / 3)][Math.floor(x * 2 / 3)] === '1' ? '#' : '.').join(''));
+  }
+  const sequenceIcons = [
+    ['sandbox', 'Sequence'], ['phone', 'Phone'], ['user', 'Person'], ['tasks', 'Checklist'], ['stats', 'Chart'],
+    ['settings', 'Settings'], ['autopilot', 'Autopilot'], ['stop', 'Stop'], ['star', 'Star'], ['home', 'Home'],
+    ['apps', 'Apps'], ['keyboard', 'Keyboard'], ['control', 'Pointer'], ['speed', 'Lightning'], ['checkin', 'Check-in'],
+    ['game', 'Controller'], ['calendar', 'Calendar'], ['reward', 'Reward'], ['ai', 'Sparkle'], ['wifi', 'Wi-Fi'],
+    ['usb', 'USB'], ['unlock', 'Unlocked'], ['lock', 'Locked'], ['update', 'Refresh'], ['chat', 'Chat'],
+    ['book', 'Book'], ['rec', 'Record'], ['flag', 'Flag'], ['pause', 'Pause'], ['play', 'Play'],
+    ['edit', 'Pencil'], ['trash', 'Bin'], ['target', 'Target'], ['laptop', 'Laptop'], ['check', 'Check mark'],
+    ['camera', 'Camera'], ['clock', 'Clock'], ['plus', 'Plus'], ['loop', 'Loop'], ['search', 'Search'],
+    ['branch', 'Branch'], ['pin', 'Pin'], ['eye', 'Eye'], ['send', 'Send'], ['coin', 'Coin'],
+    ['gem', 'Gem'], ['cash', 'Cash'], ['gift', 'Gift'], ['swipe', 'Arrows'], ['wait', 'Hourglass'],
+  ].map(([id, name]) => ({id, name, category: 'Essentials'})).concat(EXTRA_ICONS.map(([id, name, category]) => ({id: 'px' + id, name, category})));
   const pathOf = rows => { let d = ''; rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] === '#') { let w = 1; while (r[x + w] === '#') w++; d += 'M' + (x + 2) + ' ' + (y + 2) + 'h' + w + 'v1h-' + w + 'z'; x += w - 1; } }); return d; };
   // The sprite: one <symbol> per icon. Use with icon('stop').
   function sprite() {
@@ -100,6 +169,19 @@
   // Inline styles are written as data-style and applied through the CSSOM, which the page's CSP allows.
   function fix(root) { if (!root) return root; const all = root.querySelectorAll ? [...(root.matches && root.matches('[data-style]') ? [root] : []), ...root.querySelectorAll('[data-style]')] : []; for (const n of all) { n.style.cssText = n.dataset.style; n.removeAttribute('data-style'); } return root; }
   function el(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return fix(t.content.firstElementChild); }
+  function sequenceIconPicker(value, onChange) {
+    const box = el('<details class="seqicons"><summary></summary><div class="seqiconfilters"><label>Find an icon<input type="search" placeholder="Search 100 pixel icons" maxlength="60"></label><label>Category<select><option value="">All icons</option>' + [...new Set(sequenceIcons.map(i => i.category))].map(c => '<option>' + esc(c) + '</option>').join('') + '</select></label></div><p class="muted small" role="status"></p><div class="seqicongrid" role="group" aria-label="Sequence pixel icons"></div></details>');
+    const summary = box.querySelector('summary'), input = box.querySelector('input'), category = box.querySelector('select'), grid = box.querySelector('.seqicongrid'), status = box.querySelector('[role="status"]');
+    const selected = () => { const entry = sequenceIcons.find(i => i.id === value); summary.innerHTML = icon(MAPS[value] ? value : 'sandbox') + '<span>' + esc(entry?.name || 'Current icon') + '</span><small>Choose from 100 pixel icons</small>'; };
+    const draw = () => {
+      const q = input.value.trim().toLowerCase(), shown = sequenceIcons.filter(i => (!category.value || i.category === category.value) && (i.name + ' ' + i.category).toLowerCase().includes(q));
+      grid.innerHTML = shown.map(i => '<button type="button" data-icon="' + i.id + '" title="' + esc(i.name) + '" aria-label="' + esc(i.name) + '" aria-pressed="' + (i.id === value) + '">' + icon(i.id) + '<span>' + esc(i.name) + '</span></button>').join('');
+      status.textContent = shown.length ? shown.length + ' of 100 icons' : 'No icons match. Try another search.';
+    };
+    input.oninput = category.onchange = draw;
+    grid.onclick = e => { const button = e.target.closest('[data-icon]'); if (!button) return; value = button.dataset.icon; selected(); grid.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b === button))); onChange(value); };
+    selected(); draw(); return box;
+  }
   const text = (node, v) => { if (node && node.textContent !== String(v)) node.textContent = String(v); };
   const attr = (node, k, v) => { if (!node) return; if (v === null || v === false || v === undefined) { if (node.hasAttribute(k)) node.removeAttribute(k); } else if (node.getAttribute(k) !== String(v === true ? '' : v)) node.setAttribute(k, v === true ? '' : v); };
   const cls = (node, c, on) => { if (node && node.classList.contains(c) !== !!on) node.classList.toggle(c, !!on); };
@@ -543,5 +625,5 @@
       + '<details class="pbmore"><summary>Details</summary><p><em>Deadline</em> ' + (p.deadline.at ? esc(new Date(p.deadline.at).toLocaleString()) + ' · ' + esc(p.deadline.source) : 'unknown') + '</p><p><em>Time per level</em> ' + (p.estimate.minPerLevel ? '≈ ' + p.estimate.minPerLevel + ' min' : 'unknown') + ' · ' + esc(p.estimate.note) + '</p>'
       + p.notes.map(n => '<p>' + esc(n) + '</p>').join('') + p.unknowns.map(n => '<p class="sand">' + esc(n) + '</p>').join('') + '<p>' + esc(v.note) + ' It never buys anything and never taps inside an ad.</p></details></div>';
   };
-  window.Pixel = {playbookHtml, MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced, monogram, num, unitIcon, earnLine, offersHtml, prepHtml, rewardsHtml, historyHtml, tiersHtml, progressHtml, motion, money, cardHtml, library, earnTiles, ladderHtml, activityHtml, MSTATE, noticesHtml, ago, setDragon, dragonSrc, avatarHtml, introHtml, INTRO, normIcon, researchHtml, trainHtml};
+  window.Pixel = {sequenceIcons, sequenceIconPicker, playbookHtml, MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced, monogram, num, unitIcon, earnLine, offersHtml, prepHtml, rewardsHtml, historyHtml, tiersHtml, progressHtml, motion, money, cardHtml, library, earnTiles, ladderHtml, activityHtml, MSTATE, noticesHtml, ago, setDragon, dragonSrc, avatarHtml, introHtml, INTRO, normIcon, researchHtml, trainHtml};
 })();

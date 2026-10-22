@@ -4565,7 +4565,7 @@ var require_lib = __commonJS({
 // src/main.ts
 var import_electron2 = require("electron");
 var import_node_fs7 = require("node:fs");
-var import_node_crypto6 = require("node:crypto");
+var import_node_crypto7 = require("node:crypto");
 var import_node_path8 = require("node:path");
 var import_node_child_process4 = require("node:child_process");
 var import_qrcode = __toESM(require_lib());
@@ -14497,6 +14497,7 @@ var HubEngine = class _HubEngine {
   stopped = false;
   n = 0;
   teach = null;
+  pendingSandboxTeach = null;
   // Teach Falcor pressed on a game's page: waiting for that game to come to the front (one per game).
   coachWait = /* @__PURE__ */ new Map();
   footage = /* @__PURE__ */ new Map();
@@ -14531,6 +14532,17 @@ var HubEngine = class _HubEngine {
   }
   notify() {
     this.changed();
+  }
+  draftingSandbox = false;
+  async sandboxGenerate(request2) {
+    if (!this.o.draftSandbox) throw new Error("Connect a chat model in Settings > AI to build with Falcor.");
+    if (this.draftingSandbox) throw new Error("Falcor is already building a Sandbox draft. Wait for it to finish.");
+    this.draftingSandbox = true;
+    try {
+      return await this.o.draftSandbox(request2);
+    } finally {
+      this.draftingSandbox = false;
+    }
   }
   say(line2, tag = "SYSTEM", missionId) {
     const l = redact(line2).slice(0, 240);
@@ -14866,6 +14878,7 @@ var HubEngine = class _HubEngine {
   // sandbox: the Sandbox's recording mode: at Stop the touches are added as blocks to that sequence (teach-bridge.ts).
   async teachStart(id, o, how = { auto: false, took: false }) {
     if (this.teach) throw new Error("Falcor is already recording. Stop that session first.");
+    if (this.pendingSandboxTeach) throw new Error("Choose whether to analyze or discard the stopped Sandbox recording first.");
     const drv = this.drivers.get(id), f = this.found.get(id), v = this.views.get(id);
     if (!drv || !f || !v) throw new Error("That phone is not connected.");
     if (this.leases.emergency(id)) throw new Error("Emergency Stop is on. Clear it first.");
@@ -14973,11 +14986,24 @@ var HubEngine = class _HubEngine {
   work(stage, pct2) {
     this.teachWork = { stage, pct: pct2, at: this.now() };
   }
-  async teachStop(why = "stopped by you") {
+  async teachStop(why = "stopped by you", deferSandbox = false) {
     const t = this.teach;
     if (!t) throw new Error("Nothing is being recorded.");
     this.teach = null;
     clearInterval(t.timer);
+    if (deferSandbox && t.sandbox) {
+      const rec = await t.session.stop();
+      this.footage.get(t.deviceId)?.close(this.now());
+      if (t.tookControl) {
+        const l = this.leases.current(t.deviceId, this.now());
+        if (l?.leaseId === t.leaseId) this.leases.release(l.leaseId);
+      }
+      const id = "pending-" + this.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      this.pendingSandboxTeach = { id, t, rec, why, analyzing: false };
+      this.teachWork = null;
+      this.changed();
+      return { pending: { id, pkg: rec.pkg, name: rec.name, screens: rec.screens.length, touches: rec.touches.length, elapsedMs: rec.activeMs, sequenceId: t.sandbox.sequenceId } };
+    }
     this.work("Stopping the recording", 8);
     try {
       return await this.teachStopWork(t, why);
@@ -14985,12 +15011,39 @@ var HubEngine = class _HubEngine {
       this.work("Done", 100);
     }
   }
-  async teachStopWork(t, why) {
-    const rec = await t.session.stop();
+  async teachAnalyze(id) {
+    const pending = this.pendingSandboxTeach;
+    if (!pending || pending.id !== id) throw new Error("That stopped Sandbox recording is no longer available.");
+    if (pending.analyzing) throw new Error("This Sandbox recording is already being analyzed.");
+    pending.analyzing = true;
     this.work("Reading your touches, taps and typing", 30);
-    this.footage.get(t.deviceId)?.close(this.now());
+    let complete2 = false;
+    try {
+      const result = await this.teachStopWork(pending.t, pending.why, pending.rec, true);
+      complete2 = true;
+      return result;
+    } finally {
+      if (complete2 && this.pendingSandboxTeach === pending) this.pendingSandboxTeach = null;
+      pending.analyzing = false;
+      this.work("Done", 100);
+    }
+  }
+  teachDiscard(id) {
+    const pending = this.pendingSandboxTeach;
+    if (!pending || pending.id !== id) throw new Error("That stopped Sandbox recording is no longer available.");
+    if (pending.analyzing) throw new Error("This Sandbox recording is already being analyzed.");
+    pending.t.session.shots.clear();
+    this.pendingSandboxTeach = null;
+    this.say("Sandbox: recording discarded before analysis.", "YOU");
+    this.changed();
+    return { discarded: true, sequenceId: pending.t.sandbox.sequenceId };
+  }
+  async teachStopWork(t, why, stopped, captured = false) {
+    const rec = stopped || await t.session.stop();
+    this.work("Reading your touches, taps and typing", 30);
+    if (!captured) this.footage.get(t.deviceId)?.close(this.now());
     if (t.custom?.home && rec.pkg && !HOME_SCREEN.test(this.views.get(t.deviceId)?.info?.foreground || "")) await this.input(t.deviceId, { kind: "key", key: "HOME" }).catch(() => null);
-    if (t.tookControl) {
+    if (!captured && t.tookControl) {
       const l = this.leases.current(t.deviceId, this.now());
       if (l?.leaseId === t.leaseId) this.leases.release(l.leaseId);
     }
@@ -17782,11 +17835,11 @@ var RemoteServer = class _RemoteServer {
     }
     if (method === "GET" && path2 === "/api/screen") {
       const id = String(query.get("deviceId") || "");
-      if (query.get("live") === "1") {
-        const v = await this.liveFrame?.(id).catch(() => null);
-        if (v) return { status: 200, image: v };
+      if (query.get("live") === "1" && !e.o.simulated) {
+        const v = await this.liveFrame?.(id);
+        return v ? { status: 200, image: v } : { status: 503, json: { error: "Fast video is reconnecting. Keep Falcor.Hub open with this phone selected and check its USB connection." } };
       }
-      const cached = e.lastFrame(id), f = cached && e.now() - cached.at < (query.get("live") === "1" ? 400 : 2500) ? cached : await e.frame(id);
+      const cached = query.get("live") === "1" ? null : e.lastFrame(id), f = cached && e.now() - cached.at < 2500 ? cached : await e.frame(id);
       return { status: 200, image: { mime: f.mime, data: Buffer.from(f.data, "base64") } };
     }
     if (method === "POST" && path2 === "/api/control") {
@@ -17896,10 +17949,14 @@ var RemoteServer = class _RemoteServer {
         e.say("Teach started from " + from + ".", "YOU");
         return ok({ sequenceId: id, teaching: st });
       }
-      if (post && body.op === "stop") return ok(await e.teachStop("ended from " + from));
+      if (post && body.op === "stop") return ok(await e.teachStop("ended from " + from, true));
+      if (post && body.op === "analyze") return ok(await e.teachAnalyze(String(body.id || "")));
+      if (post && body.op === "discard") return ok(e.teachDiscard(String(body.id || "")));
     }
     if (get && path2 === "/api/sandbox") return ok({ sequences: sb.list(), schedules: sb.scheduleList(), runs: sb.runs(void 0, 30), live: sb.live() });
     if (get && path2 === "/api/sandbox/catalog") return ok(sb.catalog());
+    if (post && path2 === "/api/sandbox/generate") return ok(await this.engine.sandboxGenerate({ prompt: body.prompt, kind: body.kind }));
+    if (post && path2 === "/api/sandbox/check") return ok(sb.check(body.definition));
     if (post && path2 === "/api/sandbox/sequences") return ok(sb.create({ title: body.title, deviceId: body.deviceId, template: body.template, definition: body.definition }));
     if (post && path2 === "/api/sandbox/schedules") return ok(await sb.createSchedule(body.schedule));
     if (post && path2 === "/api/sandbox/schedules/preview") return ok(sb.previewSchedule(body.schedule));
@@ -17964,16 +18021,17 @@ var RemoteServer = class _RemoteServer {
         res.writeHead(200, { ...cors, "Content-Type": f.mime, "Cache-Control": path2.includes("/assets/") ? "public, max-age=31536000, immutable" : "no-cache" }).end(f.data);
         return;
       }
-      const ip = req.socket.remoteAddress || "", now = this.engine.now(), h = this.hits.get(ip) || { at: now, n: 0 };
+      const ip = req.socket.remoteAddress || "", live = req.method === "GET" && path2 === "/api/screen" && new URL(req.url || "/", "http://hub").searchParams.get("live") === "1";
+      const key2 = ip + (live ? ":mirror" : ""), now = this.engine.now(), h = this.hits.get(key2) || { at: now, n: 0 };
       if (now - h.at > 1e3) {
         h.at = now;
         h.n = 0;
       }
-      if (++h.n > 30) {
+      if (++h.n > (live ? 90 : 30)) {
         res.writeHead(429, cors).end();
         return;
       }
-      this.hits.set(ip, h);
+      this.hits.set(key2, h);
       const chunks = [];
       let size = 0;
       req.on("data", (c) => {
@@ -17992,7 +18050,7 @@ var RemoteServer = class _RemoteServer {
         const u = new URL(req.url || "/", "http://hub");
         try {
           const r = await this.handle(req.method || "GET", u.pathname, u.searchParams, body && typeof body === "object" ? body : {}, req);
-          if (r.image) res.writeHead(r.status, { ...cors, "Content-Type": r.image.mime }).end(r.image.data);
+          if (r.image) res.writeHead(r.status, { ...cors, "Content-Type": r.image.mime, "Cache-Control": "no-store", ...live ? { "X-Falcor-Mirror": this.engine.o.simulated ? "simulated" : "scrcpy-video" } : {} }).end(r.image.data);
           else res.writeHead(r.status, { ...cors, "Content-Type": "application/json" }).end(JSON.stringify(r.json));
         } catch (err) {
           res.writeHead(400, { ...cors, "Content-Type": "application/json" }).end(JSON.stringify({ error: err instanceof Error ? err.message : "Refused." }));
@@ -18783,6 +18841,9 @@ async function writeGuideAI(s2, text2, images, previous, f = fetch) {
 }
 function converse(s2, messages, tools, f = fetch) {
   return request(s2, messages, 1200, void 0, f, { tools, timeoutMs: 6e4, op: "chat" });
+}
+function writeSandboxAI(s2, instructions, prompt, f = fetch) {
+  return complete(s2, [{ role: "system", content: instructions }, { role: "user", content: prompt }], 6e3, void 0, f, { json: true, timeoutMs: 9e4, op: "chat" });
 }
 
 // src/knowledge.ts
@@ -20660,13 +20721,16 @@ Nothing here talks to a website. The phone is driven over USB from your computer
     - One controller per phone: Play now while the queue runs asks **Pause queue and run game**, **Add to queue** or **Cancel**. Taking control, Emergency Stop, a pulled cable or a locked phone stops the activity safely; it is recorded as interrupted and comes back only when that is safe.\r
   - **Schedules** (the same editor from the queue's **+**, a game, a task or a sequence): once, daily, weekdays, weekly or custom days; a time, an earliest and latest start, a duration, the time zone, a priority (1\u20135), attempts and retries, what it waits for (no loops), and what to do when it was missed (skip, run when the phone is available, or ask first; skip is the default). A schedule adds the activity to the Daily Queue; it starts by itself at its time (while this computer is on, Falcor.Hub is open and the phone is plugged in and unlocked).\r
 - **Sandbox tab (key 3): build your own routines from blocks.**\r
-  - It opens on **Create** (what the Sandbox is; start Blank, from the Example or a preset, or Import a .json) or **My sequences** (search, sort, folders, and Run, Edit, Schedule, Duplicate and Delete for each). **Edit** opens the editor as its own page; **\u2039 My sequences** goes back.\r
+  - It opens with four balanced cards: **Blank workspace**, **Templates**, **My drafts** and **Quick tour**. Templates offers the example and presets; My drafts opens your unpublished work with search, sort and folders. Build with Falcor and Teach are available inside every workspace rather than separate start cards. **Edit** opens the editor as its own page; **\u2039 My sequences** goes back.\r
   - The mirror sits in the middle; the **block library** is on the left (Touch and gesture, App and device, Time and flow, Screen aware, presets and your own presets; greyed blocks say why the phone link cannot do them), the **step's settings** on the right, the **timeline** at the bottom (Flow or Tree; drag to reorder, Ctrl+G to group, Ctrl+Z / Ctrl+Y, copy and paste).\r
   - **Pick target**: click the mirror to set a tap's point (the button under it becomes its anchor, so a moved button is still found). **Pick gesture**: drag to draw a swipe (a curve becomes a path). Picking never touches the phone. Pins show every point; drag a pin to move it.\r
   - **Teach** records what you do on the mirror and adds it to the open sequence as blocks (open the app, each tap, swipe, key and text, your pauses if you want them, and a last check of the screen).\r
-  - **Test step**, **Preview** and **Start** play it on the phone through the same safety gate as Autopilot: never a purchase, a payment, an ad or a private screen. **Pause**, **Stop** and **Stop after group** are always in the header; a sign-in, payment or code screen pauses it for you.\r
+  - **Build with Falcor** on desktop, or **Falcor AI** above the phone's blocks, turns a typed idea into an editable draft using your configured chat model and existing AI budgets. Choose **Custom block** to insert one named group of actions into the sequence you are editing, preserving existing blocks and unsaved changes; choose **New sequence** for individual action blocks in a separate draft. Review the preview, then explicitly add or open it. Groups can be folded into one block or expanded in their settings. Generation never runs or publishes anything. The phone must be connected to the computer for AI drafting; offline editing still works.\r
+  - **Play sequence** beside the blocks previews the routine on the phone through the same safety gate as Autopilot: never a purchase, a payment, an ad or a private screen. The same control becomes **Pause** / **Resume**, with **Stop** alongside. The active block is highlighted and the playback bar shows its step number. **Test step** plays only the selected block; a sign-in, payment or code screen pauses it for you.\r
   - Every save is a version (History restores one); a run plays the version it started with. Unsaved changes are kept as a draft.\r
-  - **Save sequence**, **Save as task**, **Run now**, **Add to queue** (today, when the phone is free) and **Set schedule** (the Daily Queue's editor). On your phone, a schedule still runs by itself only with **Run it while I am away** ticked.\r
+  - **Save draft** keeps your work in Sandbox, **Save a copy** makes a separate draft, and **Publish to Library** makes it available in the Library. Published sequences use **Save changes**. Run or schedule a published sequence from its Library detail page. On your phone, a schedule still runs by itself only with **Run it while I am away** ticked.\r
+  - Open a published sequence in the Library and use **Make it yours** to edit its name, description and icon. The shared **100 pixel icons** picker offers searchable categories and a selection preview on desktop and phone. Press **Save details** to persist the icon on the sequence and its Library cards; this does not change its action blocks.\r
+  - Blocks show the action name, its specific target or instructions, and extra context. Click a block to open its settings panel; on the phone, timing and notes are under **Timing and notes**. Drag desktop cards or the phone's enlarged grip to reorder. A highlighted insertion edge shows the snap position; hold near the list's edge to scroll to off-screen steps. Phone drags stay within their current branch, so groups cannot be broken accidentally. **Undo** / **Redo** restore order changes.\r
   - Export and import a sequence as a .json file. **?** shows the shortcuts and a five-step walkthrough.\r
 - **Library tab (key 2): your games, apps and creations.** Every game with a challenge you accepted, an offer from an earning app, or a guide; every app you collect rewards from on a schedule (for example FireFaucet, every 30 minutes); and every creation you built in Sandbox, each as a card: its picture (the app's own icon from the phone, else the artwork read from its offer page, else a pixel letter), name, earning app, what it can pay, what was credited or paid out, goals reached as blocks, status (Active, Completed, Expired) and time left. Filter by All, Games, Apps, Creations, Active, Completed or Expired; sort by recently updated, deadline, advertised reward or progress.\r
   - **Capture**: open the game's offer page in your earning app on the phone and press it. Falcor reads the screen (the game, its picture, the total, the deadline, each milestone and its reward), then the next one after you scroll (or press **Scroll for me**: one swipe, under your control), until a screen shows nothing new. Overlaps are read once and the order is kept, so a 60-milestone offer comes out as 60 milestones. Check it, fix anything, **Save**; nothing is kept before that.\r
@@ -20694,7 +20758,8 @@ Nothing here talks to a website. The phone is driven over USB from your computer
 - **Settings tab (key 5):** the AI, the phone app, Knowledge and the rest. Rewards per unit (never added across units) are on each card in the Library; what ran is in Activity.\r
 - **On your phone (Remote):** **Sandbox** (**Create**: blank, the example or a preset; **My sequences**: your sequences with Edit, Duplicate, Delete, with a big Start / Stop and their schedule switches; a full-screen editor: tap the screenshot to place a step, Blocks and Step drawers, the steps along the bottom, Run / Pause / Stop at your thumb), Home (the phone's state, today's stats, a live screen thumbnail you can open full screen, activity, and Start/Stop Autopilot at the bottom), **Games** (the same library cards, filters and game profiles: the reward ladder with its stage menus, earnings and activity; **Open game** opens the game on the plugged-in phone and gives control straight back; **Run available activity** asks the same one-controller question), **Falcor** (the same chat, like a mobile chat app: the message box stays at the bottom, past chats slide out from the side and can be deleted, and it opens on a new chat) and **Tasks** (Run now, Pause, Resume and the approval gate). Stop and the notification bell are always in the header.\r
 - **Stop** is always in the header (Ctrl+Shift+X). It stops every phone and turns Autopilot off; a red bar shows until you press Clear. It also works from the Remote.\r
-- **Teach Falcor** (in the Sandbox; the Hub tab's Teach opens it there).\r
+- The phone's Hub, Sandbox Studio and block editor all use JPEG frames from the **same decoded scrcpy video** as the desktop mirror, not the old slow screen-capture loop. Requests run one at a time, paced at up to 60 frames per second; encoding and Wi-Fi affect the actual rate and latency. Keep the desktop app open with the same phone selected; minimizing it does not stop an active phone mirror. If live video is unavailable, the phone reconnects instead of silently switching to slow ADB screenshots.\r
+- **Teach Falcor** is in Sandbox, not in the Hub mirror controls on desktop or phone.\r
   - Open the app on the phone, press **Teach Falcor**, name it and say what you will show. Or press it on the phone's home screen and then open the app: Falcor learns how you open it too.\r
   - Play it on the mirror. The mirror is live video inside the window; every touch goes through Falcor and is recorded, with where it landed and the screen it led to once that screen has finished loading.\r
   - Show the task from its start (how you get there), do it once, and mark the moment that matters. Peeking at a shop and going Back is fine: Falcor leaves detours out.\r
@@ -20715,11 +20780,12 @@ Nothing here talks to a website. The phone is driven over USB from your computer
   - After the last round it goes Home. If the end you showed does not appear, the task comes back to you.\r
   - Edit a custom task's rounds, stop words, Home and repeat with its pencil button. Changing how it repeats sends it back to review. The Remote lists its steps too.\r
 - **Falcor: chat with him** (also on your phone, the same conversation). Falcor is the glowing square with his picture: drag it anywhere, press it for a small chat (New chat, **Full page**, Close). Ctrl+K opens it from anywhere. **Full page** shows the whole chat with your past chats; its button brings back the small chat.\r
-  - It opens on a new chat with Falcor's greeting; a chat is kept only once you send something. Past chats are on the left, grouped by day, with search.\r
+  - It opens on a new chat with Falcor's greeting; a chat is kept only once you send something. Full-page chat has history on the left and the conversation filling the right, with no Context sidebar. Past chats are grouped by day, with search. Hover or focus a chat to rename, pin or delete it; Enter saves a name, Escape cancels, and deletion asks for confirmation.\r
   - Ask about your games, tasks, what Falcor learned, stats, rewards, Autopilot, or how Falcor.Hub works.\r
   - Tell it what to do: start or stop Autopilot, run, pause or resume a task, create or edit a task, fix a guide, start a teaching session.\r
   - Anything that creates, edits or removes something shows a card; nothing changes until you tap **Confirm**. Approving a task shows the same ticks as Other automations; only your taps approve it.\r
   - Say **stop** at any time: everything stops at once, even with no internet.\r
+- **About: the Keeper's hall** (Settings, About). A pixel-dragon welcome leads into three expandable lore chapters, the Keeper's house rules and playful margin notes. Discover the Sealed archive or unfold A note from the Keeper; the archive's Back button returns to About. Version and tool details remain at the bottom.\r
 - **How Falcor works out what to do on a screen**, cheapest first:\r
   - the task's own logic: claim buttons ("Claim", "Claim Day 3", "Collect 50 coins"), signup forms, balances, and the screens every game has (loading, Play, Next, Continue, Retry, free Collect, Skip ad, upgrades paid with the game's own coins);\r
   - your **Teach recipe** for that app (the buttons you pressed, followed by what they say, never a money button);\r
@@ -20791,8 +20857,51 @@ npm run build && npx cap add android && node scripts/prepare-android.mjs && cd a
 \`\`\`\r
 \r
 Release APKs are signed when \`FALCOR_KEYSTORE\`, \`FALCOR_KEYSTORE_PASSWORD\` and \`FALCOR_KEY_ALIAS\` are set. Every update must use the same key.\r
-\r
 `;
+
+// src/sandbox/ai.ts
+var import_node_crypto4 = require("node:crypto");
+async function draftSandbox(raw, settings, f = fetch) {
+  if (raw.kind !== "sequence" && raw.kind !== "block") throw new SequenceError("Choose a sequence or a custom block.");
+  if (typeof raw.prompt !== "string" || !raw.prompt.trim() || raw.prompt.length > 3e3 || /[\u0000-\u0008\u000b-\u001f\u007f]/.test(raw.prompt)) throw new SequenceError("Describe what to build in 1 to 3000 characters.");
+  const kind = raw.kind;
+  const catalog = BLOCKS.filter((b) => !b.unavailable && b.type !== "callSequence");
+  const instructions = `You are Falcor, drafting editable Android Sandbox blocks, never running anything.
+Return only JSON: {"title":"Short name","description":"What this does and any limitations","steps":[{"type":"wait","params":{"durationMs":1000}}]}.
+If the request is unsupported or needs missing details, return {"error":"One concise explanation of what the owner should specify."}.
+Use only the catalog below, with its parameter names and limits. Each step may have label (80 chars), note (300 chars), enabled, waitBeforeMs, waitAfterMs, children and else where supported. Do not add IDs, settings, target, code, commands or other fields.
+${kind === "block" ? "Draft the actions INSIDE one custom block. The app will wrap these steps in one named group." : "Draft a complete sequence with a separate block for each action. Use groups only for requested loops or conditional logic."}
+At most 60 steps total, nesting at most ${kind === "block" ? LIMITS.depth - 1 : LIMITS.depth} levels. All loops must be bounded.
+Prefer tapText for a known label, never invent coordinates or app package names. Ask for missing targets rather than pretend to know the screen. Do not create password, payment, purchase, permission-granting or destructive actions. Never claim the result was tested. The owner must review it before playing.
+Conditions: {"kind":"text","text":"Exact words","present":true}, {"kind":"control","text":"Label"}, {"kind":"app","packageName":"com.example.app"}, {"kind":"var","name":"count","op":"<","value":5}, or {"kind":"changed"}.
+CATALOG: ${JSON.stringify(catalog)}`;
+  const text2 = await writeSandboxAI(await settings(), instructions, raw.prompt.trim(), f);
+  if (text2.length > 1e5) throw new SequenceError("Falcor returned too many blocks. Try a smaller request.");
+  let value;
+  try {
+    value = JSON.parse(text2.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, ""));
+  } catch {
+    throw new SequenceError("Falcor returned an unreadable draft. Nothing was changed; try again.");
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new SequenceError("Falcor did not return a sequence.");
+  const result = value;
+  if (typeof result.error === "string") throw new SequenceError(result.error.slice(0, 500));
+  for (const key2 of Object.keys(result)) if (!["title", "description", "steps"].includes(key2)) throw new SequenceError("Falcor returned an unsupported draft field: " + key2.slice(0, 40));
+  let count = 0;
+  const steps = (list, depth = 1) => {
+    if (!Array.isArray(list) || !list.length) throw new SequenceError("Falcor returned an empty or invalid set of actions.");
+    if (depth > (kind === "block" ? LIMITS.depth - 1 : LIMITS.depth)) throw new SequenceError("Falcor nested too many groups.");
+    return list.map((item) => {
+      if (++count > 60 || !item || typeof item !== "object" || Array.isArray(item)) throw new SequenceError("Falcor returned too many or invalid actions.");
+      const step = item;
+      if (!catalog.some((b) => b.type === step.type)) throw new SequenceError("Falcor used an unsupported action: " + String(step.type).slice(0, 40));
+      return { ...step, id: "s" + (0, import_node_crypto4.randomUUID)().replace(/-/g, ""), ...step.children !== void 0 ? { children: steps(step.children, depth + 1) } : {}, ...step.else !== void 0 ? { else: Array.isArray(step.else) && !step.else.length ? [] : steps(step.else, depth + 1) } : {} };
+    });
+  };
+  const actions = steps(result.steps);
+  const definition = validateSequence({ title: result.title, description: result.description, steps: kind === "block" ? [{ id: "s" + (0, import_node_crypto4.randomUUID)().replace(/-/g, ""), type: "group", label: result.title, params: {}, children: actions }] : actions });
+  return { kind, definition, warnings: ["AI draft: review every action and target before playing.", ...warnings(definition)] };
+}
 
 // src/app.ts
 async function createHub(o) {
@@ -20878,6 +20987,7 @@ async function createHub(o) {
     now: o.now,
     shrink: o.shrink,
     crop: o.crop,
+    draftSandbox: (request2) => draftSandbox(request2, async () => knowledge.track(await knowledge.ready("chat", false, "chat"), "chat"), o.fetch),
     // An offer page drawn as a picture: read by Falcor AI from a small copy, only for a model that reads pictures.
     offerPicture: async (mime, data) => {
       const s2 = await kimi("offer");
@@ -21055,7 +21165,7 @@ function openViewer({ scrcpyPath, adbPath, serial, label, mode, onExit }) {
 var import_electron = require("electron");
 
 // src/pack.ts
-var import_node_crypto4 = require("node:crypto");
+var import_node_crypto5 = require("node:crypto");
 var import_node_fs6 = require("node:fs");
 var import_node_path7 = require("node:path");
 var RELEASES = "https://raw.githubusercontent.com/thekidgilly/Falcor-Hub-Releases/main";
@@ -21124,7 +21234,7 @@ async function downloadPack(fetch2, packsDir, l, onProgress = () => {
     const r = await fetch2(base + "/packs/" + l.version + "/" + f.path);
     if (!r.ok) throw new Error("Could not download " + f.path + " (" + r.status + ").");
     const buf = Buffer.from(await r.arrayBuffer());
-    if ((0, import_node_crypto4.createHash)("sha256").update(buf).digest("hex") !== f.sha256) throw new Error(f.path + " did not match its checksum, so the update was not used.");
+    if ((0, import_node_crypto5.createHash)("sha256").update(buf).digest("hex") !== f.sha256) throw new Error(f.path + " did not match its checksum, so the update was not used.");
     (0, import_node_fs6.mkdirSync)((0, import_node_path7.dirname)((0, import_node_path7.join)(tmp, f.path)), { recursive: true });
     (0, import_node_fs6.writeFileSync)((0, import_node_path7.join)(tmp, f.path), buf);
     onProgress(Math.round(++done / l.files.length * 100));
@@ -21199,7 +21309,7 @@ function startUpdater(o) {
 // src/phone/video.ts
 var import_node_child_process3 = require("node:child_process");
 var import_node_net = __toESM(require("node:net"));
-var import_node_crypto5 = require("node:crypto");
+var import_node_crypto6 = require("node:crypto");
 var VideoParser = class {
   buf = Buffer.alloc(0);
   stage = "dummy";
@@ -21277,7 +21387,7 @@ function textMessage(t) {
   return b;
 }
 async function startVideo(o) {
-  const scid = ((0, import_node_crypto5.randomBytes)(4).readUInt32BE(0) & 2147483647).toString(16).padStart(8, "0");
+  const scid = ((0, import_node_crypto6.randomBytes)(4).readUInt32BE(0) & 2147483647).toString(16).padStart(8, "0");
   const port = await freePort();
   await o.exec(ADB.pushVideoServer(o.serial, o.serverPath), { timeoutMs: 3e4 });
   await o.exec(ADB.forwardVideo(o.serial, port, scid), { timeoutMs: 1e4 });
@@ -21394,7 +21504,7 @@ async function startVideo(o) {
 
 // src/main.ts
 var where = globalThis.falcorHub || { appRoot: (0, import_node_path8.join)(__dirname, ".."), packRoot: (0, import_node_path8.join)(__dirname, ".."), packVersion: null, installVersion: import_electron2.app.getVersion(), packsDir: (0, import_node_path8.join)(import_electron2.app.getPath("userData"), "packs") };
-var VERSION = "0.21.51";
+var VERSION = "0.21.56";
 var simulated = process.argv.includes("--simulated");
 if (!import_electron2.app.requestSingleInstanceLock()) {
   if (where.packVersion) {
@@ -21634,11 +21744,20 @@ import_electron2.ipcMain.on("frameTaken", (_e, a) => {
   const png = r.png instanceof ArrayBuffer ? Buffer.from(r.png) : r.png instanceof Uint8Array ? Buffer.from(r.png.buffer, r.png.byteOffset, r.png.byteLength) : null;
   done(png && png.length > 100 ? { png, width: Number(r.width) || 0, height: Number(r.height) || 0, at: Number(r.at) || 0 } : null);
 });
+var mirrorWakeTimer = null;
 function windowFrame(deviceId, mime = "image/png") {
   return new Promise((resolve) => {
-    if (!win || win.isDestroyed() || !videos.has(deviceId)) {
+    if (!win || win.isDestroyed() || mime !== "image/jpeg" && !videos.has(deviceId)) {
       resolve(null);
       return;
+    }
+    if (mime === "image/jpeg") {
+      if (!mirrorWakeTimer) win.webContents.setBackgroundThrottling(false);
+      else clearTimeout(mirrorWakeTimer);
+      mirrorWakeTimer = setTimeout(() => {
+        mirrorWakeTimer = null;
+        if (win && !win.isDestroyed()) win.webContents.setBackgroundThrottling(true);
+      }, 3500);
     }
     const req = ++frameReq, t = setTimeout(() => {
       frameWaits.delete(req);
@@ -21805,7 +21924,9 @@ var handlers = {
   teachStart: (a) => need().engine.teachStart(String(a.deviceId), { name: String(a.name || ""), intent: String(a.intent || ""), custom: a.custom || void 0, sandbox: a.sandbox || void 0, home: a.home === true }),
   teachPause: (a) => need().engine.teachPause(a.on === true),
   teachMark: (a) => need().engine.teachMark(String(a.note || "")),
-  teachStop: () => need().engine.teachStop(),
+  teachStop: (a) => need().engine.teachStop("stopped by you", a.deferSandbox === true),
+  teachAnalyze: (a) => need().engine.teachAnalyze(String(a.id || "")),
+  teachDiscard: (a) => need().engine.teachDiscard(String(a.id || "")),
   teachProgress: () => need().engine.teachWork,
   teachEstimate: (a) => need().knowledge.estimate(String(a.pkg), String(a.id)),
   teachWrite: (a) => need().knowledge.writeGuide(String(a.pkg), String(a.id), a.mode === "text" ? "text" : a.mode === "local" ? "local" : "full", a.overLimit === true),
@@ -21929,6 +22050,8 @@ var handlers = {
     switch (op) {
       case "catalog":
         return sb.catalog();
+      case "generate":
+        return need().engine.sandboxGenerate({ prompt: a.prompt, kind: a.kind });
       case "list":
         return { sequences: sb.list(), schedules: sb.scheduleList(), runs: sb.runs(void 0, 30), prefs: sb.prefs() };
       case "get":
@@ -22108,7 +22231,7 @@ function shortcutIcons() {
   if (process.platform !== "win32" || !import_electron2.app.isPackaged) return;
   try {
     const bytes = (0, import_node_fs7.readFileSync)((0, import_node_path8.join)(where.packRoot, "ui", "app.ico")), dir = import_electron2.app.getPath("userData");
-    const ico = (0, import_node_path8.join)(dir, "Falcor.Hub-" + (0, import_node_crypto6.createHash)("sha256").update(bytes).digest("hex").slice(0, 10) + ".ico");
+    const ico = (0, import_node_path8.join)(dir, "Falcor.Hub-" + (0, import_node_crypto7.createHash)("sha256").update(bytes).digest("hex").slice(0, 10) + ".ico");
     if (!(0, import_node_fs7.existsSync)(ico)) (0, import_node_fs7.writeFileSync)(ico, bytes);
     for (const f of (0, import_node_fs7.readdirSync)(dir)) if (/^Falcor\.Hub(-[0-9a-f]{10})?\.ico$/.test(f) && (0, import_node_path8.join)(dir, f) !== ico) try {
       (0, import_node_fs7.unlinkSync)((0, import_node_path8.join)(dir, f));

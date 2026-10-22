@@ -88,7 +88,6 @@
             <button class="icon" id="kbd" title="Type into the phone"><svg class="ico"><use href="#i-keyboard"></use></svg></button>
             <span class="sep"></span>
             <button id="take" class="primary"><svg class="ico"><use href="#i-control"></use></svg>Take Control</button><button id="release" hidden><svg class="ico"><use href="#i-control"></use></svg>Release</button>
-            <button id="teach" title="Play an app on the mirror while Falcor watches and learns it"><svg class="ico"><use href="#i-rec"></use></svg>Teach</button>
             <button id="phonecap" title="Read the offer page open on the phone"><svg class="ico"><use href="#i-camera"></use></svg><span id="phonecaplbl">CAPTURE</span></button>
             <button class="icon" id="viewer" title="Open a second display of the phone: its own window you can drag anywhere, even outside Falcor.Hub"><svg class="ico"><use href="#i-popout"></use></svg></button>
             <button class="icon" id="askfalcor" title="Ask Falcor about the app in front"><svg class="ico"><use href="#i-chat"></use></svg></button>
@@ -203,23 +202,17 @@
       <div class="sbacts"><button class="small" id="sbfocus" aria-pressed="false">Focus</button><button class="small danger" id="sbstudio-stop">Stop all</button><button class="small" id="sbpanels">Panels</button>
         <button class="small" id="sbnew" title="New sequence (Ctrl+N)"><svg class="ico"><use href="#i-plus"></use></svg>New</button>
         <button class="small" id="sbopen" title="Drafts and published (Ctrl+O)"><svg class="ico"><use href="#i-book"></use></svg>Open</button>
-        <button class="small" id="sbsave" title="Save a new version (Ctrl+S)"><svg class="ico"><use href="#i-check"></use></svg>Save</button>
-        <button class="small" id="sbsaveas" title="Save as a new sequence">Save As</button>
-        <button class="small pubbtn" id="sbpublish" title="Put it in the Library, where it can be scheduled"><svg class="ico"><use href="#i-check"></use></svg>Publish</button>
-        <button class="small" id="sbsavetask" title="Save it and list it in Tasks, with Run now, Schedule and its history"><svg class="ico"><use href="#i-tasks"></use></svg>Save as task</button>
+        <button class="small" id="sbsave" title="Save this draft without publishing (Ctrl+S)"><svg class="ico"><use href="#i-check"></use></svg>Save draft</button>
+        <button class="small" id="sbsaveas" title="Save a separate copy as a new draft">Save a copy</button>
+        <button class="small" id="sbai" title="Describe a sequence or custom block for Falcor to build"><svg class="ico"><use href="#i-chat"></use></svg>Build with Falcor</button>
+        <button class="small pubbtn" id="sbpublish" title="Put it in the Library, where it can be scheduled"><svg class="ico"><use href="#i-check"></use></svg>Publish to Library</button>
         <button class="small icon" id="sbundo" title="Undo (Ctrl+Z)"><svg class="ico"><use href="#i-undo"></use></svg></button>
         <button class="small icon" id="sbredo" title="Redo (Ctrl+Y)"><svg class="ico"><use href="#i-redo"></use></svg></button>
         <span class="sep"></span>
         <button class="small" id="sbtest" title="Run only the selected step (T)"><svg class="ico"><use href="#i-target"></use></svg>Test step</button>
-        <button class="small" id="sbpreview" title="Run it once while you watch, labelled as a preview"><svg class="ico"><use href="#i-eye"></use></svg>Preview</button>
-        <button class="small primary" id="sbstart" title="Save and run it now (Ctrl+Enter)"><svg class="ico"><use href="#i-play"></use></svg>Run now</button>
-        <button class="small" id="sbpause" hidden><svg class="ico"><use href="#i-pause"></use></svg>Pause</button>
         <button class="small" id="sbskip" title="Skip the step it waits on" hidden>Skip</button>
         <button class="small" id="sbafter" title="Finish the group or loop it is in, then stop" hidden>Stop after group</button>
-        <button class="small danger" id="sbstop" title="Stop the run" hidden><svg class="ico"><use href="#i-stop"></use></svg>Stop</button>
         <span class="sep"></span>
-        <button class="small icon" id="sbqueue" title="Add to today's queue (it runs in its turn)"><svg class="ico"><use href="#i-queue"></use></svg></button>
-        <button class="small icon" id="sbsched" title="Set a schedule (the Daily Queue)"><svg class="ico"><use href="#i-calendar"></use></svg></button>
         <button class="small icon" id="sbprefs" title="Sandbox settings"><svg class="ico"><use href="#i-settings"></use></svg></button>
         <button class="small icon" id="sbhelp" title="Help and shortcuts (?)"><svg class="ico"><use href="#i-help"></use></svg></button>
       </div>
@@ -288,6 +281,11 @@
       <div class="top">
         <div class="seg" id="sbviews"><button data-v="flow" class="on">Flow</button><button data-v="tree">Tree</button><button data-v="log">Run log</button></div><button class="ghost small icon popbtn" data-pop="sbtl" data-poptitle="Timeline" title="Pop out to its own window (put it on another monitor)"><svg class="ico"><use href="#i-popout"></use></svg></button>
         <span class="muted small" id="sbsum"></span>
+        <div class="sbplayback" id="sbplayback" role="group" aria-label="Sequence playback">
+          <span class="small muted" id="sbplaystate" role="status">Ready to play</span>
+          <button class="small primary" id="sbplay" title="Play the sequence while you watch"><svg class="ico"><use href="#i-play"></use></svg>Play sequence</button>
+          <button class="small danger" id="sbplaystop" hidden><svg class="ico"><use href="#i-stop"></use></svg>Stop</button>
+        </div>
         <span class="grow"></span>
         <div class="sbrun" id="sbrun" hidden><span class="led"></span><b id="sbrunstate"></b><span class="muted small" id="sbrunstep"></span><span class="muted small timer" id="sbruntime"></span></div>
       </div>
@@ -408,6 +406,7 @@
       </div>
       <div class="crgrid" id="crlist" aria-live="polite"></div>
     </div>
+    <div id="crdetail" hidden></div>
     <div id="crother" hidden>
     <div class="toolrow">
       <div class="seg" id="taskfilter"><button data-f="all" class="on">All</button><button data-f="needs">Needs me</button><button data-f="scheduled">Scheduled</button><button data-f="done">Done</button></div>
@@ -450,17 +449,13 @@
         <ul class="threadlist" id="threadlist"></ul>
       </div>
       <div class="panel convo">
-        <div class="convohead"><div class="top"><span class="favatar xs" id="chatavatar"><img src="dragon.png" alt=""></span><div class="ctitle"><h2 id="chattitle">New chat</h2><span class="csub" id="chatsub">Falcor · your conductor</span></div><button class="icon" id="ctxtoggle" title="What Falcor is looking at"><svg class="ico"><use href="#i-eye"></use></svg></button><button class="icon" id="docknew" title="New chat"><svg class="ico"><use href="#i-plus"></use></svg></button><button class="icon" id="chatsize" title="Full page"><svg class="ico"><use href="#i-max"></use></svg></button><button class="icon" id="dockclose" title="Close"><svg class="ico"><use href="#i-close"></use></svg></button></div></div>
+        <div class="convohead"><div class="top"><span class="favatar xs" id="chatavatar"><img src="dragon.png" alt=""></span><div class="ctitle"><h2 id="chattitle">New chat</h2><span class="csub" id="chatsub">Falcor · your conductor</span></div><button class="icon" id="docknew" title="New chat"><svg class="ico"><use href="#i-plus"></use></svg></button><button class="icon" id="chatsize" title="Full page"><svg class="ico"><use href="#i-max"></use></svg></button><button class="icon" id="dockclose" title="Close"><svg class="ico"><use href="#i-close"></use></svg></button></div></div>
         <div class="msgs" id="msgs"><div id="chatintro"></div><div class="msglist" id="msglist"></div></div>
         <div class="chips" id="quick"></div>
         <form class="composer" id="composer">
           <div class="focusrow"><span class="focuschip" id="focuschip" hidden><svg class="ico"><use href="#i-book"></use></svg><span id="focusname"></span><button type="button" id="focusclear" title="Stop focusing">×</button></span><button type="button" class="ghost small" id="atbtn">@ app</button><ul class="atmenu" id="atmenu" hidden></ul></div>
           <div class="row"><textarea id="chattext" rows="2" maxlength="2000" placeholder="Ask Falcor anything, or say what to do. Enter sends · Shift+Enter new line"></textarea><button class="primary icon big" title="Send"><svg class="ico"><use href="#i-send"></use></svg></button></div>
         </form>
-      </div>
-      <div class="panel context" id="context">
-        <p class="eyebrow">// CONTEXT</p>
-        <div id="ctxbody"></div>
       </div>
     </div>
   </section>
@@ -538,7 +533,7 @@
         <button data-sub="activity"><svg class="ico"><use href="#i-stats"></use></svg>Activity</button>
         <button data-sub="secrets"><svg class="ico"><use href="#i-lock"></use></svg>Secrets</button>
         <button data-sub="updates"><svg class="ico"><use href="#i-update"></use></svg>Updates</button>
-        <button data-sub="about"><svg class="ico"><use href="#i-phone"></use></svg>About</button>
+        <button data-sub="about"><svg class="ico"><use href="#i-book"></use></svg>About</button>
       </nav>
       <div>
         <div class="panel actpanel" data-sub="activity" hidden>
@@ -614,23 +609,51 @@
           <p class="eyebrow" data-gap>// WHAT'S NEW</p>
           <div id="history"></div>
         </div>
-        <div class="panel" data-sub="about" hidden>
-          <p class="eyebrow">// ABOUT</p>
-          <div class="abouthero"><img src="dragon.png" alt=""><div><h2>FALCOR.HUB</h2><p class="muted small" id="about"></p></div></div>
-          <div class="lore">
-            <p class="lorehead">The Lay of the Keeper</p>
-            <p>Before the first screen ever glowed, the old dragons kept the lore of play. From the high places they watched every game ever made, and learned its hidden paths: where the treasure lies buried, which doors are snares, how a level is won by patience and never by haste. One by one the old dragons went to their long sleep, until only the eldest remained.</p>
-            <p>Falcor would not sleep. He came down from the mountain with everything his kin had known, and he built a hall to keep it. This is that hall.</p>
-            <p>Here the Keeper watches over the phone you bring him. Through its glass he sees what you see, and through its glowing frame he learns. When you rest, he plays on through the long night, and when the sun returns, the spoils of the day wait for you, counted and true.</p>
-            <p>Nothing here is learned by chance. When you play before him, he marks every tap, every pause and every word you type, and weaves them into runs that answer to you alone. A run once shown can be cast again, unchanged, as often as you call for it. Each game he plays leaves him wiser for the next, and the more you show him, the deeper his memory runs.</p>
-            <p>The old laws still bind him. He never spends what is not his: no purchase, no wager, not a single coin of yours leaves your hand by his claw. Nothing in this hall stirs until you have blessed it. And should you speak the word of stilling, <b>stop</b>, every wing in the hall folds at once.</p>
-            <p>The hall keeps its own secrets. Your keys rest here and nowhere else, each one whispered only to its own keeper. No website peers through these windows, and nothing that passes between you and the dragon is ever sold.</p>
-            <p>This knowledge is not written in any book. It passes only from master to apprentice, from hand to claw, and you are now one of the very few who hold it.</p>
-            <p class="loresign">Few are ever shown the way in. You were. Guard what you learn here, and teach him well.<span>— Falcor, Keeper of the Hub</span></p>
+        <div class="panel keeperabout" data-sub="about" hidden>
+          <div class="keeperhero">
+            <div class="keeperportrait"><img src="dragon.png" alt="Falcor, Keeper of the Hub"><span class="keeperseal">THE KEEPER IS IN</span></div>
+            <div class="keepergreeting"><p class="eyebrow">// FALCOR.HUB · A HIDDEN SIDE QUEST</p><h2>Well now. A visitor.</h2><p>Most come here looking for a version number.<br>You found a dragon's hall instead.</p><div class="keeperbadges"><span><i class="led on"></i>Keeper awake</span><span><svg class="ico"><use href="#i-book"></use></svg>Lore inside</span></div></div>
           </div>
+          <div class="keeperbody">
+            <div class="keeperchapters">
+              <details class="keeperchapter origin" open><summary><span class="chapternum">01</span><span><b>The last dragon who stayed</b><small>From the Lay of the Keeper</small></span></summary><div class="chapterbody">
+                <p>Before the first screen glowed, the old dragons knew the hidden paths of every game: the door with treasure behind it, the tempting shortcut that was really a trap, the victory earned by one more patient try.</p>
+                <p>One by one, they went to their long sleep. Falcor stayed. He built a hall for everything worth remembering: a Library for discoveries, a Sandbox for little spells, and a place beside the glass where he could learn from you.</p>
+                <p>Dragons usually collect gold. This one collects <em>the way you do things</em>. A tap, a pause, a clever little routine. Show him once, and another path is written into the hall.</p>
+              </div></details>
+              <details class="keeperchapter" open><summary><span class="chapternum">02</span><span><b>The old laws still hold</b><small>Even dragons have house rules</small></span></summary><div class="chapterbody"><ul class="keeperlaws">
+                <li><svg class="ico"><use href="#i-control"></use></svg><span><b>Your hand chooses.</b>The Keeper follows your permission, not his curiosity.</span></li>
+                <li><svg class="ico"><use href="#i-lock"></use></svg><span><b>Your keys stay yours.</b>A good dragon guards a vault. He does not gossip about it.</span></li>
+                <li><svg class="ico"><use href="#i-stop"></use></svg><span><b>One word stills the hall.</b>Say <em>stop</em>, and every wing folds.</span></li>
+              </ul></div></details>
+              <details class="keeperchapter" open><summary><span class="chapternum">03</span><span><b>Notes from the margins</b><small>Not technically an instruction manual</small></span></summary><div class="chapterbody">
+                <p>The Keeper insists he does not have favorites. The carefully sorted shelf of your best sequences suggests otherwise.</p>
+                <p>He also denies sleeping beside the warmest window in the Hub. The tiny claw marks are, apparently, a rendering artifact.</p>
+                <p class="keeperwhisper">If a dragon says "one more run," check the clock.</p>
+              </div></details>
+            </div>
+            <p class="loresign keepersign">You were not on the visitor list.<br>He kept a place for you anyway.<span>— a line added to the ledger, just now</span></p>
+            <div class="loreextras">
+              <button class="lorelink" data-go="lore"><svg class="ico"><use href="#i-book"></use></svg><span><b>Sealed archive</b><small>Explore the Keeper's private ledger</small></span><svg class="ico arrow"><use href="#i-chevron"></use></svg></button>
+              <details class="loreegg"><summary><svg class="ico"><use href="#i-edit"></use></svg><span><b>A note from the Keeper</b><small>Unfold a message left just for you</small></span></summary><p>The Keeper says the hall has no clocks. He still knows when you have been away too long.</p></details>
+            </div>
+          </div>
+          <p class="muted small keeperbuild" id="about"></p>
         </div>
       </div>
     </div>
+  </section>
+  <section data-pane="lore" class="pane" hidden>
+    <div class="crhead pagehead archivehead"><div><p class="eyebrow">// SEALED ARCHIVE · ACCESS GRANTED</p><h2>Below the Hall</h2><p class="muted small">A few leaves from the Keeper's private ledger.</p></div><button class="ghost" data-go="settings:about"><svg class="ico"><use href="#i-back"></use></svg>Back to About</button></div>
+    <article class="panel lore lorearchive">
+      <p class="lorehead">The first light in the workshop</p>
+      <p>Before the Hub had windows, it was a workbench: one phone, one careful hand, and a dragon learning the difference between a button that opens a door and one that asks too much. The first rule was written before the first run: the hand chooses; the Keeper follows.</p>
+      <p>So the hall was built with a place for every kind of memory. A screen may be observed, but a secret stays veiled. A lesson may be kept, but only because its maker asked. A sequence may be repeated, but never beyond the owner's word. These are not locks on the door. They are the shape of the door itself.</p>
+      <p>When the phone is near, the Keeper can watch its glass and carry out a run. When it is far, the hall waits without pretending it can reach. The Library remembers what you made; the Sandbox is where you teach it; and the red word <b>stop</b> is never more than one call away.</p>
+      <p>Every new block is another mark in the margin. Some are small: a pause, a tap, a name typed carefully. Together they become a path that belongs to you, held here on your computer and ready when you are.</p>
+      <p class="loresign">The archive keeps no prophecy. Only what you chose to teach.<span>— from the Keeper's ledger, undated</span></p>
+      <details class="loreegg" id="loremargin"><summary>Filed under: “Do not wake”</summary><p>There is no sleeping dragon beneath the floor. There is, however, a very old button that says Stop. The Keeper insists this is a much better arrangement.</p></details>
+    </article>
   </section>
 </main>
 <div class="modal" id="after" hidden>
@@ -661,4 +684,3 @@
 <script src="profile.js"></script>
 </body>
 </html>
-
