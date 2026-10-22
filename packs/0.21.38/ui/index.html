@@ -47,6 +47,7 @@
 <main>
   <!-- PHONE -->
   <section data-pane="phone" class="pane">
+    <div class="crhead pagehead"><div><p class="eyebrow">// HUB</p><h2>The Mainframe</h2></div></div>
     <div class="panel setup" id="setup" hidden>
       <p class="eyebrow">// PLUG IN</p>
       <h2>Plug in your phone</h2>
@@ -160,7 +161,7 @@
   <!-- SANDBOX -->
   <section data-pane="sandbox" class="pane sandbox" hidden>
     <div class="sbhome" id="sbhome" hidden>
-      <div class="crhead pagehead"><div><p class="eyebrow">// SANDBOX</p><h2>Sandbox</h2><p class="muted small">Build runs from blocks, or press Teach and show Falcor on the phone.</p></div></div>
+      <div class="crhead pagehead"><div><p class="eyebrow">// SANDBOX</p><h2>Build and teach your runs</h2><p class="muted small">Build runs from blocks, or press Teach and show Falcor on the phone.</p></div></div>
       <div class="sbhometop"><div class="seg" id="sbhometabs"><button data-home="create"><svg class="ico"><use href="#i-plus"></use></svg>Create</button><button data-home="mine"><svg class="ico"><use href="#i-sandbox"></use></svg>Drafts <span id="sbminecount"></span></button></div></div>
       <div class="sbhomebody" id="sbhomebody"></div>
     </div>
@@ -310,6 +311,7 @@
         <div class="row gacts">
           <button id="gpopen" title="Open it on the phone and take control"><svg class="ico"><use href="#i-phone"></use></svg>Open game</button>
           <button id="gpteach" title="Play it your way: Falcor records and learns from you (no time to fill, nothing else to press)"><svg class="ico"><use href="#i-rec"></use></svg>Teach Falcor</button>
+          <button id="gpoptions" title="The reward ladder, earnings, tasks, your notes, what Falcor learned and the web research"><svg class="ico"><use href="#i-settings"></use></svg>Options</button>
           <details class="gmore" id="gpmore"><summary title="Offer, tasks and the rest">More<svg class="ico caret"><use href="#i-chevron"></use></svg></summary>
             <div class="gmenu">
               <p class="eyebrow">// OFFER</p>
@@ -330,6 +332,9 @@
       <div id="gpprep"></div>
       <div class="gpauto" id="gpautoline" hidden></div>
       <div class="panel gptrain" id="gptrain" hidden></div>
+      <!-- The game's page as a bento (the owner, 2026-10-21): the playbook large on the left; what is happening, what Falcor
+           knows and ads stacked on the right; the details (ladder, earnings, tasks, notes, lessons, research) in Options. -->
+      <div class="gpbento"><div class="gpmain">
       <div class="panel gpap" id="gpap">
         <div class="gpplan" id="gpplan" hidden></div>
         <div class="gpaphead" id="gpaphead"><p class="eyebrow">// GAME AUTOPILOT <span class="gpai" id="gpai"></span></p>
@@ -339,15 +344,20 @@
             <button class="danger" id="gpapstop" title="End it: the run stops and its returns are cancelled" hidden><svg class="ico"><use href="#i-stop"></use></svg>Stop Autopilot</button></div></div>
         <div id="gpapbody"></div>
       </div>
+      </div><div class="gpside">
+      <div class="panel" id="gpactbox"><p class="eyebrow">// ACTIVITY</p><div id="gpact"></div></div>
+      <div class="panel" id="gpknow"><p class="eyebrow">// WHAT FALCOR KNOWS</p><div id="gpknowbody"></div></div>
+      <div class="panel" id="gpads"><p class="eyebrow">// REWARDED ADS</p><div id="gpadsbody"></div></div>
+      </div></div>
+      <div class="gpdrawerwrap" id="gpdrawer" hidden><aside class="panel gpdrawer" role="dialog" aria-label="Game options">
+      <div class="top gpdrawerhead"><div><p class="eyebrow">// OPTIONS</p><h2 id="gpdrawername">More about this game</h2></div><button class="icon" id="gpdrawerclose" title="Close" aria-label="Close"><svg class="ico"><use href="#i-close"></use></svg></button></div>
       <div class="panel" id="gpofferbox" hidden><p class="eyebrow">// REWARD LADDER</p><p class="muted small">A goal reached in the game is not money: credited and paid out are. Set a stage from its menu; "observed" came from the earning app's page, "you" from you, "Falcor" from the game's level.</p><div id="gpoffers"></div></div>
       <div class="panel" id="gpweb" hidden><p class="eyebrow">// FROM THE WEB</p><div id="gpwebbody"></div></div>
       <div class="panel" id="gpnotes"><p class="eyebrow">// YOUR NOTES FOR FALCOR</p><p class="muted small">How to play this game, in your words. Falcor reads them on every move and they win over anything it learned. One tip per note: a screen and what to do there.</p><div id="gpnotelist"></div><form class="row" id="gpnoteform"><input id="gpnotetext" maxlength="300" placeholder="e.g. On the sign-in screen pick Guest" autocomplete="off"><button class="small primary" type="submit">Add note</button></form></div>
       <div class="panel" id="gpearnbox"><p class="eyebrow">// EARNINGS IN THE GAME</p><p class="muted small">Per unit, never added across units. Collected means the game showed it claimed or credited; pending means the game says it is on its way.</p><div id="gpearn"></div><div id="gphist"></div></div>
       <div class="panel" id="gptasksbox"><p class="eyebrow">// TASKS IN THIS GAME</p><div class="tasklist" id="gptasks"></div></div>
-      <div class="panel" id="gpactbox"><p class="eyebrow">// ACTIVITY</p><div id="gpact"></div></div>
       <div class="panel" id="gptierbox" hidden><p class="eyebrow">// WHAT FALCOR LEARNED</p><p class="muted small">Steps and rewards Falcor saw while you played it (Teach Falcor).</p><div id="gptiers"></div></div>
-      <div class="panel" id="gpknow"><p class="eyebrow">// WHAT FALCOR KNOWS</p><div id="gpknowbody"></div></div>
-      <div class="panel" id="gpads"><p class="eyebrow">// REWARDED ADS</p><div id="gpadsbody"></div></div>
+      </aside></div>
     </div>
   </section>
 
@@ -456,7 +466,7 @@
   <!-- STATS -->
   <section data-pane="stats" class="pane actpane" hidden>
     <div class="crhead">
-      <div><p class="eyebrow">// ACTIVITY</p><h2>Activity</h2><p class="muted small">What ran, when, on which phone, and how it ended.</p></div>
+      <div><p class="eyebrow">// ACTIVITY</p><h2>Everything that ran</h2><p class="muted small">What ran, when, on which phone, and how it ended.</p></div>
       <span class="grow"></span>
       <p class="muted small" id="actusage"></p>
     </div>
@@ -471,7 +481,7 @@
 
   <!-- SETTINGS -->
   <section data-pane="settings" class="pane" hidden>
-    <div class="crhead pagehead"><div><p class="eyebrow">// SETTINGS</p><h2>Settings</h2><p class="muted small">Falcor's AI, the phone app, secrets and updates.</p></div></div>
+    <div class="crhead pagehead"><div><p class="eyebrow">// SETTINGS</p><h2>Tune your Hub</h2><p class="muted small">Falcor's AI, the phone app, secrets and updates.</p></div></div>
     <div class="settingsgrid">
       <nav class="submenu" id="submenu">
         <button data-sub="ai" class="on"><svg class="ico"><use href="#i-ai"></use></svg>AI</button>

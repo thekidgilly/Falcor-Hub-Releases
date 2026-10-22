@@ -1,11 +1,11 @@
 {
-  "version": "0.21.37",
-  "notes": "Falcor.Hub 0.21.37: on the Hub, windows can be moved over the heading; the layouts still start below it",
-  "publishedAt": "2026-10-22T02:48:03.088Z",
+  "version": "0.21.38",
+  "notes": "Falcor.Hub 0.21.38: Hub windows move freely (Snap is off by default; turn it on in Layout or hold Shift); windows can go over the heading",
+  "publishedAt": "2026-10-22T02:50:43.873Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "786409b8e8e69186a99a290b81f9f787780f969b545065441f9b2b2452ccd028",
+      "sha256": "02285e4db89e9ff84bcce2c5cadc7ba9d5a72d210b711ca63a628cb0602716fe",
       "size": 1176346
     },
     {
@@ -100,8 +100,8 @@
     },
     {
       "path": "ui/desk.js",
-      "sha256": "782eae09f06105c4edcba88bf5d356e607cce91f65c97c6e6d884b2bbd33b3ab",
-      "size": 45855
+      "sha256": "20c890089376d095f895953c46894193fc45061e4cc7b2a5626387579e5bff61",
+      "size": 46174
     },
     {
       "path": "ui/dragon.png",

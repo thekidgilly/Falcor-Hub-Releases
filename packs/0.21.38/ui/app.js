@@ -954,7 +954,14 @@ $('gpofferedit').onclick = () => { const o = (S.games.find(g => g.pkg === gamePk
 $('gpofferrefresh').onclick = () => { const o = (S.games.find(g => g.pkg === gamePkg)?.earning || [])[0]; if (o) void capStart(o.id); };
 $('gamegrid').onclick = e => { if (e.target.closest('[data-newgame]')) return openDrawer(); const t = e.target.closest('.gametile'); if (t && /^sequence:/.test(t.dataset.key || '')) { go('tasks'); if (window.crShow) crShow(t.dataset.key.slice(9)); return; } if (t) { gamePkg = t.dataset.key; renderGames(); $('gamepage').scrollIntoView({block: 'start'}); } };
 $('gamenew').onclick = () => openDrawer();
-$('gameback').onclick = () => { gamePkg = null; renderGames(); };
+$('gameback').onclick = () => { gamePkg = null; gpDrawer(false); renderGames(); };
+// A game's Options: the details that need not fill the page (reward ladder, earnings, tasks, notes, lessons, research),
+// in a drawer from the right. Close, Escape or a click beside it closes it.
+function gpDrawer(on) { $('gpdrawer').hidden = !on; if (on) { const g = (S.games || []).find(x => x.pkg === gamePkg); text($('gpdrawername'), g ? g.name : 'More about this game'); P.motion.enter($('gpdrawer').firstElementChild); } }
+$('gpoptions').onclick = () => gpDrawer($('gpdrawer').hidden);
+$('gpdrawerclose').onclick = () => gpDrawer(false);
+$('gpdrawer').addEventListener('click', e => { if (e.target === $('gpdrawer')) gpDrawer(false); });
+window.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('gpdrawer').hidden) gpDrawer(false); });
 $('gpopen').onclick = async () => { await call('openApp', {deviceId, pkg: gamePkg}); go('phone'); toast('Opened. You have control: play it on the mirror, or press Release when you are done.'); };
 $('gpteach').onclick = async () => {
   const g = S.games.find(x => x.pkg === gamePkg); if (!g) return;
