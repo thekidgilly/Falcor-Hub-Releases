@@ -1,12 +1,12 @@
 {
-  "version": "0.21.61",
-  "notes": "Desktop and phone notifications are now typed, see-through code-style lines that hold briefly and scroll away, with reduced-motion support. Wizard's Kit is the optimized default phone Studio layout, arranging the phone and tidier widgets with improved placement. Teach & Build now has a left-side LED status light plus Runs and Editor buttons and a shorter Ask label. The phone profile icon is a rounded square, Active game cards are shorter on both apps, and the desktop Profile layout is centered.",
-  "publishedAt": "2026-10-23T02:28:45.279Z",
+  "version": "0.21.62",
+  "notes": "Fix Remote pairing when the operating system cannot list network adapters. Keep the authenticated API available and recover address discovery automatically.",
+  "publishedAt": "2026-10-23T05:30:40.004Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "931f8fa0725043f2f12cddaf6e4912a7c1fe906492487f05779b4ab0a2e16aaa",
-      "size": 1219238
+      "sha256": "f826c59d3e22b7bea333e71a61a1212e3fd8dccae58ee23008408b7d5c9df348",
+      "size": 1218669
     },
     {
       "path": "dist/preload.js",
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "8a34fe52326cf664017086d1788010631483565ebd21d07fc88ad495057f057e",
-      "size": 70738
+      "sha256": "4e0b1ac8e6d130ceb56da84e024bc841c9ffb38f56c3d57582ae5e4d5c6951b5",
+      "size": 70728
     },
     {
       "path": "ui/motion.css",

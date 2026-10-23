@@ -15,6 +15,7 @@
     catch { toast('The workspace layout could not be saved on this computer.', 'warn'); }
   };
   function openDrawer(which, force) {
+    if (window.sbWindows) { window.sbWindows.show(which === 'blocks' ? 'sblib' : 'sbinsp', force); return; }
     const out = window.popIsOut?.('sb-' + (which === 'blocks' ? 'sblib' : 'sbinsp'));
     if (out) { window.popOut('sb-' + (which === 'blocks' ? 'sblib' : 'sbinsp')); return; }
     const on = force === undefined ? !grid.classList.contains(which + '-open') : force;
@@ -48,10 +49,10 @@
   function layout() {
     if (!grid.clientWidth || !grid.clientHeight) return;
     const home = phone.parentElement === grid;
-    grid.style.setProperty('--phone-reserve', home && state.docked && !maxed ? Math.min(360, grid.clientWidth * .36) + 12 + 'px' : '0px');
+    grid.style.setProperty('--phone-reserve', home && !phone.hidden && state.docked && !maxed ? Math.min(360, grid.clientWidth * .36) + 12 + 'px' : '0px');
     if (!home) { phone.removeAttribute('style'); return; }
-    const W = grid.clientWidth, H = grid.clientHeight, w = Math.min(360, W * .36);
-    const r = maxed ? {x: 0, y: 0, w: W, h: H} : state.docked || !state.rect ? {x: W - w, y: 0, w, h: H} : bounded({x: state.rect.x * W, y: state.rect.y * H, w: state.rect.w * W, h: state.rect.h * H});
+    const W = grid.clientWidth, H = grid.clientHeight, w = Math.min(360, W * .36), head = $('sbhead'), t = head.offsetParent ? Math.max(0, Math.min(H / 2, head.offsetTop + head.offsetHeight)) : 0;
+    const r = maxed ? {x: 0, y: t, w: W, h: H - t} : state.docked || !state.rect ? {x: W - w, y: t, w, h: H - t} : bounded({x: state.rect.x * W, y: state.rect.y * H, w: state.rect.w * W, h: state.rect.h * H});
     put(r);
     cls(phone, 'phone-locked', state.locked); cls(phone, 'phone-maxed', maxed);
     $('sbphonelock').setAttribute('aria-pressed', String(state.locked));
@@ -112,17 +113,35 @@
     const before = state.zoom, after = Math.round(clamp(to, .4, 2) * 1000) / 1000;
     const left = (viewport.scrollLeft + x) / before, top = (viewport.scrollTop + y) / before;
     state.zoom = after; content.style.zoom = String(after);
+    grid.dataset.zoomDetail = after < .6 ? 'overview' : after < .9 ? 'compact' : 'full';
     grid.style.setProperty('--canvas-scale', after);
     text($('sbzoomreset'), Math.round(after * 100) + '%');
-    viewport.scrollLeft = left * after - x; viewport.scrollTop = top * after - y; keep();
+    panTo(left * after - x, top * after - y); keep();
   }
   $('sbzoomin').onclick = () => zoom(state.zoom + .1);
   $('sbzoomout').onclick = () => zoom(state.zoom - .1);
-  $('sbzoomreset').onclick = () => { zoom(1, 0, 0); viewport.scrollTo(0, 0); };
+  const resetSpace = () => {
+    for (const key of ['padding-left', 'padding-top', 'min-width', 'min-height']) content.style.removeProperty(key);
+    for (const key of ['--canvas-origin-x', '--canvas-origin-y']) viewport.style.removeProperty(key);
+    viewport.scrollTo(0, 0);
+  };
+  function panTo(left, top) {
+    const style = getComputedStyle(content), z = state.zoom, r = content.getBoundingClientRect();
+    const extraX = Math.max(0, -left), extraY = Math.max(0, -top);
+    if (extraX) { content.style.paddingLeft = (parseFloat(style.paddingLeft) + extraX / z) + 'px'; if (pan) pan.left += extraX; }
+    if (extraY) { content.style.paddingTop = (parseFloat(style.paddingTop) + extraY / z) + 'px'; if (pan) pan.top += extraY; }
+    if (extraX) viewport.style.setProperty('--canvas-origin-x', ((parseFloat(viewport.style.getPropertyValue('--canvas-origin-x')) || 0) + extraX / z) + 'px');
+    if (extraY) viewport.style.setProperty('--canvas-origin-y', ((parseFloat(viewport.style.getPropertyValue('--canvas-origin-y')) || 0) + extraY / z) + 'px');
+    const width = Math.max(r.width + extraX, Math.max(0, left) + viewport.clientWidth + 240);
+    const height = Math.max(r.height + extraY, Math.max(0, top) + viewport.clientHeight + 240);
+    content.style.minWidth = width / z + 'px'; content.style.minHeight = height / z + 'px';
+    viewport.scrollLeft = Math.max(0, left); viewport.scrollTop = Math.max(0, top);
+  }
+  $('sbzoomreset').onclick = () => { zoom(1, 0, 0); resetSpace(); };
   viewport.addEventListener('wheel', e => {
-    if (!e.ctrlKey && !e.metaKey) return;
     e.preventDefault(); const r = viewport.getBoundingClientRect();
-    zoom(state.zoom * Math.exp(-e.deltaY * .005), e.clientX - r.left, e.clientY - r.top);
+    const delta = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? viewport.clientHeight : 1);
+    zoom(state.zoom * Math.exp(-clamp(delta, -200, 200) * .002), e.clientX - r.left, e.clientY - r.top);
   }, {passive: false});
   const pointers = new Map();
   let pan = null, pinch = null;
@@ -143,7 +162,7 @@
       e.preventDefault(); const p = pair(), r = viewport.getBoundingClientRect();
       zoom(pinch.zoom * p.distance / Math.max(1, pinch.distance), p.x - r.left, p.y - r.top);
     } else if (pan && pan.id === e.pointerId) {
-      viewport.scrollLeft = pan.left + pan.x - e.clientX; viewport.scrollTop = pan.top + pan.y - e.clientY;
+      panTo(pan.left + pan.x - e.clientX, pan.top + pan.y - e.clientY);
     }
   });
   function endPan(e) {
@@ -153,6 +172,6 @@
   viewport.addEventListener('pointerup', endPan); viewport.addEventListener('pointercancel', endPan);
   viewport.addEventListener('lostpointercapture', endPan);
   viewport.addEventListener('click', e => { if (e.target === content) openDrawer('settings', false); });
-  window.sbWorkspace = {openDrawer, layout, resetView: () => viewport.scrollTo(0, 0)};
+  window.sbWorkspace = {openDrawer, layout, resetView: resetSpace};
   zoom(state.zoom, 0, 0); layout();
 })();

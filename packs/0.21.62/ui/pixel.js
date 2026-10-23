@@ -138,7 +138,7 @@
     MAPS['px' + id] = Array.from({length: 12}, (_, y) => Array.from({length: 12}, (_, x) => rows[Math.floor(y * 2 / 3)][Math.floor(x * 2 / 3)] === '1' ? '#' : '.').join(''));
   }
   const sequenceIcons = [
-    ['sandbox', 'Sequence'], ['phone', 'Phone'], ['user', 'Person'], ['tasks', 'Checklist'], ['stats', 'Chart'],
+    ['sandbox', 'Chain'], ['phone', 'Phone'], ['user', 'Person'], ['tasks', 'Checklist'], ['stats', 'Chart'],
     ['settings', 'Settings'], ['autopilot', 'Autopilot'], ['stop', 'Stop'], ['star', 'Star'], ['home', 'Home'],
     ['apps', 'Apps'], ['keyboard', 'Keyboard'], ['control', 'Pointer'], ['speed', 'Lightning'], ['checkin', 'Check-in'],
     ['game', 'Controller'], ['calendar', 'Calendar'], ['reward', 'Reward'], ['ai', 'Sparkle'], ['wifi', 'Wi-Fi'],
@@ -170,7 +170,7 @@
   function fix(root) { if (!root) return root; const all = root.querySelectorAll ? [...(root.matches && root.matches('[data-style]') ? [root] : []), ...root.querySelectorAll('[data-style]')] : []; for (const n of all) { n.style.cssText = n.dataset.style; n.removeAttribute('data-style'); } return root; }
   function el(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return fix(t.content.firstElementChild); }
   function sequenceIconPicker(value, onChange) {
-    const box = el('<details class="seqicons"><summary></summary><div class="seqiconfilters"><label>Find an icon<input type="search" placeholder="Search 100 pixel icons" maxlength="60"></label><label>Category<select><option value="">All icons</option>' + [...new Set(sequenceIcons.map(i => i.category))].map(c => '<option>' + esc(c) + '</option>').join('') + '</select></label></div><p class="muted small" role="status"></p><div class="seqicongrid" role="group" aria-label="Sequence pixel icons"></div></details>');
+    const box = el('<details class="seqicons"><summary></summary><div class="seqiconfilters"><label>Find an icon<input type="search" placeholder="Search 100 pixel icons" maxlength="60"></label><label>Category<select><option value="">All icons</option>' + [...new Set(sequenceIcons.map(i => i.category))].map(c => '<option>' + esc(c) + '</option>').join('') + '</select></label></div><p class="muted small" role="status"></p><div class="seqicongrid" role="group" aria-label="Chain pixel icons"></div></details>');
     const summary = box.querySelector('summary'), input = box.querySelector('input'), category = box.querySelector('select'), grid = box.querySelector('.seqicongrid'), status = box.querySelector('[role="status"]');
     const selected = () => { const entry = sequenceIcons.find(i => i.id === value); summary.innerHTML = icon(MAPS[value] ? value : 'sandbox') + '<span>' + esc(entry?.name || 'Current icon') + '</span><small>Choose from 100 pixel icons</small>'; };
     const draw = () => {
@@ -249,6 +249,38 @@
       }
     }
   };
+  // Notifications (the owner, 2026-10-22): no banners. A see-through line of white code-style text types itself out,
+  // holds for a few seconds, then scrolls up and away. Clicks pass through everything but the small ×.
+  function notify(box, msg, kind = 'ok', {max = 4} = {}) {
+    if (!box) return null;
+    kind = kind === 'bad' || kind === 'warn' ? kind : 'ok';
+    const t = el('<div class="toast ' + (kind === 'ok' ? '' : kind) + '" role="status"><span class="tp">&gt;</span><span class="tx"></span><button class="ghost small" title="Close" aria-label="Close">&times;</button></div>');
+    const tx = t.querySelector('.tx'); t.setAttribute('aria-label', msg);
+    let timer = 0;
+    const leave = () => {
+      if (t.dataset.leaving) return; t.dataset.leaving = '1'; clearTimeout(timer);
+      if (reduced() || !t.isConnected) { t.remove(); return; }
+      t.classList.add('gone'); t.addEventListener('animationend', () => t.remove(), {once: true}); setTimeout(() => t.remove(), 700);
+    };
+    t._leave = leave;
+    t.querySelector('button').onclick = leave;
+    box.appendChild(t);
+    const live = [...box.children].filter(n => !n.dataset.leaving);
+    for (const old of live.slice(0, Math.max(0, live.length - max))) (old._leave || (() => old.remove()))();
+    const hold = kind === 'bad' ? 9000 : kind === 'warn' ? 6000 : 3500;
+    const done = () => { t.classList.remove('typing'); timer = setTimeout(leave, hold); };
+    if (reduced()) { tx.textContent = msg; done(); return t; }
+    t.classList.add('typing');
+    const step = Math.max(10, Math.min(28, 900 / Math.max(1, msg.length)));
+    let i = 0;
+    const type = () => {
+      if (t.dataset.leaving) return;
+      i = Math.min(msg.length, i + (step < 14 ? 2 : 1)); tx.textContent = msg.slice(0, i);
+      if (i < msg.length) timer = setTimeout(type, step); else done();
+    };
+    type();
+    return t;
+  }
   const stopMotion = () => { for (const a of moving) a.cancel(); };
   matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', e => { if (e.matches) stopMotion(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopMotion(); });
@@ -625,5 +657,5 @@
       + '<details class="pbmore"><summary>Details</summary><p><em>Deadline</em> ' + (p.deadline.at ? esc(new Date(p.deadline.at).toLocaleString()) + ' · ' + esc(p.deadline.source) : 'unknown') + '</p><p><em>Time per level</em> ' + (p.estimate.minPerLevel ? '≈ ' + p.estimate.minPerLevel + ' min' : 'unknown') + ' · ' + esc(p.estimate.note) + '</p>'
       + p.notes.map(n => '<p>' + esc(n) + '</p>').join('') + p.unknowns.map(n => '<p class="sand">' + esc(n) + '</p>').join('') + '<p>' + esc(v.note) + ' It never buys anything and never taps inside an ad.</p></details></div>';
   };
-  window.Pixel = {sequenceIcons, sequenceIconPicker, playbookHtml, MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced, monogram, num, unitIcon, earnLine, offersHtml, prepHtml, rewardsHtml, historyHtml, tiersHtml, progressHtml, motion, money, cardHtml, library, earnTiles, ladderHtml, activityHtml, MSTATE, noticesHtml, ago, setDragon, dragonSrc, avatarHtml, introHtml, INTRO, normIcon, researchHtml, trainHtml};
+  window.Pixel = {sequenceIcons, sequenceIconPicker, playbookHtml, MAPS, sprite, icon, esc, el, fix, text, attr, cls, keyed, htmlOnce, roll, burst, tapMark, trail, spark, intro, reduced, monogram, num, unitIcon, earnLine, offersHtml, prepHtml, rewardsHtml, historyHtml, tiersHtml, progressHtml, motion, notify, money, cardHtml, library, earnTiles, ladderHtml, activityHtml, MSTATE, noticesHtml, ago, setDragon, dragonSrc, avatarHtml, introHtml, INTRO, normIcon, researchHtml, trainHtml};
 })();

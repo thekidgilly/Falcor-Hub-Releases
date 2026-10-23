@@ -8,7 +8,7 @@
   const quiet = (op, a = {}) => window.hub.call('queue', {op, ...a});
   const qs = () => S && S.queue || null;
   const qdev = () => { const q = qs(), d = dev(); return q && d ? q.devices[d.id] || null : null; };
-  const KIND = {game: ['game', 'Game'], task: ['tasks', 'Task'], sequence: ['sandbox', 'Sequence']};
+  const KIND = {game: ['game', 'Game'], task: ['tasks', 'Task'], sequence: ['sandbox', 'Chain']};
   const MOOD = {SCHEDULED: 'muted', READY: 'ready', RUNNING: 'run', PAUSED: 'sand', BLOCKED: 'red', WAITING_FOR_USER: 'sand', COMPLETED: 'green', FAILED: 'red', SKIPPED: 'muted', MISSED: 'sand', CANCELLED: 'muted', INTERRUPTED: 'sand'};
   const ENDED = new Set(['COMPLETED', 'FAILED', 'SKIPPED', 'MISSED', 'CANCELLED', 'INTERRUPTED']);
   // (what waits on the owner: shown in its own group, never in the line-up)
@@ -68,7 +68,7 @@
         + stepLine(d.step || 'Working…') + '<div class="row"><span class="muted small">Elapsed ' + clock(Date.now() - (run.history.find(h => h.to === 'Running')?.at || Date.now())) + '</span><span class="grow"></span><button class="small" data-task="' + esc(run.id) + '" data-act="pause">' + icon('pause') + 'Pause</button></div></div>';
     } else if (sbl) {
       const paused = sbl.status === 'PAUSED' || sbl.status === 'NEEDS_ATTENTION';
-      html = '<div class="qcur s-run"><div class="qhead"><span class="qico">' + icon('sandbox') + '</span><b>' + esc(sbl.title) + '</b><span class="qtime">' + clock(sbl.elapsedMs || 0) + '</span></div><div class="qsub">' + pill(paused ? 'PAUSED' : 'RUNNING', paused ? 'Paused' : 'Running') + '<span>Sequence · Sandbox</span></div><div class="step">' + esc(sbl.step || sbl.reason || '') + '</div>'
+      html = '<div class="qcur s-run"><div class="qhead"><span class="qico">' + icon('sandbox') + '</span><b>' + esc(sbl.title) + '</b><span class="qtime">' + clock(sbl.elapsedMs || 0) + '</span></div><div class="qsub">' + pill(paused ? 'PAUSED' : 'RUNNING', paused ? 'Paused' : 'Running') + '<span>Chain · Sandbox</span></div><div class="step">' + esc(sbl.step || sbl.reason || '') + '</div>'
         + '<div class="row qctl"><button class="small" data-sbctl="' + (paused ? 'resume' : 'pause') + '">' + icon(paused ? 'play' : 'pause') + (paused ? 'Resume' : 'Pause') + '</button><button class="small danger" data-sbctl="stop">' + icon('stop') + 'Stop</button></div>' + nextLine + '</div>';
     } else {
       // Nothing running: a quiet resting view (the owner, 2026-10-21), no buttons: what runs is started from the queue.
@@ -178,7 +178,7 @@
           rows.push({k: i.key, i, pos: ''});
         }
       }
-      if (!items.length && !v.whenDue?.length) rows.push({k: 'empty', empty: S.queue.schedules ? (Q.view === 'today' ? 'Nothing scheduled today.' : 'Nothing scheduled ' + (Q.view === 'tomorrow' ? 'tomorrow' : 'in the next 7 days') + '.') + (qdev() && qdev().next ? ' Next: ' + qdev().next.name + ', ' + dayOf(qdev().next.at).toLowerCase() + ' ' + hm(qdev().next.at) + '.' : '') : 'No activities scheduled yet. Press + (or Schedule on a game, a task or a sequence).'});
+      if (!items.length && !v.whenDue?.length) rows.push({k: 'empty', empty: S.queue.schedules ? (Q.view === 'today' ? 'Nothing scheduled today.' : 'Nothing scheduled ' + (Q.view === 'tomorrow' ? 'tomorrow' : 'in the next 7 days') + '.') + (qdev() && qdev().next ? ' Next: ' + qdev().next.name + ', ' + dayOf(qdev().next.at).toLowerCase() + ' ' + hm(qdev().next.at) + '.' : '') : 'No activities scheduled yet. Press + (or Schedule on a game, a task or a chain).'});
       else if (Q.view === 'today' && !left && items.length) rows.push({k: 'alldone', empty: 'All of today\'s activities are done.'});
     }
     // (a row: the activity's icon, large, at the far left; its place in line and time; its title; one line about it)
@@ -317,7 +317,7 @@
       const word = (KIND[c.wantKind] || KIND.task)[1].toUpperCase();
       sheet(head('ONE CONTROLLER PER PHONE', 'The queue is running ' + c.name) + '<p class="small">Only one activity can use the phone at a time. ' + esc(c.name) + ' is ' + esc(String(c.status || 'running').toLowerCase().replace(/_/g, ' ')) + ' now. What should Falcor do with ' + esc(c.want) + '?</p>'
         + '<div class="qask"><button class="primary" data-a="pause">' + icon('pause') + 'PAUSE QUEUE AND RUN ' + esc(word) + '</button><button data-a="queue">' + icon('queue') + 'ADD TO QUEUE</button><button data-a="cancel" data-close>CANCEL</button></div>'
-        + '<p class="muted small">Pausing keeps the queue where it is: a task starts again on Resume (its claims are never repeated), a sequence that already acted waits for you.</p>', b => {
+        + '<p class="muted small">Pausing keeps the queue where it is: a task starts again on Resume (its claims are never repeated), a chain that already acted waits for you.</p>', b => {
         b.querySelectorAll('[data-a]').forEach(x => x.onclick = () => { const a = x.dataset.a; closeSheet(); resolve(a === 'cancel' ? null : a); });
       });
       const obs = new MutationObserver(() => { if ($('qsheet').hidden) { obs.disconnect(); resolve(null); } });
@@ -346,7 +346,7 @@
     const s = cur || {rule: {kind: 'daily', time: pad2(next.getHours()) + ':' + pad2(next.getMinutes())}, tz, durationMin: null, priority: 3, enabled: true, autoStart: false, earlyMin: 0, lateMin: 30, missed: 'skip', maxAttempts: 2, retry: 'safe', retryMin: 5, startDate: null, endDate: null, maxRuns: null, deps: [], revisionId: null, name: o.name || ''};
     const r = s.rule, today = new Date().toISOString().slice(0, 10);
     const title = o.title || (cur ? cur.name : o.name) || 'Schedule an activity';
-    const pick = targets ? '<label>Activity<select id="qe-target"><option value="">Pick a game, a task or a sequence…</option>' + ['game', 'task', 'sequence'].map(k => { const g = targets.filter(t => t.kind === k); return g.length ? '<optgroup label="' + (KIND[k][1] + 's') + '">' + g.map(t => '<option value="' + esc(tv(t.target)) + '"' + (t.approved ? '' : ' disabled') + '>' + esc(t.name) + ' · ' + esc(t.app) + (t.approved ? '' : ' (approve it first)') + '</option>').join('') + '</optgroup>' : ''; }).join('') + '</select></label>' : '';
+    const pick = targets ? '<label>Activity<select id="qe-target"><option value="">Pick a game, a task or a chain…</option>' + ['game', 'task', 'sequence'].map(k => { const g = targets.filter(t => t.kind === k); return g.length ? '<optgroup label="' + (KIND[k][1] + 's') + '">' + g.map(t => '<option value="' + esc(tv(t.target)) + '"' + (t.approved ? '' : ' disabled') + '>' + esc(t.name) + ' · ' + esc(t.app) + (t.approved ? '' : ' (approve it first)') + '</option>').join('') + '</optgroup>' : ''; }).join('') + '</select></label>' : '';
     const others = all.filter(x => !cur || x.id !== cur.id);
     const depRow = dp => '<div class="qdep"><select data-dep>' + '<option value="">—</option>' + others.map(x => '<option value="' + esc(x.id) + '"' + (dp && dp.scheduleId === x.id ? ' selected' : '') + '>' + esc(x.name) + ' · ' + esc(x.words) + '</option>').join('') + '</select><select data-mode>' + [['success', 'succeeds'], ['skip', 'succeeds (else skip this)'], ['finish', 'finishes, either way'], ['wait', 'is done or not due']].map(([v, n]) => '<option value="' + v + '"' + (dp && dp.mode === v ? ' selected' : '') + '>' + n + '</option>').join('') + '</select><button type="button" class="small icon ghost" data-deldep title="Remove">' + icon('close') + '</button></div>';
     const existing = list.length ? '<ul class="seqlist qexisting">' + list.map(x => '<li data-id="' + esc(x.id) + '"><label class="check"><input type="checkbox" data-sx="toggle"' + (x.enabled ? ' checked' : '') + ' title="In the queue"></label><div><b>' + esc(x.name) + '</b> <span class="muted small">' + esc(x.words) + (x.autoStart ? ' · starts by itself' : '') + '</span><div class="meta">' + (x.enabled && x.next ? 'next ' + esc(dayOf(x.next)) + ' ' + esc(hm(x.next)) : x.enabled ? 'no upcoming time' : 'off') + (x.lastError ? ' · <span class="sand">' + esc(x.lastError) + '</span>' : '') + '</div></div><div class="row"><button class="small" data-sx="edit">Edit</button><button class="small icon danger" data-sx="del" title="Delete">' + icon('trash') + '</button></div></li>').join('') + '</ul><p class="eyebrow">// ' + (cur ? 'EDIT' : 'ADD ANOTHER TIME') + '</p>' : '';

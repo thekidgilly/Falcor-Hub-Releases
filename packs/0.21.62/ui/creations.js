@@ -66,18 +66,18 @@
   function drawDetail() {
     const box = $('crdetail'), c = CR.list && CR.list.find(x => x.seqId === CR.detail);
     if (!box) return;
-    if (!c) { htmlOnce(box, '<div class="panel empty"><span>This sequence could not be found in the Library.</span><button data-detail="back">Back to Library</button></div>'); return; }
+    if (!c) { htmlOnce(box, '<div class="panel empty"><span>This chain could not be found in the Library.</span><button data-detail="back">Back to Library</button></div>'); return; }
     const icons = P.sequenceIcons.map(i => i.id);
     const form = box.querySelector('.crdetailform'), active = document.activeElement;
     const preserve = form && form.dataset.dirty === c.seqId;
     const off = c.needsSetup ? 'Add blocks in Sandbox first' : c.device.state === 'none' || c.device.state === 'offline' ? c.device.why : '';
     htmlOnce(box, '<div class="toolrow"><button class="ghost" data-detail="back">' + icon('back') + 'Back to Library</button><span class="grow"></span><span class="pill ' + (c.live ? 'green' : c.needsAttention ? 'sand' : c.nextRunAt ? 'accent' : 'muted') + '">' + (c.live ? 'RUNNING' : c.needsSetup ? 'NEEDS SETUP' : c.needsAttention ? 'NEEDS YOU' : c.nextRunAt ? 'SCHEDULED' : 'READY') + '</span></div>'
-      + '<article class="panel crdetailhero"><span class="cricon crdetailicon">' + icon(c.icon || 'sandbox') + '</span><div><p class="eyebrow">// PUBLISHED SEQUENCE · v' + c.revision + '</p><h2>' + esc(c.title) + '</h2><p class="muted">' + esc(c.description || 'No description yet.') + '</p></div></article>'
+      + '<article class="panel crdetailhero"><span class="cricon crdetailicon">' + icon(c.icon || 'sandbox') + '</span><div><p class="eyebrow">// PUBLISHED CHAIN · v' + c.revision + '</p><h2>' + esc(c.title) + '</h2><p class="muted">' + esc(c.description || 'No description yet.') + '</p></div></article>'
       + '<div class="panel crdetailfacts"><span><b>' + c.steps + '</b><small>steps</small></span><span><b>' + esc(c.device.label) + '</b><small>phone</small></span><span><b>' + (c.nextRunAt ? esc(when(c.nextRunAt)) : '—') + '</b><small>next run</small></span><span><b>' + (c.last ? esc(c.last.label) : 'Not run') + '</b><small>last run</small></span></div>'
       + (off ? '<p class="small sand">' + esc(off) + '</p>' : '')
       + '<div class="row crdetailacts">' + (c.live ? '<button data-detail="' + (c.live.status === 'PAUSED' || c.live.status === 'NEEDS_ATTENTION' ? 'resume' : 'pause') + '">' + icon(c.live.status === 'PAUSED' || c.live.status === 'NEEDS_ATTENTION' ? 'play' : 'pause') + (c.live.status === 'PAUSED' || c.live.status === 'NEEDS_ATTENTION' ? 'Resume' : 'Pause') + '</button><button class="danger" data-detail="stop">' + icon('stop') + 'Stop</button>' : '<button class="primary" data-detail="run"' + (off ? ' disabled title="' + esc(off) + '"' : '') + '>' + icon('play') + 'Run now</button><button data-detail="schedule">' + icon('calendar') + 'Create schedule</button>')
       + '<button data-detail="edit">' + icon('edit') + 'Edit in Sandbox</button><button class="ghost" data-detail="history">' + icon('stats') + 'History</button><button class="ghost danger" data-detail="delete">' + icon('trash') + 'Delete</button></div>'
-      + '<section class="panel crdetailform"><p class="eyebrow">// SEQUENCE DETAILS</p><h3>Make it yours</h3><div class="grid"><label>Name<input id="crdtitle" maxlength="80" value="' + esc(c.title) + '"></label><label>Icon<select id="crdicon">' + icons.map(n => '<option value="' + n + '"' + (n === c.icon ? ' selected' : '') + '>' + n[0].toUpperCase() + n.slice(1) + '</option>').join('') + '</select></label><label class="wide">Description<textarea id="crddesc" maxlength="500" rows="3">' + esc(c.description) + '</textarea></label></div><div class="row"><button class="primary" data-detail="save">' + icon('check') + 'Save details</button></div></section>');
+      + '<section class="panel crdetailform"><p class="eyebrow">// CHAIN DETAILS</p><h3>Make it yours</h3><div class="grid"><label>Name<input id="crdtitle" maxlength="80" value="' + esc(c.title) + '"></label><label>Icon<select id="crdicon">' + icons.map(n => '<option value="' + n + '"' + (n === c.icon ? ' selected' : '') + '>' + n[0].toUpperCase() + n.slice(1) + '</option>').join('') + '</select></label><label class="wide">Description<textarea id="crddesc" maxlength="500" rows="3">' + esc(c.description) + '</textarea></label></div><div class="row"><button class="primary" data-detail="save">' + icon('check') + 'Save details</button></div></section>');
     P.fix(box);
     if (preserve) { const fresh = box.querySelector('.crdetailform'); if (fresh !== form) { fresh.replaceWith(form); if (form.contains(active)) active.focus({preventScroll: true}); } }
     const select = box.querySelector('#crdicon'), currentForm = box.querySelector('.crdetailform');
@@ -138,7 +138,7 @@
         const values = {title: $('crdtitle').value.trim() || 'Untitled', description: $('crddesc').value.trim(), icon: $('crdicon').value};
         const g = await call('sandbox', {op: 'get', id: c.seqId}), definition = g.definition;
         Object.assign(definition, values);
-        await call('sandbox', {op: 'save', id: c.seqId, definition}); toast('Sequence details saved.');
+        await call('sandbox', {op: 'save', id: c.seqId, definition}); toast('Chain details saved.');
         const form = $('crdetail').querySelector('.crdetailform'); if (form) delete form.dataset.dirty;
       }
       if (act === 'edit') { go('sandbox'); if (window.sbOpen) await window.sbOpen(c.seqId); }
@@ -146,7 +146,7 @@
       if (act === 'schedule') await window.openScheduler({target: {type: 'sequence', id: c.seqId}, name: c.title, kind: 'sequence'});
       if (act === 'history') history(c);
       if (['pause', 'resume', 'stop'].includes(act) && c.live) await call('sandbox', {op: act, runId: c.live.runId});
-      if (act === 'delete' && confirm('Delete "' + c.title + '"? Its schedules are turned off.')) { await call('sandbox', {op: 'remove', id: c.seqId}); CR.detail = ''; toast('Sequence deleted.'); }
+      if (act === 'delete' && confirm('Delete "' + c.title + '"? Its schedules are turned off.')) { await call('sandbox', {op: 'remove', id: c.seqId}); CR.detail = ''; toast('Chain deleted.'); }
     } catch (err) { toast(errText(err), 'warn'); }
     finally { b.disabled = false; void loadCreations(true); }
   });
