@@ -1,11 +1,11 @@
 {
-  "version": "0.21.70",
-  "notes": "Command Deck monitor preset; compact Autopilot controls; navigation aligned beneath the phone; larger queue artwork and clearer titles.",
-  "publishedAt": "2026-10-23T23:21:15.060Z",
+  "version": "0.21.71",
+  "notes": "Persistent highlighted window banners throughout Hub, Sandbox and pop-outs; consistent appearance after tab changes and dragging; distinct keyboard focus.",
+  "publishedAt": "2026-10-23T23:31:46.611Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "f3ac163445a4b7c6a9d8b3066abee5977c4008c1a1da4f4a33b5b08f35486d05",
+      "sha256": "422128dc15430d55c399238ce571660fcfeb9cafb6435b7a44ae319b928f6d0d",
       "size": 1233267
     },
     {
@@ -210,8 +210,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "41c102d632920f2d23b42704e8e973e80c00164564b0838c4fd3a871e44dea46",
-      "size": 151982
+      "sha256": "032059671d64f4f434cb7b3acdb54aa1086d38d6fbc4b57e422e3d3f8e23f458",
+      "size": 152483
     },
     {
       "path": "ui/tokens.css",
