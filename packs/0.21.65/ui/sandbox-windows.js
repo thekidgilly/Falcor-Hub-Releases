@@ -55,7 +55,12 @@
   list.innerHTML = definitions.map(d => '<label><input type="checkbox" data-window="' + d.id + '"><span><b>' + esc(d.name) + '</b><small>' + esc(d.about) + '</small></span></label>').join('')
     + '<label><input type="checkbox" id="sbwindowslock"><span>Lock tool windows</span></label><button class="small" id="sbwindowsreset">Reset organized layout</button>';
   const windows = new Map();
-  $('sbcenter').addEventListener('pointerdown', () => { if ($('sbcenter').parentElement === grid) $('sbcenter').style.zIndex = String(++top); });
+  function front(el) {
+    for (const win of windows.values()) win.classList.toggle('front', win === el);
+    $('sbcenter').classList.toggle('front', $('sbcenter') === el);
+  }
+  $('sbcenter').addEventListener('pointerdown', () => { if ($('sbcenter').parentElement === grid) { $('sbcenter').style.zIndex = String(++top); front($('sbcenter')); } });
+  grid.addEventListener('pointerdown', e => { if (e.target === grid || e.target === $('sbsteps')) front(null); });
   const size = () => ({w: Math.max(1, grid.clientWidth - parseFloat(getComputedStyle(grid).getPropertyValue('--phone-reserve') || '0')), h: Math.max(1, grid.clientHeight)});
   const headSpace = () => head.offsetParent ? Math.max(0, Math.min(grid.clientHeight / 2, head.offsetTop + head.offsetHeight)) : 0;
   function defaults(id) {
@@ -149,6 +154,7 @@
     const el = windows.get(d.id);
     if (saved.locked || saved.locks[d.id] || maxed === d.id || e.button !== 0 || el.parentElement !== grid) return;
     el.style.zIndex = String(++top);
+    front(el);
     e.preventDefault(); e.stopPropagation(); target.setPointerCapture(e.pointerId);
     moving = {d, el, id: e.pointerId, kind, x: e.clientX, y: e.clientY, r: {x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight}};
   }
@@ -170,7 +176,7 @@
     bar.addEventListener('dblclick', e => { if (!e.target.closest('button')) toggleMax(); });
     bar.querySelector('[data-toolpop]').onclick = () => pop(d.id);
     bar.addEventListener('pointerdown', e => { if (!e.target.closest('button')) begin(d, e, 'move', bar); });
-    el.addEventListener('pointerdown', () => { if (el.parentElement === grid) el.style.zIndex = String(++top); });
+    el.addEventListener('pointerdown', () => { if (el.parentElement === grid) { el.style.zIndex = String(++top); front(el); } });
     bar.addEventListener('keydown', e => {
       if (e.target !== bar || el.parentElement !== grid) return;
       if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); toggleMax(); return; }
@@ -205,7 +211,7 @@
     keep(); layout(); menu.open = false;
   };
   const phoneMin = document.createElement('button'); phoneMin.id = 'sbphonemin'; phoneMin.title = 'Minimize Phone'; phoneMin.innerHTML = icon('minus');
-  $('sbphonebar').appendChild(phoneMin);
+  $('sbphonebar').querySelector('.winbtns').appendChild(phoneMin);
   phoneMin.onclick = () => {
     window.popBack('sb-sbcenter'); $('sbcenter').hidden = true;
     window.sbWorkspace.layout(); drawTray();
@@ -234,4 +240,5 @@
   $('sbpanels').setAttribute('aria-expanded', String(!windows.get('sblib').hidden));
   $('sbsettings').setAttribute('aria-expanded', String(!windows.get('sbinsp').hidden));
   drawTray(); layout();
+  front($('sbcenter').hidden ? [...windows.values()].find(el => !el.hidden) || null : $('sbcenter'));
 })();

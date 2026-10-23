@@ -1,7 +1,7 @@
 @import "tokens.css";
 @import "sequence-icons.css";
-@font-face { font-family: 'Departure Mono'; src: url('fonts/DepartureMono-Regular.woff2') format('woff2'); }
-@font-face { font-family: 'Geist Mono'; src: url('fonts/GeistMono-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Departure Mono'; src: url('fonts/DepartureMono-Regular.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Geist Mono'; src: url('fonts/GeistMono-Regular.woff2') format('woff2'); font-display: swap; }
 /* Design tokens: the same names in the phone app. */
 :root {
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --r1: 6px; --r2: 10px; --r3: 14px;
@@ -109,9 +109,7 @@ main { flex: 1; min-height: 0; overflow: auto; padding: var(--s4); }
 .statusbar .right { margin-left: auto; }
 
 /* Toasts. */
-.toasts { position: fixed; right: var(--s4); bottom: 36px; display: grid; gap: var(--s2); z-index: 1500; max-width: 420px; }
-.toast { display: flex; gap: var(--s2); align-items: flex-start; background: var(--panel); border: 1px solid var(--line-strong); border-left: 3px solid var(--accent); padding: 10px 12px; font-size: var(--t13); box-shadow: var(--depth-overlay); }
-.toast.warn { border-left-color: var(--sand); } .toast.bad { border-left-color: var(--red); } .toast button { margin-left: auto; padding: 0 6px; }
+.toasts { position: fixed; right: var(--s4); bottom: 36px; z-index: 1500; width: min(440px, calc(100vw - 32px)); }
 
 /* Phone tab: fills the window height with the desk of windows (see "The Phone tab's desk" below); the page never scrolls. */
 section[data-pane="phone"] { height: 100%; display: flex; flex-direction: column; gap: var(--s3); } section[data-pane="phone"] .desk { flex: 1; }
@@ -692,7 +690,7 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .desk { position: relative; min-height: 0; overflow: clip; isolation: isolate; border-radius: var(--r2); background: radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px) 0 0 / 24px 24px; }
 .desk > .win { position: absolute; left: 0; top: 0; width: 320px; height: 240px; display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--line); border-radius: var(--r2); box-shadow: var(--depth-panel);
   --tick: linear-gradient(var(--line-strong) 0 0); background: var(--tick) left 3px bottom 3px / 2px 2px no-repeat, var(--tick) right 3px bottom 3px / 2px 2px no-repeat, var(--panel); }
-.desk > .win.front { border-color: var(--line-strong); box-shadow: var(--depth-panel), 0 12px 28px rgba(0,0,0,.32); }
+.desk > .win.front { border-color: rgba(var(--accent-rgb),.38); box-shadow: var(--depth-panel), 0 12px 28px rgba(0,0,0,.32); }
 .desk > .win.maxed { border-radius: var(--r1); }
 .desk.anim > .win { transition: left var(--motion-panel) var(--ease-move), top var(--motion-panel) var(--ease-move), width var(--motion-panel) var(--ease-move), height var(--motion-panel) var(--ease-move); }
 .winbar { display: flex; align-items: center; gap: 7px; height: 30px; flex: none; min-width: 0; padding: 0 3px 0 9px; border-bottom: 1px solid var(--line); border-radius: var(--r2) var(--r2) 0 0; background: rgba(255,255,255,.015); cursor: grab; user-select: none; touch-action: none; }
@@ -1175,7 +1173,9 @@ section[data-pane="phone"] > .desk { border-radius: 0; box-shadow: none; }
 .vbatt.warn b { color: var(--sand, #F5B544); } .vbatt.warn u { background: var(--sand, #F5B544); } .vbatt.bad b { color: var(--red, #F0544F); } .vbatt.bad u { background: var(--red, #F0544F); } .vbatt.ok b { color: var(--green); }
 
 /* Profile (profile.js): a fixed bento of compact panels, never full-width strips. */
-.profbento { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; max-width: 1180px; align-items: start; }
+.profbento { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; width: 100%; max-width: 1320px; margin-inline: auto; align-items: start; }
+/* (the owner, 2026-10-22) the Profile sits centered with an equal strip of the grid showing on both sides */
+.profpane > .pagehead { width: 100%; max-width: 1320px; margin-inline: auto; }
 .profme { grid-area: me; display: grid; gap: 12px; } .profact { grid-area: act; } .profrec { grid-area: rec; } .profwork { grid-area: work; } .profrecs { grid-area: recs; }
 .profbento .panel { min-width: 0; }
 .profbento .panel .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; } .profbento .panel .top .eyebrow { margin: 0; }
@@ -1187,19 +1187,19 @@ section[data-pane="phone"] > .desk { border-radius: 0; box-shadow: none; }
 .profbar { display: block; height: 8px; border: 1px solid rgba(237,237,237,.22); padding: 1px; } .profbar u { display: block; height: 100%; width: 0; background: var(--sand, #F5B544); box-shadow: 0 0 8px rgba(245,181,68,.6); text-decoration: none; transition: width .4s steps(8); }
 .profme label { display: grid; gap: 5px; } .profme textarea { resize: vertical; min-height: 96px; } .proftip { margin: -4px 0 0; }
 .profactive { display: flex; flex-wrap: nowrap; gap: 12px; overflow-x: auto; padding: 4px 2px 12px; scroll-snap-type: x proximity; }
-.pgame { position: relative; flex: 0 0 196px; display: flex; flex-direction: column; align-items: stretch; gap: 12px; min-height: 352px; padding: 14px; border-radius: 12px; scroll-snap-align: start; text-align: left; white-space: normal; background: linear-gradient(155deg, rgba(var(--paa), .12), rgba(var(--paa), .015) 58%, rgba(255,255,255,.025)), var(--panel-2); border: 1px solid rgba(var(--paa), .22); box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 5px 16px rgba(0,0,0,.2); transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
+.pgame { position: relative; flex: 0 0 196px; display: flex; flex-direction: column; align-items: stretch; gap: 9px; min-height: 0; padding: 12px 13px; border-radius: 12px; scroll-snap-align: start; text-align: left; white-space: normal; background: linear-gradient(155deg, rgba(var(--paa), .12), rgba(var(--paa), .015) 58%, rgba(255,255,255,.025)), var(--panel-2); border: 1px solid rgba(var(--paa), .22); box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 5px 16px rgba(0,0,0,.2); transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
 .pgame::before { content: ''; position: absolute; top: 12px; bottom: 12px; left: 0; width: 2px; background: rgba(var(--paa), .55); }
 .pgame:hover { border-color: rgba(var(--paa), .55); box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 7px 20px rgba(var(--paa), .08); transform: translateY(-1px); }
-.pgart { display: grid; justify-items: center; gap: 8px; padding: 4px 0 10px; border-bottom: 1px solid rgba(var(--paa), .18); }
-.pgicon { width: 84px; height: 84px; border-radius: 12px; overflow: hidden; display: grid; place-items: center; background: #090a0b; box-shadow: 0 3px 10px rgba(0,0,0,.35); } .pgicon img { width: 100%; height: 100%; object-fit: cover; }
+.pgart { display: grid; justify-items: center; gap: 6px; padding: 2px 0 8px; border-bottom: 1px solid rgba(var(--paa), .18); }
+.pgicon { width: 68px; height: 68px; border-radius: 12px; overflow: hidden; display: grid; place-items: center; background: #090a0b; box-shadow: 0 3px 10px rgba(0,0,0,.35); } .pgicon img { width: 100%; height: 100%; object-fit: cover; }
 .pgplatform, .pgfacts small, .pgnext small { font: 10px/1.4 var(--voice); color: var(--muted); overflow-wrap: anywhere; }
 .pgtxt { display: grid; gap: 6px; min-width: 0; } .pgtxt > b { font: 13px/1.5 var(--voice); font-weight: 400; overflow-wrap: anywhere; }
 .pgstate { font: 11px/1.5 var(--voice); } .pgstate.green { color: var(--green); } .pgstate.sand { color: var(--sand); } .pgstate.muted { color: var(--muted); }
-.pgfacts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.pgfacts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .pgfacts > span, .pgnext { display: grid; align-content: start; gap: 4px; } .pgfacts b { font: 12px/1.5 var(--voice); overflow-wrap: anywhere; }
 .pgnext > span { font: 12px/1.5 var(--voice); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .pgdeadline { color: var(--sand); font-size: 11px; }
-.pgopen { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 8px; color: var(--pa); font: 11px var(--voice); }
+.pgopen { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 4px; color: var(--pa); font: 11px var(--voice); }
 .proftiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
 .ptile { display: grid; gap: 2px; padding: 10px; border-radius: 10px; background: rgba(255,255,255,.02); border: 1px solid var(--line); }
 .ptile b { font: 22px/1 var(--voice); font-weight: 400; color: var(--text); } .ptile span { font-size: 11px; color: var(--muted); }

@@ -1,11 +1,11 @@
 {
-  "version": "0.21.64",
-  "notes": "Chains stop at disabled recorded controls. Completion checks must actually pass after the final action; skipped checks cannot report success. Screenshot verification tolerates minor animation while requiring two fresh confirmations. Taught chains require reliable final evidence. Schedules support an optional precise end time.",
-  "publishedAt": "2026-10-23T16:03:44.102Z",
+  "version": "0.21.65",
+  "notes": "Automation starts open Hub's live mirror; Sandbox windows match Hub styling; phone UI has a larger mirror, improved narrow-screen layouts, and lighter preview refresh.",
+  "publishedAt": "2026-10-23T16:40:08.122Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "b2bfd16c9be140685db91413ad562b59b91d6c9b6159091023b3169f148cad7e",
+      "sha256": "52e8018d9a42a8c5f7768db6df31df7899da32e91073e7cf3f83cb4a0c7adc27",
       "size": 1221278
     },
     {
@@ -34,14 +34,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-D3EHJrIK.js",
-      "sha256": "0ea22323af5464effbb620a054948940047f1d388a5d7bf9b035131522e768c7",
-      "size": 280093
+      "path": "remote-ui/assets/index-1TQrt-q3.css",
+      "sha256": "25b03117b17791d08febff60b1264ea52470db68880ee1694534457e76b3d7ba",
+      "size": 115321
     },
     {
-      "path": "remote-ui/assets/index-D8w6rvp2.css",
-      "sha256": "4f6405682dc78f3cc2bf81fd6d60aca16d0a51bf0bb5d5dce0483e0af9b42095",
-      "size": 114675
+      "path": "remote-ui/assets/index-Ct3d3smC.js",
+      "sha256": "23cbf9e95e44ab87272272fd746df6f481d9945579320a8422eaea84fd3b127e",
+      "size": 280836
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -70,7 +70,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "efd470d5a37b34905b0054f1f597583d2ba7eacc7666ff3127b76533fea1f90f",
+      "sha256": "e87d29b41d050888b179667062a2cef1a675ae64128c42caea20893ed9a65122",
       "size": 3885
     },
     {
@@ -85,8 +85,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "79e3ade6fa697f1ce5fd6a924b6b6e9106e4f447a7a5e3c223e9c07a15b80c05",
-      "size": 152438
+      "sha256": "1315e69bb1f9545ecbcd289746b9af1d41f1c2aff5714d938f468df0497b3241",
+      "size": 152498
     },
     {
       "path": "ui/app.png",
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "4e0b1ac8e6d130ceb56da84e024bc841c9ffb38f56c3d57582ae5e4d5c6951b5",
-      "size": 70728
+      "sha256": "86de89cc5dba5227bca8d627d173954ccc0261be2e7f27bf736fdad79557aed9",
+      "size": 70852
     },
     {
       "path": "ui/motion.css",
@@ -165,8 +165,8 @@
     },
     {
       "path": "ui/queue.js",
-      "sha256": "aa5b7a935f526381cbf9a87331618da366ab2ba2cbf71d18489f8c0cc0c9383f",
-      "size": 56939
+      "sha256": "f824246e506a1785eeef0c7340f1f94fe1c0ed30d7c6ccef92db37937ea026cb",
+      "size": 56983
     },
     {
       "path": "ui/sandbox-menu.css",
@@ -180,13 +180,13 @@
     },
     {
       "path": "ui/sandbox-windows.js",
-      "sha256": "b8460a286f6f7850c51bf4f31204276580d8d75a0c43b36cf9bb7e399b0668dd",
-      "size": 17256
+      "sha256": "853f689a1566617c715232b3145eec021405c1afafb1f5b6dc4a164e34d28ba0",
+      "size": 17732
     },
     {
       "path": "ui/sandbox-workspace.css",
-      "sha256": "b09990d092dd170c3d7f7692de80c5df3af281a13bd21b8a43186b70d56c5d44",
-      "size": 14547
+      "sha256": "0a275ebce21ea1755a9211e56ff4f4aded25e5acfc38706ce5bbe0d269d368d7",
+      "size": 14488
     },
     {
       "path": "ui/sandbox-workspace.js",
@@ -195,8 +195,8 @@
     },
     {
       "path": "ui/sandbox.js",
-      "sha256": "9b6fe6af5ac672ed6266afcc185c3af4a96acecefe864810b6be533505bb1e1a",
-      "size": 132043
+      "sha256": "10919f991b63671c21926c82ad0d605af0a0e303360e04e95ef4caf9552815f5",
+      "size": 132024
     },
     {
       "path": "ui/sequence-icons.css",
