@@ -218,13 +218,14 @@
         <div class="cats" id="sbcats"></div>
         <div class="liblist" id="sbliblist"></div>
       </aside>
-      <div class="sbcenter" id="sbcenter">
-        <div class="sbphonebar" id="sbphonebar" tabindex="0" role="group" aria-label="Phone window. When unlocked, arrow keys move it; Shift and arrows resize it.">
-          <b>// PHONE</b><span class="grow"></span>
-          <button class="small icon" id="sbphonelock" aria-pressed="true" title="Unlock phone window"><svg class="ico"><use href="#i-lock"></use></svg></button>
-          <button class="small icon" id="sbphonedock" title="Dock phone on the right"><svg class="ico"><use href="#i-restore"></use></svg></button>
-          <button class="small icon" id="sbphonemax" title="Maximize phone window"><svg class="ico"><use href="#i-max"></use></svg></button>
-          <button class="small icon popbtn" data-pop="sbcenter" data-poptitle="Sandbox phone" title="Pop phone out to its own window"><svg class="ico"><use href="#i-popout"></use></svg></button>
+      <div class="sbcenter win" id="sbcenter">
+        <div class="sbphonebar winbar" id="sbphonebar" tabindex="0" role="group" aria-label="Phone window. When unlocked, arrow keys move it; Shift and arrows resize it.">
+          <span class="wingrip" aria-hidden="true"></span><b class="wintitle">// PHONE</b><span class="grow"></span><span class="winbtns">
+            <button class="small icon" id="sbphonelock" aria-pressed="true" title="Unlock phone window"><svg class="ico"><use href="#i-lock"></use></svg></button>
+            <button class="small icon" id="sbphonedock" title="Dock phone on the right"><svg class="ico"><use href="#i-restore"></use></svg></button>
+            <button class="small icon" id="sbphonemax" title="Maximize phone window"><svg class="ico"><use href="#i-max"></use></svg></button>
+            <button class="small icon popbtn" data-pop="sbcenter" data-poptitle="Sandbox phone" title="Pop phone out to its own window"><svg class="ico"><use href="#i-popout"></use></svg></button>
+          </span>
         </div>
         <div class="sbmodes">
           <div class="seg" id="sbmodes">
@@ -677,6 +678,7 @@
 <footer class="statusbar" id="statusbar"></footer>
 <div class="toasts" id="toasts"></div>
 <script src="pixel.js"></script>
+<script src="mirror-capture.js"></script>
 <script src="app.js"></script>
 <script src="sandbox.js"></script>
 <script src="sandbox-workspace.js"></script>

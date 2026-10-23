@@ -1,12 +1,12 @@
 {
-  "version": "0.21.67",
-  "notes": "Fix Chrome WebView control reads, visible completion checks and slow-observation lease expiry. Includes verified Companion 0.3.5 screens and the desktop/mobile Sandbox and mirror improvements.",
-  "publishedAt": "2026-10-23T17:57:17.551Z",
+  "version": "0.21.68",
+  "notes": "Reliable and faster Chrome web-app chains: visible controls are read using measured phone-window bounds, including animated reward pages. App-ready checks skip screen dumps; enabled-control waits support stable IDs. FireFaucet completion checks verified against an earned reward.",
+  "publishedAt": "2026-10-23T20:38:48.604Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "6fac04a147a94f0660c9dc6f83f4ed5d9b4ee3404d938d62c97df3de98f1a8e7",
-      "size": 1222855
+      "sha256": "18c27c6a141f649f575e395431039518a44dc47f6d0aa2bfbb374c71e694d118",
+      "size": 1232448
     },
     {
       "path": "dist/preload.js",
@@ -200,8 +200,8 @@
     },
     {
       "path": "ui/sandbox.js",
-      "sha256": "06d48d28798fc6fa3ea259931821a188d2088c14ab216f2bc4b8fcb21ad333f9",
-      "size": 131845
+      "sha256": "619e5a91f9033eee0a6b2c19f25dc032a3531df75a5c5cc18e2429bd0bbe2e72",
+      "size": 131934
     },
     {
       "path": "ui/sequence-icons.css",

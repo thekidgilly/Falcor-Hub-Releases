@@ -337,7 +337,7 @@ nextFrame(300);
 
 // The fast mirror: scrcpy's H.264 video from the phone, decoded here (WebCodecs) and drawn on a canvas. If it cannot
 // start, the picture mirror stays. Live viewing does not use recording privacy checks.
-const vid = {on: false, starting: false, failed: false, failedAt: 0, error: '', deviceId: null, decoder: null, config: null, codec: '', waitKey: true, frames: 0, at: Date.now(), tries: 0};
+const vid = {on: false, starting: false, failed: false, failedAt: 0, error: '', deviceId: null, decoder: null, config: null, codec: '', waitKey: true, frames: 0, revision: 0, at: Date.now(), tries: 0};
 const canvas = $('video'), ctx = canvas.getContext('2d');
 function codecOf(sps) {
   // avc1.PPCCLL from the sequence parameter set (after the 00 00 00 01 / 00 00 01 start code and the 0x67 header).
@@ -349,7 +349,7 @@ function videoDecoder() {
     output: frame => {
       if (mirrorIssue(dev())) { frame.close(); return; }
       if (canvas.width !== frame.displayWidth || canvas.height !== frame.displayHeight) { canvas.width = frame.displayWidth; canvas.height = frame.displayHeight; setAspect(canvas.width, canvas.height); }
-      ctx.drawImage(frame, 0, 0); frame.close(); frameAt = Date.now();
+      ctx.drawImage(frame, 0, 0); frame.close(); frameAt = Date.now(); vid.revision++;
       if (canvas.hidden) { canvas.hidden = false; $('mirror').hidden = true; $('mirrorwait').hidden = true; }
       vid.frames++; const now = Date.now(); if (now - vid.at > 1000) { setFps(canvas.width + '×' + canvas.height + ' · video ' + Math.round(vid.frames * 1000 / (now - vid.at)) + ' fps'); vid.frames = 0; vid.at = now; }
     },
@@ -378,7 +378,7 @@ function feedVideo(p) {
 window.hub.onVideo(p => { if (p && p.deviceId === vid.deviceId) feedVideo(p); });
 // The engine's looks take the decoded video frame instead of a screen capture (main.ts asks, adb.ts#frameSource): the
 // canvas at most 576 wide as a PNG; nothing when the video is not running or has not drawn a frame yet.
-let shotCanvas = null;
+const mirrorCapture = window.createMirrorCapture();
 if (window.hub.onFrameWanted) window.hub.onFrameWanted(async p => {
   const reply = r => { try { window.hub.frameTaken({req: p.req, ...r}); } catch { /* the engine falls back to a capture */ } };
   try {
@@ -388,13 +388,7 @@ if (window.hub.onFrameWanted) window.hub.onFrameWanted(async p => {
       if (p.deviceId === deviceId && !mirrorIssue(dev()) && !vid.on && !vid.starting && !vid.failed && S && !S.simulated && S.scrcpy) void startVideo(deviceId);
     }
     if (!vid.on || !vid.decoder || vid.decoder.state !== 'configured' || !frameAt || canvas.hidden || p.deviceId !== vid.deviceId || !canvas.width || !canvas.height) { reply({png: null}); return; }
-    const w = Math.min(canvas.width, 576), h = Math.round(canvas.height * w / canvas.width);
-    if (!shotCanvas) shotCanvas = new OffscreenCanvas(w, h);
-    if (shotCanvas.width !== w || shotCanvas.height !== h) { shotCanvas.width = w; shotCanvas.height = h; }
-    shotCanvas.getContext('2d').drawImage(canvas, 0, 0, w, h);
-    // (the phone app's live mirror asks for a JPEG: a tenth of the size, so it can follow the screen over Wi-Fi)
-    const blob = await shotCanvas.convertToBlob(p.mime === 'image/jpeg' ? {type: 'image/jpeg', quality: 0.72} : {type: 'image/png'});
-    reply({png: await blob.arrayBuffer(), width: w, height: h, at: frameAt});
+    reply(await mirrorCapture.take({canvas, deviceId: vid.deviceId, revision: vid.revision, at: frameAt, mime: p.mime === 'image/jpeg' ? p.mime : 'image/png'}));
   } catch { reply({png: null}); }
 });
 async function startVideo(id) {
@@ -406,6 +400,7 @@ async function startVideo(id) {
 }
 function showPictures() { canvas.hidden = true; $('mirror').hidden = false; }
 function endVideo(why) {
+  mirrorCapture.clear();
   if (vid.decoder && vid.decoder.state !== 'closed') try { vid.decoder.close(); } catch { /* closed */ }
   vid.decoder = null; vid.codec = ''; vid.config = null;
   if (vid.on && vid.deviceId) void window.hub.call('videoStop', {deviceId: vid.deviceId}).catch(() => {});
@@ -423,10 +418,7 @@ let down = null;
 const fast = () => vid.on && vid.control && !mirrorIssue(dev()) && !S.teaching && !!window.hub.touch;
 const touch = (kind, p, extra) => window.hub.touch({deviceId, kind, ...(p ? {x: p.x, y: p.y} : {}), ...(extra || {})});
 let moveAt = 0;
-// The navigation bar helper (the owner, 2026-10-21): a short tap anywhere in the bottom strip of an upright phone presses
-// the nearest of Recent, Home and Back as a key (the small buttons are easy to miss); a swipe from there stays a swipe.
-const NAV_Y = 0.935, navKey = x => x < 0.37 ? 'APP_SWITCH' : x > 0.63 ? 'BACK' : 'HOME';
-const inNav = p => p.y >= NAV_Y && !document.body.classList.contains('phone-landscape');
+// Taps map to the displayed pixels, including gesture-navigation phones. Explicit navigation buttons send keys.
 for (const surface of [$('mirror'), canvas]) {
   // The Sandbox's pointer modes (view, pick a target or a gesture, a run playing) take the mouse; Control and Teach touch.
   surface.addEventListener('pointermove', e => {
@@ -437,7 +429,7 @@ for (const surface of [$('mirror'), canvas]) {
   surface.addEventListener('pointerdown', e => {
     if (window.sbPointer && tab === 'sandbox' && sbPointer('down', at(e), e)) return;
     if (!controlling) { toast('Take Control first to touch the phone.', 'warn'); return; }
-    const p0 = at(e); down = {...p0, t: Date.now(), fast: fast() && !inNav(p0), nav: inNav(p0)}; surface.setPointerCapture(e.pointerId);
+    const p0 = at(e); down = {...p0, t: Date.now(), fast: fast()}; surface.setPointerCapture(e.pointerId);
     if (down.fast) touch('down', down);
   });
   surface.addEventListener('pointercancel', e => { if (window.sbPointer && tab === 'sandbox') sbPointer('cancel', at(e), e); if (down && down.fast) touch('up', down); down = null; });
@@ -449,7 +441,6 @@ for (const surface of [$('mirror'), canvas]) {
       lastTouch = {x: down.x * 100, y: down.y * 100}; down = null; return;
     }
     if (!down) return; const up = at(e), ms = Date.now() - down.t, moved = Math.hypot(up.x - down.x, up.y - down.y);
-    if (down.nav && moved <= 0.03 && ms <= 600) { P.tapMark($('overlay'), down.x * 100, down.y * 100, false); const key = navKey(down.x); down = null; void send({kind: 'key', key}); return; }
     const a = moved > 0.03 ? {kind: 'swipe', x: down.x, y: down.y, toX: up.x, toY: up.y, ms: Math.min(2000, Math.max(120, ms))} : ms > 600 ? {kind: 'long_press', x: down.x, y: down.y, ms: Math.min(3000, ms)} : {kind: 'tap', x: down.x, y: down.y};
     if (a.kind === 'swipe') P.trail($('overlay'), down.x * 100, down.y * 100, up.x * 100, up.y * 100); else P.tapMark($('overlay'), down.x * 100, down.y * 100, false);
     lastTouch = {x: down.x * 100, y: down.y * 100};
@@ -1103,7 +1094,7 @@ function wireGate(gate, t) {
 document.addEventListener('click', async e => {
   const g = e.target.closest('#tasklist [data-link]'); if (g) { followLink(g.dataset.link, g.dataset.ref); return; }
   const t = e.target.closest('[data-task]');
-  if (t) { await call('taskAction', {id: t.dataset.task, action: t.dataset.act}); return; }
+  if (t) { await call('taskAction', {id: t.dataset.task, action: t.dataset.act}); if (['run', 'resume'].includes(t.dataset.act)) go('phone'); return; }
   const a = e.target.closest('[data-approve]');
   if (a) {
     const gate = a.closest('.gate'), q = k => gate.querySelector('[data-tick="' + k + '"]');

@@ -32,7 +32,7 @@
   const fmtMs = ms => { ms = Number(ms) || 0; if (ms < 1000) return ms + ' ms'; if (ms < 60000) return (Math.round(ms / 100) / 10) + ' s'; if (ms < 3600000) { const m = Math.floor(ms / 60000), s = Math.round((ms % 60000) / 1000); return m + ' min' + (s ? ' ' + s + ' s' : ''); } const h = Math.floor(ms / 3600000), m = Math.round((ms % 3600000) / 60000); return h + ' h' + (m ? ' ' + m + ' min' : ''); };
   const pt = p => Array.isArray(p) ? Math.round(p[0] * 100) + '%, ' + Math.round(p[1] * 100) + '%' : '?';
   const dirOf = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1]; return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'); };
-  const condWords = c => !c ? '…' : c.kind === 'text' ? 'the screen ' + (c.present !== false ? 'says' : 'no longer says') + ' "' + (c.text || '…') + '"' : c.kind === 'control' ? '"' + (c.text || '…') + '" is on screen' : c.kind === 'app' ? (c.packageName || '…') + ' is in front' : c.kind === 'var' ? c.name + ' ' + c.op + ' ' + c.value : 'the screen changed';
+  const condWords = c => !c ? '…' : c.kind === 'text' ? 'the screen ' + (c.present !== false ? 'says' : 'no longer says') + ' "' + (c.text || '…') + '"' : c.kind === 'control' ? '"' + (c.text || c.id || '…') + '" is on screen' : c.kind === 'app' ? (c.packageName || '…') + ' is in front' : c.kind === 'var' ? c.name + ' ' + c.op + ' ' + c.value : 'the screen changed';
   function words(s) {
     if (s.label) return s.label;
     const p = s.params || {};
@@ -198,6 +198,7 @@
     const r = await sb('start', {id: SB.seq.id, deviceId: d.id, mode, stepId: mode === 'test' ? SB.focus : undefined});
     SB.events = []; SB.eventsFor = r.id; SB.logRun = r.id;
     toast(mode === 'test' ? 'Testing one step on the phone.' : mode === 'preview' ? 'Preview: watch the phone. Pause or Stop any time.' : 'Running "' + def().title + '" (version ' + r.revision + ').');
+    go('phone');
   }
   const ctl = (op, label) => async () => { const l = liveRun(); if (!l) return; await sb(op, {runId: l.runId}); if (label) toast(label); };
   let pollTimer = null;
@@ -572,7 +573,7 @@
     c = c || {kind: 'text', text: '', present: true};
     let h = sel('p.condition.kind', 'When', c.kind, [['text', 'the screen says / no longer says'], ['control', 'a control with a label is on screen'], ['app', 'an app is in front'], ['var', 'a variable compares'], ['changed', 'the screen changed']]);
     if (c.kind === 'text') h += '<div class="pair">' + sel('p.condition.present', 'It', c.present !== false ? 'true' : 'false', [['true', 'says'], ['false', 'no longer says']]) + inp('p.condition.text', 'Words', c.text, ' maxlength="120"') + '</div>';
-    if (c.kind === 'control') h += inp('p.condition.text', 'Label', c.text, ' maxlength="120"');
+    if (c.kind === 'control') h += inp('p.condition.text', 'Label', c.text, ' maxlength="120"') + inp('p.condition.id', 'Control ID (optional)', c.id || '', ' maxlength="200"');
     if (c.kind === 'app') h += inp('p.condition.packageName', 'App', c.packageName, ' list="sbapps"');
     if (c.kind === 'var') h += '<div class="pair">' + inp('p.condition.name', 'Variable', c.name) + sel('p.condition.op', 'Is', c.op || '>=', ['<', '<=', '==', '!=', '>=', '>']) + '</div>' + num('p.condition.value', 'Value', c.value ?? 0, -1e9, 1e9, 'any');
     return h;
@@ -740,7 +741,6 @@
         const from = buildPointer; buildPointer = null;
         const ms = Date.now() - from.at, moved = Math.hypot(p.x - from.x, p.y - from.y);
         const action = moved > .03 ? {kind: 'swipe', x: from.x, y: from.y, toX: p.x, toY: p.y, ms: Math.min(2000, Math.max(120, ms))}
-          : from.y >= .935 && !document.body.classList.contains('phone-landscape') && ms <= 600 ? {kind: 'key', key: from.x < .37 ? 'APP_SWITCH' : from.x > .63 ? 'BACK' : 'HOME'}
           : ms > 600 ? {kind: 'long_press', x: from.x, y: from.y, ms: Math.min(3000, ms)} : {kind: 'tap', x: from.x, y: from.y};
         buildAction(action);
       } else if (kind === 'cancel') buildPointer = null;
@@ -1208,7 +1208,7 @@
         const a = e.target.closest('[data-act]'), li = e.target.closest('li[data-id]'); if (!a || !li) return;
         const id = li.dataset.id, s = SB.data.sequences.find(x => x.id === id);
         if (a.dataset.act === 'edit') { if (SB.dirty && SB.seq && SB.seq.id !== id && !confirmLeave()) return; closeSheet(); await open(id); }
-        if (a.dataset.act === 'start') { const d = sdev(); if (!d) { toast('Plug in the phone first.', 'warn'); return; } const r = await sb('start', {id, deviceId: d.id}); toast('Running "' + s.title + '" (version ' + r.revision + ').'); closeSheet(); if (!SB.seq || SB.seq.id !== id) await open(id); }
+        if (a.dataset.act === 'start') { const d = sdev(); if (!d) { toast('Plug in the phone first.', 'warn'); return; } const r = await sb('start', {id, deviceId: d.id}); toast('Running "' + s.title + '" (version ' + r.revision + ').'); closeSheet(); go('phone'); }
         if (a.dataset.act === 'sched') { closeSheet(); if (!SB.seq || SB.seq.id !== id) await open(id); schedule(); }
         if (a.dataset.act === 'pub') { await sb('publish', {id}); await refresh(); draw(b); toast('"' + s.title + '" is in your Library now.'); }
         if (a.dataset.act === 'unpub') { if (!window.confirm('Unpublish "' + s.title + '"? It leaves the Library and its schedules turn off. It stays here as a draft.')) return; await sb('unpublish', {id}); await refresh(); draw(b); toast('"' + s.title + '" is a draft again.'); }
