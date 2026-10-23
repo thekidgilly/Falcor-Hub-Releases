@@ -1,17 +1,17 @@
 {
-  "version": "0.21.68",
-  "notes": "Reliable and faster Chrome web-app chains: visible controls are read using measured phone-window bounds, including animated reward pages. App-ready checks skip screen dumps; enabled-control waits support stable IDs. FireFaucet completion checks verified against an earned reward.",
-  "publishedAt": "2026-10-23T20:38:48.604Z",
+  "version": "0.21.69",
+  "notes": "Simpler numbered queue; Start Autopilot and Stop beside the phone screen on desktop and Companion; gray idle Stop buttons; read-only Current Activity; Stop holds scheduled starts.",
+  "publishedAt": "2026-10-23T23:05:27.255Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "18c27c6a141f649f575e395431039518a44dc47f6d0aa2bfbb374c71e694d118",
-      "size": 1232448
+      "sha256": "9fb3335403e21919801507f1a6cc54fd9063433eb7dde3480ed08ff084e16904",
+      "size": 1233267
     },
     {
       "path": "dist/preload.js",
-      "sha256": "f3308335a63240c659aae7a02797538323579b083dc6bf74b21938ae3119fe2a",
-      "size": 2259
+      "sha256": "d5041ad1a7682693681b456cfd83d6ef66ef86e6a857cd554b3a0fedf42b58d1",
+      "size": 2279
     },
     {
       "path": "remote-ui/assets/boot-flight-NOI3X87k.png",
@@ -34,14 +34,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-B_W3EfO_.css",
-      "sha256": "535a064306919da7b0c1537687e86271383821b8e7ecb087862960fb6ef5b65e",
-      "size": 116208
+      "path": "remote-ui/assets/index-CVL09KbR.js",
+      "sha256": "75496ec58fcc9d4264e07341f6a35af66306333f6c35f0978ce79de469f99160",
+      "size": 283824
     },
     {
-      "path": "remote-ui/assets/index-DjszVTBQ.js",
-      "sha256": "a3e34894e8fd2a41b34a7c76487fd3f8c8cf1dcfdb83a583c9f323b40d8e1402",
-      "size": 283229
+      "path": "remote-ui/assets/index-D_MiwINv.css",
+      "sha256": "ad7b94f03d06f8ee4c0b37d7c4d60b9dd144767064eb2ecdff24dbe9ac3e072f",
+      "size": 116631
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -70,7 +70,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "8e9ac17fcc1386ef64992cd071179e777a962261c8543de6ef923499548e8974",
+      "sha256": "fe93d462616b69b208c5c35794a8408a72ef5afe026af1da335bbcb4a2620d93",
       "size": 3885
     },
     {
@@ -85,8 +85,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "34508cd6f23a1187138676fa7511badcebcca457b4334e93453fd486d9ef12db",
-      "size": 151561
+      "sha256": "3927a4e956c206560f816824eb3b8dc694e1ab8c10b86b8e4e7efa218584e86b",
+      "size": 151814
     },
     {
       "path": "ui/app.png",
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "8f3fdec58043233d110516ae66125d2ebb9f33c71eea8fbc4e1322f006c1faa7",
-      "size": 70894
+      "sha256": "ccdce1b96108e9e8f3973f9b590a6a0d8fded6ac11df3061c1d6fe5e275182cc",
+      "size": 70825
     },
     {
       "path": "ui/mirror-capture.js",
@@ -170,8 +170,8 @@
     },
     {
       "path": "ui/queue.js",
-      "sha256": "f824246e506a1785eeef0c7340f1f94fe1c0ed30d7c6ccef92db37937ea026cb",
-      "size": 56983
+      "sha256": "f1cc12815fa8613956f9469485af7344d0fad9f4f92ccccacd57b5586251cd86",
+      "size": 52697
     },
     {
       "path": "ui/sandbox-menu.css",
@@ -210,8 +210,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "72eb50ea92b4600d29ac04ab22f57e9f931f87bd0d74a263ab0adfe3d565529c",
-      "size": 149039
+      "sha256": "9909f7efb02a1618e21c6e838d3c3a465f41affd721374e0592244c1f82dfb11",
+      "size": 150110
     },
     {
       "path": "ui/tokens.css",
