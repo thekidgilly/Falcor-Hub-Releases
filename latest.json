@@ -1,12 +1,12 @@
 {
-  "version": "0.21.57",
-  "notes": "Sandbox now has a full zoomable block grid, horizontal Flow and vertical Tree views, and a floating phone window with lock, move, resize, maximize, popout and dock controls. Build mode turns accepted phone inputs into editable blocks while keeping Teach, custom writing, AI drafting and playback. Phone Sandbox adds a vertical blocks-first grid, expanded Build view, block count and independent pinch zoom. Phone Profile opens from your top-right photo; five bottom tabs remain Hub, Library, Sandbox, Falcor and Settings. Hub shows the centered, uncropped mirror first with equal stat tiles and migrates saved layouts. Fixed Teach analyze and discard access.",
-  "publishedAt": "2026-10-22T19:41:57.313Z",
+  "version": "0.21.58",
+  "notes": "Falcor request is the first block in the new AI category at the top of desktop, phone and offline catalogs. Add bounded runtime AI instructions and completion goals to Chains using the configured Gaming model and existing safeguards. Sandbox gains organized floating tool windows, a dedicated Chain player, live Chain insights cost scenarios, context menus, improved focus and pointer zoom, and clearer low-zoom blocks. Phone Sandbox matches the desktop tools with a consolidated pull-out menu, long-press actions and improved mirror availability. Profiles share editable display names and //usernames with portrait activity cards. Falcor blocks feature a centered dragon and subtle pixel effects.",
+  "publishedAt": "2026-10-23T00:19:47.983Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "1d63a53930c7c9cdd7550a377cd8ff51ce4f6ec384efdf24dca5f595e6a61865",
-      "size": 1195103
+      "sha256": "0b26f889c66dc4f3eb40de8c1e8aa16d73de5ca8aed948c4fcf556c0314b4837",
+      "size": 1217581
     },
     {
       "path": "dist/preload.js",
@@ -19,6 +19,11 @@
       "size": 1169088
     },
     {
+      "path": "remote-ui/assets/dragon-128-BuXhqaZy.png",
+      "sha256": "3a0a517a96a5b1581c3ed839e02623338e2522c2c53756c21815c22dd117a0d4",
+      "size": 29978
+    },
+    {
       "path": "remote-ui/assets/esm-B7fXffpm.js",
       "sha256": "d620c7d9f5069c4146d59442034319884ccddb55b0eb5f1151b116a06d17700a",
       "size": 410060
@@ -29,14 +34,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-DbR7jXAL.js",
-      "sha256": "8220ea88d716754832dd1e34ddcb16d4714f789ad3c2fe2272f0a0e377627a92",
-      "size": 264644
+      "path": "remote-ui/assets/index-BULelK-c.css",
+      "sha256": "d430d362a310f6117d2a1ded8b875dab733e7a4c3806b0f74a1b40ccf414d165",
+      "size": 112069
     },
     {
-      "path": "remote-ui/assets/index-ZtEEYcCH.css",
-      "sha256": "5ae37cc5aae0b70a48f9705d52ad05c10e1cb6a0ea722d572ec95949a96f92d9",
-      "size": 107163
+      "path": "remote-ui/assets/index-ekY8d1R9.js",
+      "sha256": "69c1fa0bba33cff4a7fa089c42b3396dce34141ac2fc90c30be0042a84e55c62",
+      "size": 274947
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -65,7 +70,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "9ab17c5afc397d63f5d02a3a2c30d59c874b191ce58fa16388e82ab98ffda035",
+      "sha256": "47d2d4fc8e6b1573fc5cd1cf66b1677d3dcdef31ee71143e237e73d1c6ea6e5d",
       "size": 3885
     },
     {
@@ -80,8 +85,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "b204889d64e8948e420fe6c37a7a035670caafbc808aca51554a8535ac01b94e",
-      "size": 151742
+      "sha256": "d427ecd8beddfdf55c03661018893ddfc93183e62b6f6e2bb7f2e7312aebd4a4",
+      "size": 152919
     },
     {
       "path": "ui/app.png",
@@ -95,18 +100,23 @@
     },
     {
       "path": "ui/creations.js",
-      "sha256": "768e3f6d3d58d3cd6c68eea63eb5c7513ab7415889944602eeb3980567d94176",
-      "size": 24336
+      "sha256": "da98ac751592eb7cb39cd27c43d2f9928799f3708e384c944a02624d5e3b4b1f",
+      "size": 24321
     },
     {
       "path": "ui/desk.js",
-      "sha256": "a928d9e51a355d35969ad300b5ce332489b0b804a86646429ac2d021da66e41e",
-      "size": 47774
+      "sha256": "1091cdb5a9652b1da1f44c484bcb9973883761713d90dfd9e9fc51e44e760b16",
+      "size": 47765
     },
     {
       "path": "ui/dragon.png",
       "sha256": "ebd39660f8f6738a2cf67217cba5ed78f78226d03bb2b464ee643f6fe4618af9",
       "size": 314323
+    },
+    {
+      "path": "ui/falcor-request.css",
+      "sha256": "3325809cb2c76efafbaee4c60851563e20bcca0af42d4f30b823e2cd9816008e",
+      "size": 1374
     },
     {
       "path": "ui/fonts/DepartureMono-OFL.txt",
@@ -130,8 +140,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "fdc265c61c8d2a4962893e634ae96f003759bd325150b0cac074642305d5f868",
-      "size": 70570
+      "sha256": "8a34fe52326cf664017086d1788010631483565ebd21d07fc88ad495057f057e",
+      "size": 70738
     },
     {
       "path": "ui/motion.css",
@@ -140,38 +150,53 @@
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "7c7b0e3698aeb2e82b94ce215f115e22dfc22481cefd55d29accde3c130688c1",
-      "size": 71036
+      "sha256": "346a51372bb4a1ec551b97e7cf87cd592a110edfd1db1c462f4312ccbe6d3005",
+      "size": 71030
     },
     {
       "path": "ui/popout.js",
-      "sha256": "dd0bd56812eac5159ef678a5365b9626f4f4e816c187f7852cc0e02fe611afbd",
-      "size": 6325
+      "sha256": "7df3ed8ec574447a44f6b38e23798bf1c472c1305efe85599db2bdef0cecdfaa",
+      "size": 6514
     },
     {
       "path": "ui/profile.js",
-      "sha256": "17860c43b0d0efab74bdc91a29d566516dca53f58682614f68ac7be6af4f360e",
-      "size": 10139
+      "sha256": "a88b649e46d9e1f1368e59d50ad397f9fbecc646578edddc9a1332b43750aa19",
+      "size": 11321
     },
     {
       "path": "ui/queue.js",
-      "sha256": "425a1011813fb20c56bfdd8a39c3e51db0a19bccfb55ec3fcb205e01c8932715",
-      "size": 56748
+      "sha256": "448d63197fd7afab236556a5566214b73f5479409c6d65ba3a42f6cca6e52e95",
+      "size": 56733
+    },
+    {
+      "path": "ui/sandbox-menu.css",
+      "sha256": "d506d0731826b1b83a2eaa5934ff9ecbe03adb1a30d5b21562227b24597ebc0b",
+      "size": 945
+    },
+    {
+      "path": "ui/sandbox-menu.js",
+      "sha256": "2a48a97f82bd6d53d67ed84eadc450c8c18eee54b5e462de3a0adc05854cf835",
+      "size": 5247
+    },
+    {
+      "path": "ui/sandbox-windows.js",
+      "sha256": "93dda4ad87701b25d3e64391610a6ad4f8db776908d3edca947fdc6dae9e5760",
+      "size": 13109
     },
     {
       "path": "ui/sandbox-workspace.css",
-      "sha256": "d305bdd77ef8b1835a5967c34951972fdacd1706ab739b3c1daf41917351a8eb",
-      "size": 5665
+      "sha256": "5207e51087df265f51aae7eb5ddc0c8e33d18a43fced2cd87eb608e48b8cb75f",
+      "size": 12641
     },
     {
       "path": "ui/sandbox-workspace.js",
-      "sha256": "bf052d7da627b2702e3ca7aa9b9b3a59637e09dcee1e59bf137277ac13b2fdb2",
-      "size": 9763
+      "sha256": "9c906ae2aee429d5b7e9d0584a23fb8150e8aa13f2d4d3b6852998e3fd8d01e1",
+      "size": 11359
     },
     {
       "path": "ui/sandbox.js",
-      "sha256": "6fd3e6e18cfe0627d1a1af676044d6fbea93244985a9e48ec045439b996ac795",
-      "size": 124141
+      "sha256": "4d02b994a505b5f7f46331c956dbde5158cc7860c4865d80960943522ff552a8",
+      "size": 131886
     },
     {
       "path": "ui/sequence-icons.css",
@@ -180,8 +205,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "b53b1b2ef4af23eb149f6d10f28dd374ff7069249e699aea87741f89e8e365f4",
-      "size": 147669
+      "sha256": "12cdf0fadbf91d29e3c6acbf1229991a08e4eb3672c2969756602ad0f1123f11",
+      "size": 148822
     },
     {
       "path": "ui/tokens.css",

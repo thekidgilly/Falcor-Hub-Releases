@@ -11,6 +11,7 @@
   const keep = () => { try { localStorage.setItem(KEY, JSON.stringify(kept)); } catch { /* not kept */ } };
   window.__popFind = id => { for (const p of pops.values()) { try { const n = p.w.document.getElementById(id); if (n) return n; } catch { /* closing */ } } return null; };
   window.popIsOut = key => pops.has(key);
+  window.popBack = key => pops.get(key)?.back();
   window.popOut = function (key, node, title, opts = {}) {
     if (pops.has(key)) { try { pops.get(key).w.focus(); } catch { /* gone */ } return; }
     if (!node) return;
@@ -60,7 +61,11 @@
     if (opts.onOut) opts.onOut();
   };
   // The Sandbox's panels (Blocks, Phone stage, Step settings, Timeline): their pop-out buttons. Their space goes to the stage's grid.
-  const sbPop = (id, title, at) => window.popOut('sb-' + id, document.getElementById(id), title || 'Panel', {free: true, at});
+  const sbPop = (id, title, at) => {
+    const el = document.getElementById(id);
+    if (el?.classList.contains('sbtoolwindow') && window.sbWindows) { window.sbWindows.pop(id, at); return; }
+    window.popOut('sb-' + id, el, title || 'Panel', {free: true, at});
+  };
   document.addEventListener('click', e => { const b = e.target.closest('[data-pop]'); if (b) sbPop(b.dataset.pop, b.dataset.poptitle); });
   // The page going away (closing or a reload) brings every panel home first; closing keeps the list for the next start.
   window.addEventListener('beforeunload', () => { leaving = true; for (const p of [...pops.values()]) p.back(); });
