@@ -1,11 +1,11 @@
 {
-  "version": "0.21.69",
-  "notes": "Simpler numbered queue; Start Autopilot and Stop beside the phone screen on desktop and Companion; gray idle Stop buttons; read-only Current Activity; Stop holds scheduled starts.",
-  "publishedAt": "2026-10-23T23:05:27.255Z",
+  "version": "0.21.70",
+  "notes": "Command Deck monitor preset; compact Autopilot controls; navigation aligned beneath the phone; larger queue artwork and clearer titles.",
+  "publishedAt": "2026-10-23T23:21:15.060Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "9fb3335403e21919801507f1a6cc54fd9063433eb7dde3480ed08ff084e16904",
+      "sha256": "f3ac163445a4b7c6a9d8b3066abee5977c4008c1a1da4f4a33b5b08f35486d05",
       "size": 1233267
     },
     {
@@ -85,8 +85,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "3927a4e956c206560f816824eb3b8dc694e1ab8c10b86b8e4e7efa218584e86b",
-      "size": 151814
+      "sha256": "3e7ec57d436f4025550e0311dcb0c97cfbdc05ccffa94902621e3ef8102187ab",
+      "size": 151929
     },
     {
       "path": "ui/app.png",
@@ -105,8 +105,8 @@
     },
     {
       "path": "ui/desk.js",
-      "sha256": "1091cdb5a9652b1da1f44c484bcb9973883761713d90dfd9e9fc51e44e760b16",
-      "size": 47765
+      "sha256": "cfff6b83eb762b04047a7c59849bf97ad51e8a78e7b04750ce7630dadfb559f7",
+      "size": 48899
     },
     {
       "path": "ui/dragon.png",
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "ccdce1b96108e9e8f3973f9b590a6a0d8fded6ac11df3061c1d6fe5e275182cc",
-      "size": 70825
+      "sha256": "57ff28a2fea4bbe3b5bbb86d40a8de635052d61b89974d1f9471a941a8a5acfb",
+      "size": 71065
     },
     {
       "path": "ui/mirror-capture.js",
@@ -210,8 +210,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "9909f7efb02a1618e21c6e838d3c3a465f41affd721374e0592244c1f82dfb11",
-      "size": 150110
+      "sha256": "41c102d632920f2d23b42704e8e973e80c00164564b0838c4fd3a871e44dea46",
+      "size": 151982
     },
     {
       "path": "ui/tokens.css",
