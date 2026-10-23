@@ -6,6 +6,7 @@
 <title>Falcor.Hub</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="motion.css">
+<link rel="stylesheet" href="sandbox-workspace.css">
 </head>
 <body>
 <div id="boot-screen" class="boot-screen" aria-hidden="true"></div>
@@ -48,22 +49,6 @@
   <!-- PHONE -->
   <section data-pane="phone" class="pane">
     <div class="crhead pagehead"><div><p class="eyebrow">// HUB</p><h2>The Mainframe</h2></div></div>
-    <div class="panel setup" id="setup" hidden>
-      <p class="eyebrow">// PLUG IN</p>
-      <h2>Plug in your phone</h2>
-      <p class="muted">Use the phone that will run the games, not your everyday phone. Each step ticks itself off.</p>
-      <ol class="checks" id="checks"></ol>
-      <details><summary>Settings for total control</summary>
-        <ul class="steps">
-          <li><b>USB debugging:</b> Settings → About phone → Software information → tap Build number 7 times, then Settings → Developer options → USB debugging on.</li>
-          <li><b>Allow this computer:</b> on "Allow USB debugging?" tick Always allow from this computer, then Allow.</li>
-          <li><b>Samsung Auto Blocker off:</b> Settings → Security and privacy → Auto Blocker → Off (otherwise taps never arrive).</li>
-          <li><b>Stay awake:</b> Developer options → Stay awake on, so the screen stays on while it charges.</li>
-          <li><b>Xiaomi / Redmi / POCO:</b> also Developer options → USB debugging (Security settings) on.</li>
-          <li><b>Leave it unlocked:</b> Falcor never unlocks your phone.</li>
-        </ul>
-      </details>
-    </div>
     <!-- The desk: every panel is a window the owner moves, resizes, hides and shows again (desk.js). -->
     <div class="phonegrid desk" id="phonegrid" hidden>
       <section class="win" data-win="mirror" aria-label="Phone screen">
@@ -77,7 +62,10 @@
               <div class="screen" id="mirrorbox" tabindex="0">
                 <img id="mirror" alt="The phone's screen" draggable="false"><canvas id="video" hidden></canvas>
                 <div class="overlay" id="overlay"></div><div class="sbpins" id="sbpins" hidden></div><span class="offtag" id="offtag" hidden>OFFLINE REFERENCE</span>
-                <div class="waiting" id="mirrorwait"><span class="load10"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="muted small">Waiting for the phone's screen…</span></div>
+                <div class="waiting" id="mirrorwait" role="status">
+                  <b id="mirrorstatus">Waiting for the phone screen...</b><span class="muted small" id="mirrorhelp"></span>
+                  <details id="setup" hidden><summary>Connection help</summary><ol class="checks" id="checks"></ol><p class="muted small">Use a USB data cable. Enable USB debugging in Developer options and allow this computer on the phone. Wake and unlock it yourself; Falcor never bypasses its lock.</p></details>
+                </div>
               </div>
             </div>
           </div>
@@ -88,7 +76,6 @@
             <button class="icon" id="kbd" title="Type into the phone"><svg class="ico"><use href="#i-keyboard"></use></svg></button>
             <span class="sep"></span>
             <button id="take" class="primary"><svg class="ico"><use href="#i-control"></use></svg>Take Control</button><button id="release" hidden><svg class="ico"><use href="#i-control"></use></svg>Release</button>
-            <button id="teach" title="Play an app on the mirror while Falcor watches and learns it"><svg class="ico"><use href="#i-rec"></use></svg>Teach</button>
             <button id="phonecap" title="Read the offer page open on the phone"><svg class="ico"><use href="#i-camera"></use></svg><span id="phonecaplbl">CAPTURE</span></button>
             <button class="icon" id="viewer" title="Open a second display of the phone: its own window you can drag anywhere, even outside Falcor.Hub"><svg class="ico"><use href="#i-popout"></use></svg></button>
             <button class="icon" id="askfalcor" title="Ask Falcor about the app in front"><svg class="ico"><use href="#i-chat"></use></svg></button>
@@ -112,7 +99,7 @@
         <header class="winbar"><span class="wintitle">// TODAY'S QUEUE</span><span class="winx muted qsum" id="qsum"></span></header>
         <div class="winbody fill"><div class="queue" id="queuepanel">
           <div class="ticker" id="qticker" role="status" aria-live="polite"><span></span></div>
-          <div class="qbar"><div class="seg" id="qviews"><button data-v="today" class="on">Today</button><button data-v="tomorrow">Tomorrow</button><button data-v="upcoming">Upcoming</button><button data-v="history">History</button></div><button class="small" id="qtoggle" title="Scheduled runs (games, playbooks, creations) start by themselves at their time, one after another. Pause schedule stops them starting by themselves until you resume; Play now on a game still plays it."><span class="led"></span><span id="qtogglelabel">Pause schedule</span></button><button class="small icon" id="qadd" title="Add an activity to the queue (a game, a task or a sequence)"><svg class="ico"><use href="#i-plus"></use></svg></button></div>
+          <div class="qbar"><div class="seg" id="qviews"><button data-v="today" class="on">Today</button><button data-v="tomorrow">Tomorrow</button><button data-v="upcoming">Upcoming</button><button data-v="history">History</button></div><button class="small" id="qtoggle" title="Scheduled runs (games, playbooks, creations) start by themselves at their time, one after another. Pause schedule stops them starting by themselves until you resume; Play now on a game still plays it."><span class="led"></span><span id="qtogglelabel">Pause schedule</span></button><button class="small icon" id="qadd" title="Add an activity to the queue (a game, a task or a chain)"><svg class="ico"><use href="#i-plus"></use></svg></button></div>
           <ol class="qlist" id="qlist"></ol>
           <div class="qnotes" id="qnotes"></div>
         </div></div>
@@ -197,31 +184,24 @@
     </div>
     <div class="sbhead" id="sbhead">
       <button class="small ghost" id="sbtohome" title="Back to Drafts"><svg class="ico"><use href="#i-back"></use></svg>Drafts</button>
-      <div class="sbname"><svg class="ico"><use href="#i-sandbox"></use></svg><input id="sbtitle" maxlength="80" placeholder="No sequence open" aria-label="Sequence name"><span class="dirty" id="sbdirty" title="Unsaved changes" hidden></span><span class="muted small" id="sbrev"></span></div>
+      <div class="sbname"><svg class="ico"><use href="#i-sandbox"></use></svg><input id="sbtitle" maxlength="80" placeholder="No chain open" aria-label="Chain name"><span class="dirty" id="sbdirty" title="Unsaved changes" hidden></span><span class="muted small" id="sbrev"></span></div>
       <select id="sbdev" title="The phone it runs on"></select>
       <span class="grow"></span>
-      <div class="sbacts"><button class="small" id="sbfocus" aria-pressed="false">Focus</button><button class="small danger" id="sbstudio-stop">Stop all</button><button class="small" id="sbpanels">Panels</button>
-        <button class="small" id="sbnew" title="New sequence (Ctrl+N)"><svg class="ico"><use href="#i-plus"></use></svg>New</button>
-        <button class="small" id="sbopen" title="Drafts and published (Ctrl+O)"><svg class="ico"><use href="#i-book"></use></svg>Open</button>
-        <button class="small" id="sbsave" title="Save a new version (Ctrl+S)"><svg class="ico"><use href="#i-check"></use></svg>Save</button>
-        <button class="small" id="sbsaveas" title="Save as a new sequence">Save As</button>
-        <button class="small pubbtn" id="sbpublish" title="Put it in the Library, where it can be scheduled"><svg class="ico"><use href="#i-check"></use></svg>Publish</button>
-        <button class="small" id="sbsavetask" title="Save it and list it in Tasks, with Run now, Schedule and its history"><svg class="ico"><use href="#i-tasks"></use></svg>Save as task</button>
+      <div class="sbacts"><div class="sbtoolgroup" role="group" aria-label="Workspace view"><span>View</span><button class="small" id="sbfocus" aria-pressed="false">Focus</button></div>
+        <div class="sbtoolgroup" role="group" aria-label="Build and edit blocks"><span>Build</span><button class="small" id="sbpanels" aria-expanded="false" aria-controls="sblib" title="Choose an action to add to your chain">Add blocks</button><button class="small" id="sbsettings" aria-expanded="false" aria-controls="sbinsp" title="Edit the selected block, or chain settings when nothing is selected">Block details</button>
+        <button class="small" id="sbai" title="Describe a chain or custom block for Falcor to build"><svg class="ico"><use href="#i-chat"></use></svg>Build with Falcor</button>
         <button class="small icon" id="sbundo" title="Undo (Ctrl+Z)"><svg class="ico"><use href="#i-undo"></use></svg></button>
-        <button class="small icon" id="sbredo" title="Redo (Ctrl+Y)"><svg class="ico"><use href="#i-redo"></use></svg></button>
-        <span class="sep"></span>
-        <button class="small" id="sbtest" title="Run only the selected step (T)"><svg class="ico"><use href="#i-target"></use></svg>Test step</button>
-        <button class="small" id="sbpreview" title="Run it once while you watch, labelled as a preview"><svg class="ico"><use href="#i-eye"></use></svg>Preview</button>
-        <button class="small primary" id="sbstart" title="Save and run it now (Ctrl+Enter)"><svg class="ico"><use href="#i-play"></use></svg>Run now</button>
-        <button class="small" id="sbpause" hidden><svg class="ico"><use href="#i-pause"></use></svg>Pause</button>
-        <button class="small" id="sbskip" title="Skip the step it waits on" hidden>Skip</button>
-        <button class="small" id="sbafter" title="Finish the group or loop it is in, then stop" hidden>Stop after group</button>
-        <button class="small danger" id="sbstop" title="Stop the run" hidden><svg class="ico"><use href="#i-stop"></use></svg>Stop</button>
-        <span class="sep"></span>
-        <button class="small icon" id="sbqueue" title="Add to today's queue (it runs in its turn)"><svg class="ico"><use href="#i-queue"></use></svg></button>
-        <button class="small icon" id="sbsched" title="Set a schedule (the Daily Queue)"><svg class="ico"><use href="#i-calendar"></use></svg></button>
+        <button class="small icon" id="sbredo" title="Redo (Ctrl+Y)"><svg class="ico"><use href="#i-redo"></use></svg></button></div>
+        <div class="sbtoolgroup" role="group" aria-label="Save and manage chains"><span>Chain</span>
+        <button class="small" id="sbnew" title="New chain (Ctrl+N)"><svg class="ico"><use href="#i-plus"></use></svg>New</button>
+        <button class="small" id="sbopen" title="Drafts and published (Ctrl+O)"><svg class="ico"><use href="#i-book"></use></svg>Open</button>
+        <button class="small" id="sbsave" title="Save this draft without publishing (Ctrl+S)"><svg class="ico"><use href="#i-check"></use></svg>Save draft</button>
+        <button class="small" id="sbsaveas" title="Save a separate copy as a new draft">Save a copy</button>
+        <button class="small pubbtn" id="sbpublish" title="Put it in the Library, where it can be scheduled"><svg class="ico"><use href="#i-check"></use></svg>Publish to Library</button>
+        </div><div class="sbtoolgroup" role="group" aria-label="Sandbox preferences and help"><span>Help</span>
         <button class="small icon" id="sbprefs" title="Sandbox settings"><svg class="ico"><use href="#i-settings"></use></svg></button>
         <button class="small icon" id="sbhelp" title="Help and shortcuts (?)"><svg class="ico"><use href="#i-help"></use></svg></button>
+        </div>
       </div>
     </div>
     <div class="teachstrip" id="rec" hidden>
@@ -233,15 +213,23 @@
         </div>
     <div class="sbgrid" id="sbgrid">
       <aside class="panel sblib" id="sblib">
-        <div class="top"><p class="eyebrow">// BLOCKS</p><span class="row"><button class="ghost small icon popbtn" data-pop="sblib" data-poptitle="Blocks" title="Pop out to its own window (put it on another monitor)"><svg class="ico"><use href="#i-popout"></use></svg></button><button class="ghost small icon" id="sblibfold" title="Fold the library"><svg class="ico"><use href="#i-chevron"></use></svg></button></span></div>
+        <div class="top"><p class="eyebrow">// BLOCKS</p><span class="row"><button class="ghost small icon popbtn" data-pop="sblib" data-poptitle="Blocks" title="Pop out to its own window (put it on another monitor)"><svg class="ico"><use href="#i-popout"></use></svg></button><button class="ghost small icon" id="sblibfold" title="Close blocks"><svg class="ico"><use href="#i-close"></use></svg></button></span></div>
         <input id="sblibq" placeholder="Search blocks" autocomplete="off">
         <div class="cats" id="sbcats"></div>
         <div class="liblist" id="sbliblist"></div>
       </aside>
       <div class="sbcenter" id="sbcenter">
+        <div class="sbphonebar" id="sbphonebar" tabindex="0" role="group" aria-label="Phone window. When unlocked, arrow keys move it; Shift and arrows resize it.">
+          <b>// PHONE</b><span class="grow"></span>
+          <button class="small icon" id="sbphonelock" aria-pressed="true" title="Unlock phone window"><svg class="ico"><use href="#i-lock"></use></svg></button>
+          <button class="small icon" id="sbphonedock" title="Dock phone on the right"><svg class="ico"><use href="#i-restore"></use></svg></button>
+          <button class="small icon" id="sbphonemax" title="Maximize phone window"><svg class="ico"><use href="#i-max"></use></svg></button>
+          <button class="small icon popbtn" data-pop="sbcenter" data-poptitle="Sandbox phone" title="Pop phone out to its own window"><svg class="ico"><use href="#i-popout"></use></svg></button>
+        </div>
         <div class="sbmodes">
           <div class="seg" id="sbmodes">
-            <button data-mode="view" class="on" title="Look only (V)"><svg class="ico"><use href="#i-eye"></use></svg>View</button>
+            <button data-mode="build" class="on" title="Use the phone and add each action as a block"><svg class="ico"><use href="#i-plus"></use></svg>Build</button>
+            <button data-mode="view" title="Look only (V)"><svg class="ico"><use href="#i-eye"></use></svg>View</button>
             <button data-mode="control" title="Touch the phone yourself (C)"><svg class="ico"><use href="#i-control"></use></svg>Control</button>
             <button data-mode="target" title="Click the mirror to set the selected step's point (P)"><svg class="ico"><use href="#i-target"></use></svg>Pick target</button>
             <button data-mode="gesture" title="Drag on the mirror to draw a swipe or path (G)"><svg class="ico"><use href="#i-swipe"></use></svg>Pick gesture</button>
@@ -253,9 +241,9 @@
           <button class="small icon" data-sbkey="BACK" title="Back"><svg class="ico"><use href="#i-back"></use></svg></button>
           <button class="small icon" data-sbkey="HOME" title="Home"><svg class="ico"><use href="#i-home"></use></svg></button>
           <button class="small icon" data-sbkey="APP_SWITCH" title="Recent apps"><svg class="ico"><use href="#i-apps"></use></svg></button>
-          <button class="small icon" id="sbgridbtn" title="Grid over the mirror"><svg class="ico"><use href="#i-grid"></use></svg></button><button class="small icon popbtn" data-pop="sbcenter" data-poptitle="Phone stage" title="Pop out to its own window (put it on another monitor)"><svg class="ico"><use href="#i-popout"></use></svg></button>
+          <button class="small icon" id="sbgridbtn" title="Grid over the mirror"><svg class="ico"><use href="#i-grid"></use></svg></button>
         </div>
-        <div class="sbstage" id="sbstage"><div class="sbempty" id="sbnophone" hidden><svg class="ico big"><use href="#i-usb"></use></svg><b>No phone</b><span class="muted small">Plug in the phone (see the Phone tab). You can still build a sequence.</span></div></div>
+        <div class="sbstage" id="sbstage"><div class="sbempty" id="sbnophone" hidden><svg class="ico big"><use href="#i-usb"></use></svg><b>No phone</b><span class="muted small">Plug in the phone (see the Phone tab). You can still build a chain.</span></div></div>
         <p class="hint" id="sbhint"></p>
       </div>
       <aside class="panel sbinsp" id="sbinsp">
@@ -280,19 +268,40 @@
           </div>
           <div class="row"><button class="primary"><svg class="ico"><use href="#i-rec"></use></svg>Start recording</button><button type="button" id="teachcancel">Cancel</button></div>
         </form>
-        <div class="top"><p class="eyebrow" id="sbinsptitle">// SEQUENCE</p><span class="row"><div class="seg" id="sbinsptabs"><button data-t="basic" class="on">Basic</button><button data-t="advanced">Advanced</button></div><button class="ghost small icon popbtn" data-pop="sbinsp" data-poptitle="Step settings" title="Pop out to its own window (put it on another monitor)"><svg class="ico"><use href="#i-popout"></use></svg></button></span></div>
+        <div class="top"><p class="eyebrow" id="sbinsptitle">// CHAIN</p><span class="row"><div class="seg" id="sbinsptabs"><button data-t="basic" class="on">Basic</button><button data-t="advanced">Advanced</button></div><button class="ghost small icon popbtn" data-pop="sbinsp" data-poptitle="Step settings" title="Pop out to its own window (put it on another monitor)"><svg class="ico"><use href="#i-popout"></use></svg></button><button class="ghost small icon" id="sbinspclose" title="Close settings"><svg class="ico"><use href="#i-close"></use></svg></button></span></div>
         <div class="inspbody" id="sbinspbody"></div>
       </aside>
-    </div>
-    <div class="panel sbtl" id="sbtl">
+    <div class="sbtl" id="sbtl">
       <div class="top">
-        <div class="seg" id="sbviews"><button data-v="flow" class="on">Flow</button><button data-v="tree">Tree</button><button data-v="log">Run log</button></div><button class="ghost small icon popbtn" data-pop="sbtl" data-poptitle="Timeline" title="Pop out to its own window (put it on another monitor)"><svg class="ico"><use href="#i-popout"></use></svg></button>
+        <div class="seg" id="sbviews"><button data-v="flow" class="on">Flow</button><button data-v="tree">Tree</button><button data-v="log">Run log</button></div>
         <span class="muted small" id="sbsum"></span>
         <span class="grow"></span>
+      </div>
+      <div class="sbplayback" id="sbplayback" role="group" aria-label="Chain player">
+        <div class="sbplayerheading"><b>Chain player</b><span class="small muted">Runs on your phone · Pause holds your place · Stop returns to the start</span></div>
+        <div class="sbtransport">
+          <button class="small primary" id="sbplay" title="Run this chain on the selected phone"><svg class="ico"><use href="#i-play"></use></svg>Play chain</button>
+          <button class="small" id="sbpause" disabled title="Hold at the current chain step"><svg class="ico"><use href="#i-pause"></use></svg>Pause</button>
+          <button class="small" id="sbplaystop" disabled title="Stop this chain and reset the player. Phone actions are not undone."><svg class="ico"><use href="#i-stop"></use></svg>Stop / reset</button>
+          <span class="small" id="sbplaystate" role="status">Ready to play</span>
+          <progress id="sbprogress" max="1" value="0" aria-label="Chain position"></progress>
+          <button class="small" id="sbtest" title="Run only the selected step (T)"><svg class="ico"><use href="#i-target"></use></svg>Test selected block</button>
+          <details class="sbplayeroptions"><summary>Run options</summary><button class="small" id="sbskip" title="Skip the step that needs attention" hidden>Skip this step</button><button class="small" id="sbafter" title="Finish the current group or loop, then stop" hidden>Stop after group</button></details>
+        </div>
         <div class="sbrun" id="sbrun" hidden><span class="led"></span><b id="sbrunstate"></b><span class="muted small" id="sbrunstep"></span><span class="muted small timer" id="sbruntime"></span></div>
       </div>
-      <div class="steps flow" id="sbsteps" tabindex="0"></div>
+      <div class="sbcanvas" id="sbcanvas">
+        <div class="steps flow" id="sbsteps" tabindex="0" aria-label="Chain workspace. Mouse wheel or pinch to zoom; drag empty space to pan."><div id="sbcontent"></div></div>
+        <div class="sbintro" id="sbintro" hidden><div><b>Your chain starts here.</b><p>Use the phone in Build mode: each tap, swipe or key automatically adds a block to this grid. Or choose Add blocks, or write an idea with Build with Falcor.</p></div></div>
+      </div>
       <div class="runlog" id="sblog" hidden></div>
+      <div class="sbcanvasnav" role="group" aria-label="Workspace zoom">
+        <span class="muted small">Wheel or pinch to zoom · drag grid to pan</span>
+        <button class="small" id="sbzoomout" aria-label="Zoom out">−</button>
+        <button class="small" id="sbzoomreset" title="Reset zoom and return to the first block">100%</button>
+        <button class="small" id="sbzoomin" aria-label="Zoom in">+</button>
+      </div>
+    </div>
     </div>
   </section>
 
@@ -451,17 +460,13 @@
         <ul class="threadlist" id="threadlist"></ul>
       </div>
       <div class="panel convo">
-        <div class="convohead"><div class="top"><span class="favatar xs" id="chatavatar"><img src="dragon.png" alt=""></span><div class="ctitle"><h2 id="chattitle">New chat</h2><span class="csub" id="chatsub">Falcor · your conductor</span></div><button class="icon" id="ctxtoggle" title="What Falcor is looking at"><svg class="ico"><use href="#i-eye"></use></svg></button><button class="icon" id="docknew" title="New chat"><svg class="ico"><use href="#i-plus"></use></svg></button><button class="icon" id="chatsize" title="Full page"><svg class="ico"><use href="#i-max"></use></svg></button><button class="icon" id="dockclose" title="Close"><svg class="ico"><use href="#i-close"></use></svg></button></div></div>
+        <div class="convohead"><div class="top"><span class="favatar xs" id="chatavatar"><img src="dragon.png" alt=""></span><div class="ctitle"><h2 id="chattitle">New chat</h2><span class="csub" id="chatsub">Falcor · your conductor</span></div><button class="icon" id="docknew" title="New chat"><svg class="ico"><use href="#i-plus"></use></svg></button><button class="icon" id="chatsize" title="Full page"><svg class="ico"><use href="#i-max"></use></svg></button><button class="icon" id="dockclose" title="Close"><svg class="ico"><use href="#i-close"></use></svg></button></div></div>
         <div class="msgs" id="msgs"><div id="chatintro"></div><div class="msglist" id="msglist"></div></div>
         <div class="chips" id="quick"></div>
         <form class="composer" id="composer">
           <div class="focusrow"><span class="focuschip" id="focuschip" hidden><svg class="ico"><use href="#i-book"></use></svg><span id="focusname"></span><button type="button" id="focusclear" title="Stop focusing">×</button></span><button type="button" class="ghost small" id="atbtn">@ app</button><ul class="atmenu" id="atmenu" hidden></ul></div>
           <div class="row"><textarea id="chattext" rows="2" maxlength="2000" placeholder="Ask Falcor anything, or say what to do. Enter sends · Shift+Enter new line"></textarea><button class="primary icon big" title="Send"><svg class="ico"><use href="#i-send"></use></svg></button></div>
         </form>
-      </div>
-      <div class="panel context" id="context">
-        <p class="eyebrow">// CONTEXT</p>
-        <div id="ctxbody"></div>
       </div>
     </div>
   </section>
@@ -503,7 +508,8 @@
         <div class="profheroin">
           <button class="profavatar" id="profavatar" title="Change your picture"><img id="profimg" alt="" hidden><span id="profinit">?</span><i class="profcam"><svg class="ico"><use href="#i-camera"></use></svg></i></button>
           <input type="file" id="proffile" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
-          <div class="profwho"><h3 id="profshow">Your name</h3><p id="profcredshow" class="muted"></p>
+          <div class="profwho"><input class="profnameline" id="profname" aria-label="Display name" maxlength="60" placeholder="Your name" autocomplete="off">
+            <label class="profhandle"><span aria-hidden="true">//</span><input id="profusername" aria-label="Falcor username" maxlength="42" placeholder="username" autocomplete="off" spellcheck="false"></label><span class="muted small" id="profsaved" role="status"></span>
             <div class="profrank"><b id="profrank">Hatchling</b><i class="profbar"><u id="profbar"></u></i><span class="muted small" id="profnext"></span></div></div>
           <span class="grow"></span>
           <div class="profheroact"><span class="muted small" id="profsince"></span><button class="small" id="profcustom" aria-expanded="false"><svg class="ico"><use href="#i-edit"></use></svg>Customize</button></div>
@@ -514,14 +520,6 @@
           <div><p class="eyebrow">// BANNER</p><div class="pcrow" id="pccover"></div></div>
           <div><p class="eyebrow">// PICTURE</p><div class="pcrow"><button class="small" id="profpicnew"><svg class="ico"><use href="#i-camera"></use></svg>Choose</button><button class="small ghost" id="profpicdel" hidden>Remove</button></div></div><button class="small primary pcdone" id="profcustdone">Done</button>
         </div>
-      </div>
-      <div class="panel profme">
-        <p class="eyebrow">// ABOUT YOU</p>
-        <label class="small">Name<input id="profname" maxlength="60" placeholder="What Falcor calls you" autocomplete="off"></label>
-        <label class="small">Credentials<input id="profcred" maxlength="120" placeholder="Titles, skills, certifications" autocomplete="off"></label>
-        <label class="small">About me<textarea id="profabout" maxlength="600" rows="6" placeholder="A few lines about you and what you play"></textarea></label>
-        <p class="muted small proftip">Never a password here: passwords and codes go in Settings → Secrets.</p>
-        <span class="muted small" id="profsaved"></span>
       </div>
       <div class="panel profact"><div class="top"><p class="eyebrow">// ACTIVE NOW</p><button class="small ghost" data-go="games">Library</button></div><div class="profactive" id="profactive"></div></div>
       <div class="panel profrec"><p class="eyebrow">// YOUR RECORD</p><div class="proftiles" id="proftiles"></div><div class="profearn" id="profearn"></div></div>
@@ -615,32 +613,46 @@
           <p class="eyebrow" data-gap>// WHAT'S NEW</p>
           <div id="history"></div>
         </div>
-        <div class="panel" data-sub="about" hidden>
-          <p class="eyebrow">// ABOUT</p>
-          <div class="abouthero"><img src="dragon.png" alt=""><div><h2>FALCOR.HUB</h2><p class="muted small" id="about"></p></div></div>
-          <div class="lore">
-            <p class="lorehead">The Lay of the Keeper</p>
-            <p>Before the first screen ever glowed, the old dragons kept the lore of play. From the high places they watched every game ever made, and learned its hidden paths: where the treasure lies buried, which doors are snares, how a level is won by patience and never by haste. One by one the old dragons went to their long sleep, until only the eldest remained.</p>
-            <p>Falcor would not sleep. He came down from the mountain with everything his kin had known, and he built a hall to keep it. This is that hall.</p>
-            <p>Here the Keeper watches over the phone you bring him. Through its glass he sees what you see, and through its glowing frame he learns. When you rest, he plays on through the long night, and when the sun returns, the spoils of the day wait for you, counted and true.</p>
-            <p>Nothing here is learned by chance. When you play before him, he marks every tap, every pause and every word you type, and weaves them into runs that answer to you alone. A run once shown can be cast again, unchanged, as often as you call for it. Each game he plays leaves him wiser for the next, and the more you show him, the deeper his memory runs.</p>
-            <p>The old laws still bind him. He never spends what is not his: no purchase, no wager, not a single coin of yours leaves your hand by his claw. Nothing in this hall stirs until you have blessed it. And should you speak the word of stilling, <b>stop</b>, every wing in the hall folds at once.</p>
-            <p>The hall keeps its own secrets. Your keys rest here and nowhere else, each one whispered only to its own keeper. No website peers through these windows, and nothing that passes between you and the dragon is ever sold.</p>
-            <p>This knowledge is not written in any book. It passes only from master to apprentice, from hand to claw, and you are now one of the very few who hold it.</p>
-            <p class="loresign">Few are ever shown the way in. You were. Guard what you learn here, and teach him well.<span>— Falcor, Keeper of the Hub</span></p>
-            <div class="lorelinks"><button class="ghost" data-go="lore"><svg class="ico"><use href="#i-book"></use></svg>Open the sealed archive</button></div>
-            <details class="loreegg"><summary>A note tucked beneath the seal</summary><p>The Keeper says the hall has no clocks. He still knows when you have been away too long.</p></details>
+        <div class="panel keeperabout" data-sub="about" hidden>
+          <div class="keeperhero">
+            <div class="keeperportrait"><img src="dragon.png" alt="Falcor, Keeper of the Hub"><span class="keeperseal">THE KEEPER IS IN</span></div>
+            <div class="keepergreeting"><p class="eyebrow">// FALCOR.HUB · A HIDDEN SIDE QUEST</p><h2>Well now. A visitor.</h2><p>Most come here looking for a version number.<br>You found a dragon's hall instead.</p><div class="keeperbadges"><span><i class="led on"></i>Keeper awake</span><span><svg class="ico"><use href="#i-book"></use></svg>Lore inside</span></div></div>
           </div>
+          <div class="keeperbody">
+            <div class="keeperchapters">
+              <details class="keeperchapter origin" open><summary><span class="chapternum">01</span><span><b>The last dragon who stayed</b><small>From the Lay of the Keeper</small></span></summary><div class="chapterbody">
+                <p>Before the first screen glowed, the old dragons knew the hidden paths of every game: the door with treasure behind it, the tempting shortcut that was really a trap, the victory earned by one more patient try.</p>
+                <p>One by one, they went to their long sleep. Falcor stayed. He built a hall for everything worth remembering: a Library for discoveries, a Sandbox for little spells, and a place beside the glass where he could learn from you.</p>
+                <p>Dragons usually collect gold. This one collects <em>the way you do things</em>. A tap, a pause, a clever little routine. Show him once, and another path is written into the hall.</p>
+              </div></details>
+              <details class="keeperchapter" open><summary><span class="chapternum">02</span><span><b>The old laws still hold</b><small>Even dragons have house rules</small></span></summary><div class="chapterbody"><ul class="keeperlaws">
+                <li><svg class="ico"><use href="#i-control"></use></svg><span><b>Your hand chooses.</b>The Keeper follows your permission, not his curiosity.</span></li>
+                <li><svg class="ico"><use href="#i-lock"></use></svg><span><b>Your keys stay yours.</b>A good dragon guards a vault. He does not gossip about it.</span></li>
+                <li><svg class="ico"><use href="#i-stop"></use></svg><span><b>One word stills the hall.</b>Say <em>stop</em>, and every wing folds.</span></li>
+              </ul></div></details>
+              <details class="keeperchapter" open><summary><span class="chapternum">03</span><span><b>Notes from the margins</b><small>Not technically an instruction manual</small></span></summary><div class="chapterbody">
+                <p>The Keeper insists he does not have favorites. The carefully sorted shelf of your best chains suggests otherwise.</p>
+                <p>He also denies sleeping beside the warmest window in the Hub. The tiny claw marks are, apparently, a rendering artifact.</p>
+                <p class="keeperwhisper">If a dragon says "one more run," check the clock.</p>
+              </div></details>
+            </div>
+            <p class="loresign keepersign">You were not on the visitor list.<br>He kept a place for you anyway.<span>— a line added to the ledger, just now</span></p>
+            <div class="loreextras">
+              <button class="lorelink" data-go="lore"><svg class="ico"><use href="#i-book"></use></svg><span><b>Sealed archive</b><small>Explore the Keeper's private ledger</small></span><svg class="ico arrow"><use href="#i-chevron"></use></svg></button>
+              <details class="loreegg"><summary><svg class="ico"><use href="#i-edit"></use></svg><span><b>A note from the Keeper</b><small>Unfold a message left just for you</small></span></summary><p>The Keeper says the hall has no clocks. He still knows when you have been away too long.</p></details>
+            </div>
+          </div>
+          <p class="muted small keeperbuild" id="about"></p>
         </div>
       </div>
     </div>
   </section>
   <section data-pane="lore" class="pane" hidden>
-    <div class="crhead pagehead"><button class="ghost" data-go="settings:about"><svg class="ico"><use href="#i-back"></use></svg>Back to About</button><div><p class="eyebrow">// SEALED ARCHIVE · ACCESS GRANTED</p><h2>Below the Hall</h2><p class="muted small">A few leaves from the Keeper's private ledger.</p></div></div>
+    <div class="crhead pagehead archivehead"><div><p class="eyebrow">// SEALED ARCHIVE · ACCESS GRANTED</p><h2>Below the Hall</h2><p class="muted small">A few leaves from the Keeper's private ledger.</p></div><button class="ghost" data-go="settings:about"><svg class="ico"><use href="#i-back"></use></svg>Back to About</button></div>
     <article class="panel lore lorearchive">
       <p class="lorehead">The first light in the workshop</p>
       <p>Before the Hub had windows, it was a workbench: one phone, one careful hand, and a dragon learning the difference between a button that opens a door and one that asks too much. The first rule was written before the first run: the hand chooses; the Keeper follows.</p>
-      <p>So the hall was built with a place for every kind of memory. A screen may be observed, but a secret stays veiled. A lesson may be kept, but only because its maker asked. A sequence may be repeated, but never beyond the owner's word. These are not locks on the door. They are the shape of the door itself.</p>
+      <p>So the hall was built with a place for every kind of memory. A screen may be observed, but a secret stays veiled. A lesson may be kept, but only because its maker asked. A chain may be repeated, but never beyond the owner's word. These are not locks on the door. They are the shape of the door itself.</p>
       <p>When the phone is near, the Keeper can watch its glass and carry out a run. When it is far, the hall waits without pretending it can reach. The Library remembers what you made; the Sandbox is where you teach it; and the red word <b>stop</b> is never more than one call away.</p>
       <p>Every new block is another mark in the margin. Some are small: a pause, a tap, a name typed carefully. Together they become a path that belongs to you, held here on your computer and ready when you are.</p>
       <p class="loresign">The archive keeps no prophecy. Only what you chose to teach.<span>— from the Keeper's ledger, undated</span></p>
@@ -667,11 +679,13 @@
 <script src="pixel.js"></script>
 <script src="app.js"></script>
 <script src="sandbox.js"></script>
+<script src="sandbox-workspace.js"></script>
 <script src="ai.js"></script>
 <script src="creations.js"></script>
 <script src="queue.js"></script>
 <script src="desk.js"></script>
 <script src="popout.js"></script>
+<script src="sandbox-windows.js"></script>
 <script src="widgets.js"></script>
 <script src="profile.js"></script>
 </body>

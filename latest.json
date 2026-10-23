@@ -1,12 +1,12 @@
 {
-  "version": "0.21.59",
-  "notes": "Desktop Sandbox now uses one continuous grid from the top of the workspace, with tool clearance applied to block content instead of cropping the canvas. Floating tools can move flush to the top. Minimize windows clears unlocked tools and the unlocked phone to a bottom restore bar while locked windows stay visible. Individual tool locks and minimize controls preserve window geometry, block positions and saved tool states. Minimized catalog, details and insights windows stay minimized when reopening a Chain; reset restores the organized tool layout, and minimizing a popped-out tool returns it to the workspace.",
-  "publishedAt": "2026-10-23T00:55:55.312Z",
+  "version": "0.21.60",
+  "notes": "The desktop Sandbox zooming grid now fills the entire workspace in normal and Focus views, without fixed top or bottom bands. Header controls and zoom buttons float over the canvas, and tool windows and the phone can move flush to every workspace edge. Default and maximized windows stay below the header controls. The Hub desk also fills its workspace edge to edge, from the tab bar to the status bar, removing blocked padded margins while preserving the heading spacing.",
+  "publishedAt": "2026-10-23T01:22:53.728Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "72b832f218c4923f366a3d69138b89a26875d5fe5f8b2d46a7291e5ddd8c085f",
-      "size": 1218002
+      "sha256": "662920e67e7bd710cd36b900d6eee2dc47405e1a65be0e099b35897f9f8b798c",
+      "size": 1218360
     },
     {
       "path": "dist/preload.js",
@@ -180,18 +180,18 @@
     },
     {
       "path": "ui/sandbox-windows.js",
-      "sha256": "379302aaa9439f86f09048ac11a4c2daa2618504d2b128b05154ca959123e31a",
-      "size": 16834
+      "sha256": "b8460a286f6f7850c51bf4f31204276580d8d75a0c43b36cf9bb7e399b0668dd",
+      "size": 17256
     },
     {
       "path": "ui/sandbox-workspace.css",
-      "sha256": "b49410e3618f60640de43077c329b281b60199f421d5aec0d8450620e14a544e",
-      "size": 13380
+      "sha256": "b09990d092dd170c3d7f7692de80c5df3af281a13bd21b8a43186b70d56c5d44",
+      "size": 14547
     },
     {
       "path": "ui/sandbox-workspace.js",
-      "sha256": "9649edcc71a4be70c08b1811561ebf68eb9324aa2231408cc069629a306070af",
-      "size": 11376
+      "sha256": "2fdf28e57f7dc855ae5e8daff198b7497b54ff5e2ae1e3ec0241d4f22cd5ec87",
+      "size": 11498
     },
     {
       "path": "ui/sandbox.js",
@@ -205,8 +205,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "12cdf0fadbf91d29e3c6acbf1229991a08e4eb3672c2969756602ad0f1123f11",
-      "size": 148822
+      "sha256": "c3da06b3695f2f3c328c268f8bc8ebcec45391f44fe40680f797cdb0fa3dfdd9",
+      "size": 149172
     },
     {
       "path": "ui/tokens.css",

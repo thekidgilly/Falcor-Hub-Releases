@@ -15,7 +15,7 @@
     {id: 'log', name: 'Activity log', about: 'What Falcor and you did, line by line', core: true, min: [220, 110], weight: 1.1},
     {id: 'needs', name: 'Needs you', about: 'Approvals, stuck runs and anything waiting on you', min: [220, 110], size: [300, 220], weight: .9},
     {id: 'apps', name: 'Apps', about: 'Open any app on the phone', min: [220, 160], size: [300, 360], weight: 1.3},
-    {id: 'creations', name: 'Creations', about: 'Run or stop your Sandbox sequences', min: [240, 140], size: [320, 300], weight: 1.1},
+    {id: 'creations', name: 'Creations', about: 'Run or stop your Sandbox chains', min: [240, 140], size: [320, 300], weight: 1.1},
     {id: 'today', name: 'Today', about: 'How today went, what is next, AI spending', min: [220, 130], size: [300, 270], weight: 1},
     {id: 'link', name: 'Connection', about: 'The cable, the mirror, the tools and paired phones', min: [220, 140], size: [300, 290], weight: 1},
     {id: 'clock', name: 'Clock', about: 'The time, the date and the queue\'s next start', min: [200, 110], size: [300, 160], weight: .7},
@@ -464,7 +464,7 @@
       if (t.state === 'NEEDS_REVIEW') out.push({k: 't:' + t.id, mood: 'sand', ic: 'check', t: 'Approve ' + t.app, s: t.objective, a: [['task:' + t.id, 'Review']]});
       else if (t.state === 'NEEDS_ATTENTION') out.push({k: 't:' + t.id, mood: 'sand', ic: 'flag', t: t.app + ' needs you', s: t.lastError || (t.history[t.history.length - 1] || {}).reason || t.objective, a: [['task:' + t.id, 'Open']]});
     }
-    for (const l of (S.sandbox && S.sandbox.live) || []) if (l.status === 'NEEDS_ATTENTION') out.push({k: 'sb:' + l.id, mood: 'sand', ic: 'sandbox', t: l.title + ' is waiting', s: l.reason || 'The sequence waits for you.', a: [['sbresume:' + l.id, 'Resume'], ['sbstop:' + l.id, 'Stop']]});
+    for (const l of (S.sandbox && S.sandbox.live) || []) if (l.status === 'NEEDS_ATTENTION') out.push({k: 'sb:' + l.id, mood: 'sand', ic: 'sandbox', t: l.title + ' is waiting', s: l.reason || 'The chain waits for you.', a: [['sbresume:' + l.id, 'Resume'], ['sbstop:' + l.id, 'Stop']]});
     for (const i of (S.queue && S.queue.items) || []) if (i.deviceId === d.id && (i.status === 'WAITING_FOR_USER' || i.status === 'BLOCKED')) out.push({k: 'q:' + i.key, mood: i.status === 'BLOCKED' ? 'red' : 'sand', ic: 'queue', t: i.name, s: i.reason || (i.status === 'BLOCKED' ? 'Blocked' : 'Waiting for you'), a: [['qd:' + i.key, 'Details']]});
     const n = (S.notices && S.notices.unread) || 0;
     if (n) out.push({k: 'bell', mood: 'muted', ic: 'bell', t: n + ' new notification' + (n === 1 ? '' : 's'), s: 'Updates, guides and milestones from Falcor.', a: [['bell', 'Open']]});
@@ -495,7 +495,7 @@
     const q = $('appsq').value.trim().toLowerCase(), names = d.installedNames || {}, box = $('appslist');
     const all = (d.installed || []).filter(p => !/launcher|systemui/.test(p)).map(p => ({pkg: p, name: names[p] || p}));
     const list = all.filter(a => !q || a.name.toLowerCase().includes(q) || a.pkg.toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
-    const busy = d.emergency ? 'Emergency Stop is on' : d.running ? 'A task is running on the phone' : d.sandbox ? 'A Sandbox sequence is running on the phone' : '';
+    const busy = d.emergency ? 'Emergency Stop is on' : d.running ? 'A task is running on the phone' : d.sandbox ? 'A Sandbox chain is running on the phone' : '';
     text($('appscount'), all.length ? all.length + ' app' + (all.length === 1 ? '' : 's') : '');
     if (!list.length) { htmlOnce(box, '<li class="none" data-empty><span>' + (all.length ? 'No app matches "' + esc(q) + '".' : 'No apps read yet. Press the arrows to read the phone\'s app list.') + '</span></li>'); return; }
     rowsFrom(box);

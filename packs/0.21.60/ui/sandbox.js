@@ -1,17 +1,22 @@
 // Falcor.Hub's Sandbox tab: build a sequence from blocks on the live mirror, test it, run it, schedule it. Loaded after
 // app.js and uses its helpers (S, call, toast, go, send, the mirror). Everything is checked again on the computer's side
-// (sandbox/index.ts): this page only edits a draft, and nothing runs until the owner presses Start, Preview or Test step.
+// (sandbox/index.ts): this page only edits a draft, and nothing runs until the owner presses Play sequence or Test step.
 (function () {
   const SB = {cat: null, data: null, seq: null, dirty: false, sel: [], focus: null, undo: [], redo: [], merge: '', mergeAt: 0,
-    mode: 'view', view: 'flow', insp: 'basic', draw: null, drag: null, pinDrag: null, libCat: 'all', libQ: '',
-    check: null, error: '', loading: null, live: null, events: [], eventsFor: '', logRun: null, wasLive: null, deviceSeen: new Set()};
+    mode: 'build', view: 'flow', insp: 'basic', draw: null, drag: null, pinDrag: null, libCat: 'all', libQ: '',
+    check: null, error: '', loading: null, live: null, events: [], eventsFor: '', logRun: null, wasLive: null, folded: new Set(), deviceSeen: new Set()};
   const workspace = document.querySelector('section[data-pane="sandbox"]');
-  $('sbstudio-stop').onclick = () => $('stop').click();
-  $('sbfocus').onclick = () => { const on = workspace.classList.toggle('studio-focus'); $('sbfocus').setAttribute('aria-pressed', String(on)); $('sbfocus').textContent = on ? 'Exit focus' : 'Focus'; requestAnimationFrame(() => fitDevice()); };
+  function setFocus(on) {
+    workspace.classList.toggle('studio-focus', on);
+    $('sbfocus').setAttribute('aria-pressed', String(on));
+    $('sbfocus').textContent = on ? 'Exit focus' : 'Focus';
+    requestAnimationFrame(() => fitDevice());
+  }
+  $('sbfocus').onclick = () => setFocus(!workspace.classList.contains('studio-focus'));
   $('sbpanels').onclick = () => { workspace.classList.toggle('studio-panels-hidden'); requestAnimationFrame(() => fitDevice()); };
   new ResizeObserver(() => { if (!workspace.hidden) requestAnimationFrame(() => fitDevice()); }).observe($('sbtl'));
   const BLOCKS = () => new Map((SB.cat ? SB.cat.blocks : []).map(b => [b.type, b]));
-  const CATS = {touch: 'Touch and gesture', app: 'App and device', flow: 'Time and flow', screen: 'Screen aware'};
+  const CATS = {ai: 'AI', touch: 'Touch and gesture', app: 'App and device', flow: 'Time and flow', screen: 'Screen aware'};
   const KEYS = ['BACK', 'HOME', 'APP_SWITCH', 'ENTER', 'DEL', 'TAB', 'ESCAPE'], KEYNAME = {BACK: 'Back', HOME: 'Home', APP_SWITCH: 'Recent apps', ENTER: 'Enter', DEL: 'Delete', TAB: 'Tab', ESCAPE: 'Escape'};
   const POINTS = ['tap', 'doubleTap', 'longPress', 'swipe', 'path', 'multiTap'];
   const local = {get(k, d) { try { const v = localStorage.getItem('sb.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { if (v === null) localStorage.removeItem('sb.' + k); else localStorage.setItem('sb.' + k, JSON.stringify(v)); } catch { /* private window */ } }};
@@ -21,6 +26,7 @@
   const newId = () => 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const prefs = () => (SB.data && SB.data.prefs) || {};
   const sdev = () => S && (S.devices.find(x => x.id === deviceId) || S.devices[0]) || null;
+  let buildQueue = Promise.resolve(), buildPending = 0, buildPointer = null;
 
   // ------------------------------------------------------------------ words (the same as sandbox/schema.ts#words)
   const fmtMs = ms => { ms = Number(ms) || 0; if (ms < 1000) return ms + ' ms'; if (ms < 60000) return (Math.round(ms / 100) / 10) + ' s'; if (ms < 3600000) { const m = Math.floor(ms / 60000), s = Math.round((ms % 60000) / 1000); return m + ' min' + (s ? ' ' + s + ' s' : ''); } const h = Math.floor(ms / 3600000), m = Math.round((ms % 3600000) / 60000); return h + ' h' + (m ? ' ' + m + ' min' : ''); };
@@ -31,6 +37,7 @@
     if (s.label) return s.label;
     const p = s.params || {};
     switch (s.type) {
+      case 'falcorRequest': return 'Falcor: ' + String(p.prompt || 'Write your instructions').slice(0, 100);
       case 'tap': return 'Tap ' + (p.anchor && p.anchor.text && p.anchor.mode !== 'off' ? '"' + p.anchor.text + '"' : 'at ' + pt(p.point));
       case 'doubleTap': return 'Double tap at ' + pt(p.point);
       case 'longPress': return 'Long press at ' + pt(p.point) + ' for ' + fmtMs(p.durationMs);
@@ -137,10 +144,12 @@
   }
   async function refresh() { SB.data = await quiet('list').catch(() => SB.data); if (SB.home) { if (tab === 'sandbox') drawHome(true); return; } drawHead(); drawLib(); }
   async function open(id, o = {}) {
+    await buildQueue;
     const g = await sb('get', {id});
     SB.seq = {id: g.id, title: g.title, def: g.definition, revision: g.revision, revisions: g.revisions, meta: g.meta};
     SB.check = {warnings: g.warnings, estimate: g.estimate}; SB.error = '';
     SB.undo = []; SB.redo = []; SB.dirty = false; SB.merge = '';
+    each(g.definition.steps, s => { if (s.type === 'group') SB.folded.add(s.id); });
     if (!o.keepSel) { SB.sel = []; SB.focus = null; } else keepSel();
     if (g.definition.target.deviceId && S && S.devices.some(x => x.id === g.definition.target.deviceId)) deviceId = g.definition.target.deviceId;
     local.set('last', g.id);
@@ -148,9 +157,17 @@
     if (draft && !o.discardDraft && draft.revision === g.revision.number && JSON.stringify(draft.def) !== JSON.stringify(g.definition)) { SB.seq.def = draft.def; SB.dirty = true; toast('Your unsaved changes to "' + g.title + '" are back. Save keeps them; Undo is empty.', 'warn'); }
     else local.set('draft.' + g.id, null);
     SB.events = []; SB.eventsFor = ''; SB.logRun = null; SB.home = null;
+    if (!S.teaching && !liveRun()) setMode('build', true);
+    if (!o.keepSel) {
+      if (!window.sbWindows?.isMinimized('sblib')) window.sbWorkspace?.openDrawer('blocks', !flat().length);
+      if (!window.sbWindows?.isMinimized('sbinsp')) window.sbWorkspace?.openDrawer('settings', false);
+    }
+    window.sbWorkspace?.resetView();
+    if ((o.newWorkspace || !flat().length) && !window.sbWindows?.isMinimized('sbinsights')) window.sbWindows?.show('sbinsights', true);
     draw();
   }
   async function save(o = {}) {
+    await buildQueue;
     if (!def()) return null;
     if (!SB.dirty && !o.force) return SB.seq.revision;
     const r = await sb('save', {id: SB.seq.id, definition: def()});
@@ -164,12 +181,13 @@
   async function saveAs() {
     if (!def()) return;
     const r = await sb('create', {definition: {...def(), title: (def().title + ' (copy)').slice(0, 80)}});
-    await refresh(); await open(r.id); toast('Saved as a new sequence. Rename it at the top.');
+    await refresh(); await open(r.id); toast('Saved as a new chain. Rename it at the top.');
   }
 
   // ------------------------------------------------------------------ the phone's state and runs
   function liveRun() { const d = sdev(); return d && d.sandbox ? d.sandbox : null; }
   async function start(mode) {
+    await buildQueue;
     if (!def()) return;
     const d = sdev(); if (!d) { toast('Plug in the phone first.', 'warn'); return; }
     if (mode === 'test' && !SB.focus) { toast('Select the step to test.', 'warn'); return; }
@@ -204,8 +222,7 @@
     SB.wasLive = l ? l.runId : null;
     if (l && SB.mode !== 'run') setMode('run', true); else if (!l && SB.mode === 'run') setMode(S.teaching ? 'teach' : 'view', true);
     if (S.teaching && SB.mode !== 'teach' && !l) setMode('teach', true); else if (!S.teaching && SB.mode === 'teach') setMode('view', true);
-    if (!S.teaching && !l && SB.mode === 'view' && controlling) setMode('control', true);
-    drawHead(); drawRunbar(); marks(); devFrame(d);
+    drawHead(); drawRunbar(); marks(); devFrame(d); drawInsights();
     text($('sbteachlbl'), S.teaching ? 'End Teach' : 'Teach'); cls($('sbteach'), 'on', !!S.teaching);
     $('sbteach').disabled = SB.ending || !!l || (!S.teaching && !d);
   };
@@ -213,10 +230,10 @@
     const devEl = $('device');
     cls(devEl, 'control', controlling && !S.teaching); cls(devEl, 'recording', !!S.teaching); cls(devEl, 'falcor-acting', !!(d && d.control && d.control.kind === 'agent'));
     $('devtag').hidden = !(controlling || S.teaching || liveRun()); text($('devtag'), S.teaching ? '● REC' : liveRun() ? 'SANDBOX RUN' : 'YOU HAVE CONTROL');
-    const off = !d || !d.connected || !d.authorized;
-    cls($('sbstage'), 'offline', off && !!$('mirror').getAttribute('src')); $('offtag').hidden = !(off && tab === 'sandbox' && $('mirror').getAttribute('src'));
-    $('sbnophone').hidden = !(off && !$('mirror').getAttribute('src'));
-    $('device').hidden = !!(off && !$('mirror').getAttribute('src'));
+    renderMirrorState(d);
+    cls($('sbstage'), 'offline', false); $('offtag').hidden = true;
+    $('sbnophone').hidden = true;
+    $('device').hidden = false;
   }
   function draw(o = {}) {
     if (tab !== 'sandbox') return;
@@ -235,24 +252,35 @@
     htmlOnce($('sbchips'), '<span class="' + conn[0] + '"><i class="led ' + (conn[0] === 'ok' ? 'on' : conn[0]) + '"></i>' + esc(conn[1]) + '</span>'
       + (d ? '<span>' + (d.rotation % 2 ? 'Landscape' : 'Portrait') + '</span>' : '')
       + (q && def().target.rotation !== null && d && def().target.rotation !== d.rotation ? '<span class="warn">Drawn ' + (def().target.rotation % 2 ? 'landscape' : 'portrait') + '</span>' : ''));
-    const l = liveRun(), mine = l && q && l.sequenceId === q.id;
-    for (const id of ['sbsave', 'sbsaveas', 'sbtest', 'sbpreview', 'sbsched', 'sbqueue', 'sbsavetask', 'sbpublish']) $(id).disabled = !q;
+    const l = liveRun(), mine = l && q && l.sequenceId === q.id && l.runId !== SB.resetRunId;
+    for (const id of ['sbsave', 'sbsaveas', 'sbtest', 'sbpublish']) $(id).disabled = !q;
     // A draft can be played by hand; only a published one (in the Library) can be scheduled or queued.
     const mineRow = q && SB.data ? SB.data.sequences.find(x => x.id === q.id) : null, isPub = !!(mineRow && mineRow.published);
-    htmlOnce($('sbpublish'), icon('check') + (isPub ? 'In Library' : 'Publish')); cls($('sbpublish'), 'done', isPub);
+    htmlOnce($('sbpublish'), icon('check') + (isPub ? 'In Library' : 'Publish to Library')); cls($('sbpublish'), 'done', isPub);
+    htmlOnce($('sbsave'), icon('check') + (isPub ? 'Save changes' : 'Save draft'));
+    $('sbsave').title = isPub ? 'Save changes to this published chain (Ctrl+S)' : 'Save this draft without publishing (Ctrl+S)';
     $('sbpublish').title = isPub ? 'Published: it is in the Library. Click to unpublish it.' : 'Put it in the Library, where it can be scheduled';
-    for (const id of ['sbsched', 'sbqueue']) { if (q && !isPub) $(id).disabled = true; $(id).title = q && !isPub ? 'Publish it to the Library first' : id === 'sbsched' ? 'Schedule' : 'Add to queue'; }
-    if (q) { const listed = SB.data && SB.data.sequences.find(x => x.id === q.id); $('sbsavetask').innerHTML = icon(listed && listed.task ? 'check' : 'tasks') + (listed && listed.task ? 'In Tasks' : 'Save as task'); }
     $('sbsave').disabled = !q || !SB.dirty; $('sbundo').disabled = !SB.undo.length; $('sbredo').disabled = !SB.redo.length;
-    $('sbstart').hidden = !!l; $('sbpreview').hidden = !!l; $('sbtest').hidden = !!l;
-    $('sbstart').disabled = !q || !d || !!S.teaching || !!(d && (d.running || d.emergency));
-    $('sbpreview').disabled = $('sbtest').disabled = $('sbstart').disabled; if (!SB.focus) $('sbtest').disabled = true;
-    for (const id of ['sbpause', 'sbstop', 'sbafter', 'sbskip']) $(id).hidden = !l;
-    if (l) { const paused = l.status === 'PAUSED' || l.status === 'NEEDS_ATTENTION'; $('sbpause').innerHTML = icon(paused ? 'play' : 'pause') + (paused ? 'Resume' : 'Pause'); $('sbskip').hidden = !paused; $('sbafter').hidden = !mine; }
+    $('sbtest').hidden = !!l;
+    const cannotPlay = !q || !flat().length || !d || !d.connected || !d.authorized || d.locked || !!S.teaching || !!(d && (d.running || d.emergency));
+    $('sbtest').disabled = cannotPlay || !SB.focus;
+    for (const id of ['sbafter', 'sbskip']) $(id).hidden = !mine;
+    if (mine) $('sbskip').hidden = l.status !== 'NEEDS_ATTENTION';
+    $('sbplayback').querySelector('.sbplayeroptions').hidden = !mine;
+    const paused = l && (l.status === 'PAUSED' || l.status === 'NEEDS_ATTENTION');
+    htmlOnce($('sbplay'), icon('play') + (mine && paused ? 'Resume chain' : 'Play chain'));
+    $('sbplay').disabled = l ? !mine || !paused : cannotPlay;
+    $('sbpause').disabled = !mine || paused || l.status !== 'RUNNING';
+    $('sbplaystop').disabled = !mine && !(SB.runInfo && SB.runInfo.sequenceId === q?.id && SB.resetRunId !== SB.runInfo.id);
+    const steps = flat(), at = mine ? steps.findIndex(s => s.id === l.stepId) : -1;
+    const ended = !l && SB.runInfo && SB.runInfo.sequenceId === q?.id && SB.runInfo.id !== SB.resetRunId ? SB.runInfo : null;
+    text($('sbplaystate'), mine ? (paused ? 'Paused · holding position' : l.status === 'RUNNING' ? 'Playing' : l.status.replaceAll('_', ' ').toLowerCase()) + (at >= 0 ? ' · Block ' + (at + 1) + ' of ' + steps.length : '') : ended?.status === 'COMPLETED' ? 'Complete · Play to start again' : ended ? ended.reason : 'Ready · ' + steps.length + ' blocks');
+    $('sbprogress').max = Math.max(1, steps.length);
+    $('sbprogress').value = mine ? Math.max(0, at + 1) : ended?.status === 'COMPLETED' ? steps.length : 0;
     setBadge('badge-sandbox', S.sandbox && S.sandbox.live.length ? '▶' : 0);
   }
   function drawRunbar() {
-    const l = liveRun(), r = !l && SB.runInfo && SB.seq && SB.runInfo.sequenceId === SB.seq.id ? SB.runInfo : null, x = l || r;
+    const active = liveRun(), l = active && SB.seq && active.sequenceId === SB.seq.id && active.runId !== SB.resetRunId ? active : null, r = !l && SB.runInfo && SB.seq && SB.runInfo.sequenceId === SB.seq.id && SB.runInfo.id !== SB.resetRunId ? SB.runInfo : null, x = l || r;
     $('sbrun').hidden = !x; if (!x) return;
     cls($('sbrun'), 'done', !l && x.status === 'COMPLETED'); cls($('sbrun'), 'bad', !l && /FAILED|NEEDS/.test(x.status));
     $('sbrun').firstElementChild.className = 'led ' + (l ? (x.status === 'RUNNING' ? 'on' : 'warn') : x.status === 'COMPLETED' ? 'on' : 'bad');
@@ -260,19 +288,52 @@
     text($('sbrunstep'), (l ? l.step || l.reason : x.reason) || ''); text($('sbruntime'), clock(x.elapsedMs || 0) + ' · ' + (x.actions || 0) + ' actions');
   }
   function drawSum() {
+    drawInsights();
     const q = SB.seq; if (!q) { text($('sbsum'), ''); return; }
     const n = flat().length, e = SB.check && SB.check.estimate;
     text($('sbsum'), n + ' step' + (n === 1 ? '' : 's') + (e ? ' · about ' + fmtMs(e.ms) + (e.actions !== null ? ' · ' + e.actions + ' actions' : '') : '') + (SB.error ? ' · ' + SB.error : SB.check && SB.check.warnings && SB.check.warnings.length ? ' · ' + SB.check.warnings.length + ' warning' + (SB.check.warnings.length === 1 ? '' : 's') : ''));
     cls($('sbsum'), 'red', !!SB.error);
+  }
+  let insightsKey = '', insightsAt = 0, insightsVersion = 0;
+  function drawInsights() {
+    const box = $('sbinsightsbody'); if (!box) return;
+    const definition = def(), key = JSON.stringify([definition, S?.ai]);
+    if (key === insightsKey && Date.now() - insightsAt < 15000) return;
+    insightsKey = key; insightsAt = Date.now(); const version = ++insightsVersion;
+    if (!definition) { box.innerHTML = '<p class="muted small">Open a chain to see its one-run estimate.</p>'; return; }
+    htmlOnce(box, '<p class="muted small" role="status">Calculating this draft...</p>');
+    quiet('insights', {definition}).then(r => {
+      if (version !== insightsVersion || key !== JSON.stringify([def(), S?.ai])) return;
+      const money = n => '$' + n.toFixed(n > 0 && n < .01 ? 6 : 4);
+      const row = (label, value) => '<div><dt>' + esc(label) + '</dt><dd>' + esc(value) + '</dd></div>';
+      const cost = r.cost ? r.cost.full === 0 ? '$0.00' : money(r.cost.quick) + ' - ' + money(r.cost.full) : 'Not available';
+      htmlOnce(box, '<p class="eyebrow">ONE RUN · CURRENT DRAFT</p><strong class="sbinsightcost">' + esc(cost) + '</strong><p class="small muted">Estimated AI/API cost (USD)</p>'
+        + '<p class="small">' + esc(r.costReason) + '</p><dl class="sbinsightstats">'
+        + row('Gaming model', r.model ? r.model.name + ' · ' + r.model.provider + (r.model.local ? ' · local' : '') : 'Not configured')
+        + row('Blocks in this draft', r.blocks)
+        + row('Enabled blocks incl. linked chains', r.enabled)
+        + row('Falcor request blocks', r.aiBlocks)
+        + row('AI decisions scenario', r.calls.full === null ? 'Dynamic / unknown' : r.calls.quick + ' - ' + r.calls.full)
+        + row('Rough runtime', r.runtimeMs === null ? 'Unknown' : fmtMs(r.runtimeMs))
+        + row('Estimated phone actions', r.actions === null ? 'Dynamic / bounded by cap' : r.actions)
+        + row('Chain runtime cap', fmtMs(r.limits.durationMs))
+        + row('Chain action cap', r.limits.actions)
+        + (r.aiBlocks ? row('Per-block decision maximum', r.limits.maxDecisions) + row('Per-block timeout maximum', fmtMs(r.limits.maxAiTimeoutMs)) : '')
+        + (r.model?.price ? row('Price / 1M tokens', '$' + r.model.price.input + ' input · $' + r.model.price.output + ' output')
+          + row('Pricing source', r.model.priceSource || 'Provider listing') : '')
+        + '</dl><div class="sbinsightnotes">' + r.notes.map(n => '<p class="muted small">' + esc(n) + '</p>').join('') + '</div>');
+    }).catch(e => {
+      if (version === insightsVersion) htmlOnce(box, '<p class="small red" role="alert">Cannot calculate this draft: ' + esc(errText(e)) + '</p>');
+    });
   }
 
   // ------------------------------------------------------------------ library
   function drawLib() {
     if (!SB.cat) return;
     const favs = local.get('favs', []), recent = local.get('recent', []), q = SB.libQ.toLowerCase();
-    htmlOnce($('sbcats'), [['all', 'All'], ['fav', '★'], ['recent', 'Recent'], ['touch', 'Touch'], ['app', 'App'], ['flow', 'Flow'], ['screen', 'Screen'], ['presets', 'Presets'], ['mine', 'My presets']].map(([k, n]) => '<button class="small' + (SB.libCat === k ? ' on' : '') + '" data-c="' + k + '">' + n + '</button>').join(''));
+    htmlOnce($('sbcats'), [['all', 'All'], ['fav', '★'], ['recent', 'Recent'], ['ai', 'AI'], ['touch', 'Touch'], ['app', 'App'], ['flow', 'Flow'], ['screen', 'Screen'], ['presets', 'Presets'], ['mine', 'My presets']].map(([k, n]) => '<button class="small' + (SB.libCat === k ? ' on' : '') + '" data-c="' + k + '">' + n + '</button>').join(''));
     const match = b => !q || (b.name + ' ' + b.help).toLowerCase().includes(q);
-    const item = b => '<div class="lib' + (b.unavailable ? ' off' : '') + '" draggable="' + (!b.unavailable) + '" data-type="' + esc(b.type) + '" title="' + esc(b.unavailable || b.help) + '">' + icon(b.icon) + '<span>' + esc(b.name) + '</span><button class="fav' + (favs.includes(b.type) ? ' on' : '') + '" data-fav="' + esc(b.type) + '" title="Favourite">' + icon('star') + '</button></div>';
+    const item = b => '<div class="lib' + (b.unavailable ? ' off' : '') + '" draggable="' + (!b.unavailable) + '" data-type="' + esc(b.type) + '" title="' + esc(b.unavailable || b.help) + '">' + (b.type === 'falcorRequest' ? '<img class="falcor-avatar" src="dragon.png" alt="">' : icon(b.icon)) + '<span>' + esc(b.name) + '</span><button class="fav' + (favs.includes(b.type) ? ' on' : '') + '" data-fav="' + esc(b.type) + '" title="Favourite">' + icon('star') + '</button></div>';
     const preset = p => '<div class="lib preset" draggable="true" data-preset="' + esc(p.id) + '" title="' + esc(p.help || '') + '">' + icon(p.icon || 'sandbox') + '<span>' + esc(p.name) + '</span>' + (p.builtin ? '<span></span>' : '<button class="fav" data-unpreset="' + esc(p.id) + '" title="Delete this preset">' + icon('trash') + '</button>') + '</div>';
     const B = SB.cat.blocks.filter(match), presets = SB.cat.presets.filter(p => !q || (p.name + ' ' + (p.help || '')).toLowerCase().includes(q));
     let h = '';
@@ -285,7 +346,7 @@
     htmlOnce($('sbliblist'), h);
   }
   function addBlocks(steps, where) {
-    if (!def()) { toast('Open or create a sequence first.', 'warn'); return; }
+    if (!def()) { toast('Open or create a chain first.', 'warn'); return; }
     const w = where || placeAfterFocus();
     edit(() => { const list = listOf(w.into); list.splice(Math.min(w.at, list.length), 0, ...steps); });
     SB.sel = steps.map(s => s.id); SB.focus = steps[0].id;
@@ -320,8 +381,11 @@
 
   // ------------------------------------------------------------------ timeline: flow and tree
   function drawSteps() {
-    const box = $('sbsteps'), before = P.motion.snapshot(box); box.className = 'steps ' + (SB.view === 'tree' ? 'tree' : 'flow') + (SB.drag ? ' dragging' : ''); box.hidden = SB.view === 'log'; $('sblog').hidden = SB.view !== 'log';
-    if (!SB.seq) { htmlOnce(box, '<div class="empty">No sequence open. <button class="small primary" data-do="new">' + icon('plus') + 'New sequence</button> <button class="small" data-do="open">' + icon('book') + 'Open</button> <button class="small" data-do="example">Try the example</button></div>'); return; }
+    const box = $('sbcontent'), before = P.motion.snapshot(box);
+    $('sbsteps').className = 'steps ' + (SB.view === 'tree' ? 'tree' : 'flow') + (SB.drag ? ' dragging' : ''); $('sbsteps').hidden = SB.view === 'log'; $('sblog').hidden = SB.view !== 'log';
+    $('sbcanvas').hidden = SB.view === 'log';
+    $('sbintro').hidden = !SB.seq || !!def().steps.length;
+    if (!SB.seq) { htmlOnce(box, '<div class="empty">No chain open. <button class="small primary" data-do="new">' + icon('plus') + 'New chain</button> <button class="small" data-do="open">' + icon('book') + 'Open</button> <button class="small" data-do="example">Try the example</button></div>'); return; }
     const B = BLOCKS();
     const dz = (into, at) => '<i class="dz" data-into="' + into + '" data-at="' + at + '"></i>';
     const lane = (list, into) => { let h = dz(into, 0); list.forEach((s, i) => { h += block(s, i) + dz(into, i + 1); }); return h; };
@@ -330,31 +394,39 @@
     const about = b => String(b.help || '').split(/(?<=\.)\s/)[0].slice(0, 90);
     const block = (s, i) => {
       const b = B.get(s.type) || {icon: 'sandbox', name: s.type, cat: 'flow', help: ''};
-      const card = '<div class="blk cat-' + esc(b.cat || 'flow') + (SB.sel.includes(s.id) ? ' sel' : '') + (s.enabled === false ? ' off' : '') + (s.color ? ' c-' + s.color : '') + '" data-id="' + esc(s.id) + '" role="button" tabindex="0" aria-pressed="' + SB.sel.includes(s.id) + '" aria-label="Step ' + (i + 1) + ': ' + esc(words(s) + (meta(s) ? ', ' + meta(s) : '')) + '" draggable="true" title="' + esc(b.name + (s.note ? ' · ' + s.note : '')) + '">'
-        + '<span class="bn">' + String(i + 1).padStart(2, '0') + '</span><span class="bico"><span class="tile">' + icon(s.type === 'key' ? ({HOME: 'home', BACK: 'back', APP_SWITCH: 'apps', ENTER: 'check', DEL: 'close'})[s.params && s.params.key] || b.icon : b.icon) + '</span></span><span class="w">' + esc(words(s)) + '</span><span class="m">' + esc(meta(s)) + '</span><span class="bd">' + esc(about(b)) + '</span></div>';
+      const card = '<div class="blk cat-' + esc(b.cat || 'flow') + (s.type === 'falcorRequest' ? ' falcor-request' : '') + (SB.sel.includes(s.id) ? ' sel' : '') + (s.enabled === false ? ' off' : '') + (s.color ? ' c-' + s.color : '') + '" data-id="' + esc(s.id) + '" role="button" tabindex="0" aria-pressed="' + SB.sel.includes(s.id) + '" aria-label="Step ' + (i + 1) + ': ' + esc(words(s) + (meta(s) ? ', ' + meta(s) : '')) + '" draggable="true" title="' + esc(b.name + (s.note ? ' · ' + s.note : '')) + '">'
+        + '<span class="bn">' + String(i + 1).padStart(2, '0') + '</span><span class="bico"><span class="tile">' + (s.type === 'falcorRequest' ? '<img class="falcor-avatar" src="dragon.png" alt="">' : icon(s.type === 'key' ? ({HOME: 'home', BACK: 'back', APP_SWITCH: 'apps', ENTER: 'check', DEL: 'close'})[s.params && s.params.key] || b.icon : b.icon)) + '</span></span><span class="w">' + esc(s.type === 'group' && s.label ? s.label : b.name) + '</span><span class="boverview">' + esc(words(s)) + '</span><span class="m">' + esc(s.type === 'group' ? (s.children || []).length + ' actions inside' : words(s)) + '</span><span class="bd">' + esc(meta(s) === b.name ? about(b) : meta(s)) + '</span>'
+        + (s.type === 'falcorRequest' ? '<span class="falcor-magic" aria-hidden="true"><i></i><i></i><i></i><i></i></span>' : '') + '</div>';
       if (!b.group) return card;
+      if (SB.folded.has(s.id)) return '<div class="grp" data-g="' + esc(s.id) + '">' + card + '</div>';
       return '<div class="grp" data-g="' + esc(s.id) + '">' + card + '<div class="lane" data-l="' + (b.group === 'branch' ? 'THEN' : 'DO') + '">' + lane(s.children || [], s.id + ':children') + '</div>' + (b.group === 'branch' ? '<div class="lane" data-l="ELSE">' + lane(s.else || [], s.id + ':else') + '</div>' : '') + '</div>';
     };
-    htmlOnce(box, def().steps.length ? lane(def().steps, 'root') : '<div class="empty">Drag blocks here from the library, click one to add it, or press Teach and show Falcor on the mirror.</div>' + dz('root', 0));
+    htmlOnce(box, def().steps.length ? lane(def().steps, 'root') : dz('root', 0));
     P.motion.settle(box, before);
   }
   // The run's marks: the step being played glows, done steps tick, a failed one flashes red.
   function marks() {
     const box = $('sbsteps'); if (!box || !SB.seq) return;
-    const l = liveRun(), mine = (l && l.sequenceId === SB.seq.id) || (SB.runInfo && SB.runInfo.sequenceId === SB.seq.id && SB.eventsFor === SB.runInfo.id);
+    const active = liveRun(), l = active?.runId === SB.resetRunId ? null : active, mine = (l && l.sequenceId === SB.seq.id) || (SB.runInfo && SB.runInfo.id !== SB.resetRunId && SB.runInfo.sequenceId === SB.seq.id && SB.eventsFor === SB.runInfo.id);
+    if (l && l.sequenceId === SB.seq.id) {
+      let expanded = false;
+      for (const id of SB.folded) { const group = locate(id)?.step; if (group && group.id !== l.stepId && inside(group, l.stepId)) { SB.folded.delete(id); expanded = true; } }
+      if (expanded) drawSteps();
+    }
     const done = new Set(), fail = new Set();
     if (mine) for (const e of SB.events) { if (e.type === 'done' && e.stepId) { done.add(e.stepId); fail.delete(e.stepId); } if (e.type === 'fail' && e.stepId) fail.add(e.stepId); }
     for (const el of box.querySelectorAll('.blk')) {
       const id = el.dataset.id;
       cls(el, 'now', !!(l && l.sequenceId === SB.seq.id && l.stepId === id)); cls(el, 'done', done.has(id)); cls(el, 'fail', fail.has(id));
+      if (l && l.sequenceId === SB.seq.id && l.stepId === id) el.setAttribute('aria-current', 'step'); else el.removeAttribute('aria-current');
     }
     const now = l && box.querySelector('.blk.now'); if (now && SB.follow !== l.stepId) { SB.follow = l.stepId; now.scrollIntoView({block: 'nearest', inline: 'center'}); }
     sbPins();
   }
-  $('sbviews').onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; SB.view = b.dataset.v; document.querySelectorAll('#sbviews button').forEach(x => cls(x, 'on', x === b)); draw(); poll(); };
+  $('sbviews').onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; SB.view = b.dataset.v; $('sbviews').querySelectorAll('button').forEach(x => cls(x, 'on', x === b)); draw(); poll(); };
   $('sbsteps').addEventListener('click', e => {
     const doit = e.target.closest('[data-do]'); if (doit) { ({new: newSheet, open: openSheet, example: () => sb('create', {template: 'starter', deviceId: sdev() ? sdev().id : null}).then(r => refresh().then(() => open(r.id)))})[doit.dataset.do](); return; }
-    const el = e.target.closest('.blk'); if (!el) { if (e.target === $('sbsteps')) { SB.sel = []; SB.focus = null; draw(); } return; }
+    const el = e.target.closest('.blk'); if (!el) { if (e.target === $('sbsteps') || e.target === $('sbcontent')) { SB.sel = []; SB.focus = null; draw(); } return; }
     select(el.dataset.id, e);
   });
   $('sbsteps').addEventListener('keydown', e => {
@@ -365,14 +437,68 @@
     if (e.ctrlKey || e.metaKey) SB.sel = SB.sel.includes(id) ? SB.sel.filter(x => x !== id) : [...SB.sel, id];
     else if (e.shiftKey && SB.focus) { const ids = flat().map(s => s.id), a = ids.indexOf(SB.focus), b = ids.indexOf(id); SB.sel = ids.slice(Math.min(a, b), Math.max(a, b) + 1); }
     else SB.sel = [id];
-    SB.focus = id; draw(); if (e.type === 'keydown') $('sbsteps').querySelector('.blk[data-id="' + id + '"]')?.focus({preventScroll: true});
+    SB.focus = id; window.sbWorkspace?.openDrawer('settings', true); draw(); if (e.type === 'keydown') $('sbsteps').querySelector('.blk[data-id="' + id + '"]')?.focus({preventScroll: true});
   }
+  import('./sandbox-menu.js').then(({mountSandboxMenu}) => mountSandboxMenu($('sbsteps'), e => {
+    const block = e.target.closest('.blk[data-id]'), target = block && locate(block.dataset.id);
+    if (target) {
+      if (!SB.sel.includes(target.step.id)) SB.sel = [target.step.id];
+      SB.focus = target.step.id;
+      $('sbsteps').querySelectorAll('.blk').forEach(el => {
+        const selected = SB.sel.includes(el.dataset.id); cls(el, 'sel', selected); el.setAttribute('aria-pressed', String(selected));
+      });
+      drawInsp(); sbPins();
+      const move = delta => edit(() => {
+        const found = locate(target.step.id); if (!found) return;
+        found.list.splice(found.i, 1); found.list.splice(found.i + delta, 0, found.step);
+      });
+      return {title: SB.sel.length > 1 ? SB.sel.length + ' selected blocks' : (BLOCKS().get(target.step.type)?.name || target.step.type), items: [
+        {label: 'Block details', run: () => window.sbWorkspace?.openDrawer('settings', true)},
+        {label: 'Test block on phone', disabled: !!liveRun() || !!S.teaching || !!buildPending, run: () => start('test')},
+        {label: 'Duplicate', run: duplicate},
+        {label: target.step.enabled === false ? 'Enable selected blocks' : 'Disable selected blocks', run: () => edit(() => {
+          const enabled = target.step.enabled === false;
+          for (const id of SB.sel) { const found = locate(id); if (found) found.step.enabled = enabled; }
+        })},
+        {label: 'Move up', disabled: SB.sel.length !== 1 || target.i === 0, run: () => move(-1)},
+        {label: 'Move down', disabled: SB.sel.length !== 1 || target.i === target.list.length - 1, run: () => move(1)},
+        {label: 'Delete selected blocks', danger: true, run: removeSel}
+      ]};
+    }
+    return {title: 'Workspace', items: [
+      {label: 'Block catalog', run: () => window.sbWorkspace?.openDrawer('blocks', true)},
+      {label: 'Build with Falcor', run: () => $('sbai').click()},
+      {label: 'Undo', disabled: !SB.undo.length, run: undo},
+      {label: 'Redo', disabled: !SB.redo.length, run: redo},
+      {label: 'Reset canvas zoom', run: () => $('sbzoomreset').click()},
+      {label: 'Reset tool layout', run: () => $('sbwindowsreset').click()}
+    ]};
+  })).catch(e => toast('Could not load workspace menu: ' + errText(e), 'bad'));
   // Drag to reorder (several selected move together), and drop library blocks into place.
   $('sbsteps').addEventListener('dragstart', e => { const el = e.target.closest('.blk'); if (!el || SB.mode === 'run') { e.preventDefault(); return; } const id = el.dataset.id; SB.drag = {ids: SB.sel.includes(id) ? SB.sel.slice() : [id]}; e.dataTransfer.setData('text/plain', 'sandbox'); e.dataTransfer.effectAllowed = 'move'; el.classList.add('drag-source'); setTimeout(() => $('sbsteps').classList.add('dragging'), 0); });
-  $('sbsteps').addEventListener('dragover', e => { if (!SB.drag) return; const z = dropZone(e); e.preventDefault(); $('sbsteps').querySelectorAll('.dz.hot').forEach(x => x !== z && x.classList.remove('hot')); if (z) z.classList.add('hot'); });
+  let dragPoint = null, dragFrame = 0, dragTick = 0;
+  function dragScroll(time) {
+    if (!SB.drag || !dragPoint) return;
+    const box = $('sbsteps'), r = box.getBoundingClientRect(), p = dragPoint;
+    const dt = Math.min(32, time - dragTick || 16); dragTick = time;
+    const speed = (v, lo, hi) => v < lo + 44 ? -Math.min(1, (lo + 44 - v) / 44) : v > hi - 44 ? Math.min(1, (v - hi + 44) / 44) : 0;
+    if (p.x >= r.left && p.x <= r.right && p.y >= r.top && p.y <= r.bottom) {
+      box.scrollLeft += speed(p.x, r.left, r.right) * dt * .65;
+      box.scrollTop += speed(p.y, r.top, r.bottom) * dt * .65;
+      const z = dropZone({target: document.elementFromPoint(p.x, p.y) || box, clientX: p.x, clientY: p.y});
+      box.querySelectorAll('.dz.hot').forEach(x => x !== z && x.classList.remove('hot')); if (z) z.classList.add('hot');
+    }
+    dragFrame = requestAnimationFrame(dragScroll);
+  }
+  $('sbsteps').addEventListener('dragover', e => {
+    if (!SB.drag) return; e.preventDefault(); e.dataTransfer.dropEffect = SB.drag.ids ? 'move' : 'copy';
+    dragPoint = {x: e.clientX, y: e.clientY};
+    if (!dragFrame) { dragTick = 0; dragFrame = requestAnimationFrame(dragScroll); }
+    const z = dropZone(e); $('sbsteps').querySelectorAll('.dz.hot').forEach(x => x !== z && x.classList.remove('hot')); if (z) z.classList.add('hot');
+  });
   $('sbsteps').addEventListener('drop', e => {
-    e.preventDefault(); const z = dropZone(e), d = SB.drag; endDrag(); if (!d || !def()) return;
-    const where = z ? {into: z.dataset.into, at: Number(z.dataset.at)} : {into: 'root', at: def().steps.length};
+    e.preventDefault(); const z = dropZone(e), d = SB.drag; endDrag(); if (!d || !def() || !z) return;
+    const where = {into: z.dataset.into, at: Number(z.dataset.at)};
     if (d.type) addType(d.type, where); else if (d.preset) addPreset(d.preset, where); else if (d.ids) move(d.ids, where);
   });
   $('sbsteps').addEventListener('dragend', () => endDrag());
@@ -384,16 +510,23 @@
       return !SB.drag?.ids?.some(id => id === parent || $('sbsteps').querySelector('.grp[data-g="' + id + '"]')?.contains(z));
     };
     if (exact && valid(exact)) return exact;
-    let best = null, distance = 25;
+    const card = e.target.closest('.blk');
+    if (card) {
+      const holder = card.parentElement.classList.contains('grp') ? card.parentElement : card, r = card.getBoundingClientRect();
+      const after = SB.view === 'tree' ? e.clientY > (r.top + r.bottom) / 2 : e.clientX > (r.left + r.right) / 2;
+      const slot = after ? holder.nextElementSibling : holder.previousElementSibling;
+      if (slot?.classList.contains('dz') && valid(slot)) return slot;
+    }
+    let best = null, distance = 48;
     for (const z of $('sbsteps').querySelectorAll('.dz')) {
       if (!valid(z)) continue;
       const r = z.getBoundingClientRect();
       const d = Math.hypot(Math.max(r.left - e.clientX, 0, e.clientX - r.right), Math.max(r.top - e.clientY, 0, e.clientY - r.bottom));
       if (d < distance) { best = z; distance = d; }
     }
-    return best;
+    return best || (e.target === $('sbsteps') || e.target === $('sbcontent') || e.target.closest('.empty') ? [...$('sbsteps').querySelectorAll('.dz[data-into="root"]')].filter(valid).at(-1) : null);
   }
-  function endDrag() { $('sbsteps').querySelectorAll('.drag-source').forEach(x => x.classList.remove('drag-source')); SB.drag = null; $('sbsteps').classList.remove('dragging'); $('sbsteps').querySelectorAll('.dz.hot').forEach(x => x.classList.remove('hot')); }
+  function endDrag() { cancelAnimationFrame(dragFrame); dragFrame = 0; dragPoint = null; $('sbsteps').querySelectorAll('.drag-source').forEach(x => x.classList.remove('drag-source')); SB.drag = null; $('sbsteps').classList.remove('dragging'); $('sbsteps').querySelectorAll('.dz.hot').forEach(x => x.classList.remove('hot')); }
   function move(ids, where) {
     const into = where.into === 'root' ? null : where.into.split(':')[0];
     const moving = ids.map(id => locate(id)).filter(Boolean).map(l => l.step);
@@ -452,14 +585,16 @@
       case 'ms': return msField(k, spec.label, v, spec.min, spec.max);
       case 'int': return num(k, spec.label, v, spec.min, spec.max);
       case 'num': return num(k, spec.label, v, spec.min, spec.max, 'any');
-      case 'text': return s.type === 'typeText' ? '<label>' + esc(spec.label) + '<textarea rows="2" maxlength="500" data-k="' + k + '">' + esc(v || '') + '</textarea></label><p class="help">Never put a password here: the log shows only how many characters.</p>' : inp(k, spec.label, v, ' maxlength="200"');
+      case 'text':
+        if (s.type === 'falcorRequest' && spec.key === 'prompt') return '<label>' + esc(spec.label) + '<textarea rows="5" maxlength="2000" data-k="' + k + '" placeholder="Describe what Falcor should do on the current screen...">' + esc(v || '') + '</textarea></label><p class="help">Current app only. Uses your gaming AI model and budget. Never include passwords or private information. Write a clear Done when goal below; add required screen words for an independent text check.</p>';
+        return s.type === 'typeText' ? '<label>' + esc(spec.label) + '<textarea rows="2" maxlength="500" data-k="' + k + '">' + esc(v || '') + '</textarea></label><p class="help">Never put a password here: the log shows only how many characters.</p>' : inp(k, spec.label, v, ' maxlength="' + (spec.max || 200) + '"');
       case 'pkg': return inp(k, spec.label, v, ' list="sbapps" placeholder="com.example.app"');
       case 'key': return sel(k, spec.label, v, KEYS.map(x => [x, KEYNAME[x]]));
       case 'dir': return sel(k, spec.label, v, ['up', 'down', 'left', 'right']);
       case 'select': return sel(k, spec.label, v, spec.options);
       case 'name': return inp(k, spec.label, v, ' maxlength="24"');
       case 'bool': return '<label class="check"><input type="checkbox" data-k="' + k + '"' + (v ? ' checked' : '') + '>' + esc(spec.label) + '</label>';
-      case 'seq': return sel(k, spec.label, v, [['', 'Pick a sequence'], ...(SB.data ? SB.data.sequences.filter(q => q.id !== SB.seq.id).map(q => [q.id, q.title]) : [])]);
+      case 'seq': return sel(k, spec.label, v, [['', 'Pick a chain'], ...(SB.data ? SB.data.sequences.filter(q => q.id !== SB.seq.id).map(q => [q.id, q.title]) : [])]);
       case 'condition': return condField(v);
       case 'anchor': { const a = v || {text: '', id: '', mode: 'prefer'}; return '<div class="pair">' + inp('p.anchor.text', 'Anchor (control label)', a.text, ' maxlength="120" placeholder="none"') + sel('p.anchor.mode', 'If it moved', a.mode || 'prefer', [['prefer', 'tap the control, else the point'], ['require', 'stop if it is not there'], ['off', 'tap the point only']]) + '</div><p class="help">' + esc(spec.help || '') + '</p>'; }
     }
@@ -467,12 +602,12 @@
   }
   function drawInsp() {
     const box = $('sbinspbody'), s = SB.focus && locate(SB.focus) && locate(SB.focus).step;
-    document.querySelectorAll('#sbinsptabs button').forEach(b => cls(b, 'on', b.dataset.t === SB.insp));
+    $('sbinsptabs').querySelectorAll('button').forEach(b => cls(b, 'on', b.dataset.t === SB.insp));
     $('sbinsptabs').hidden = !s;
-    if (!SB.seq) { text($('sbinsptitle'), '// SANDBOX'); box.innerHTML = '<p class="muted small">A sequence is a list of blocks Falcor plays on the phone, step by step, through the same safety gate as Autopilot: never a purchase, a payment, an ad or a private screen.</p><div class="row"><button class="primary small" data-do="new">' + icon('plus') + 'New sequence</button><button class="small" data-do="open">' + icon('book') + 'Open</button></div>'; return; }
+    if (!SB.seq) { text($('sbinsptitle'), '// SANDBOX'); box.innerHTML = '<p class="muted small">A chain is a list of blocks Falcor plays on the phone, step by step, through the same safety gate as Autopilot: never a purchase, a payment, an ad or a private screen.</p><div class="row"><button class="primary small" data-do="new">' + icon('plus') + 'New chain</button><button class="small" data-do="open">' + icon('book') + 'Open</button></div>'; return; }
     if (!s) {
       const d = def(), st = d.settings, w = SB.check && SB.check.warnings || [], e = SB.check && SB.check.estimate;
-      text($('sbinsptitle'), '// SEQUENCE');
+      text($('sbinsptitle'), '// CHAIN');
       box.innerHTML = '<h3>' + icon(d.icon || 'sandbox') + esc(d.title) + '</h3>'
         + '<label>Description<textarea rows="2" maxlength="500" data-k="seq.description">' + esc(d.description) + '</textarea></label>'
         + sel('seq.deviceId', 'Phone', d.target.deviceId || '', [['', 'Any phone'], ...S.devices.map(x => [x.id, x.label])])
@@ -497,7 +632,7 @@
         + msField('timeoutMs', 'Step timeout', s.timeoutMs)
         + '<div class="pair">' + num('retry.max', 'Retries', s.retry ? s.retry.max : 0, 0, 5) + msField('retry.delayMs', 'Between retries', s.retry ? s.retry.delayMs : 1000) + '</div>'
         + '<label class="check"><input type="checkbox" data-k="retry.backoff"' + (s.retry && s.retry.backoff ? ' checked' : '') + '> Wait longer each retry</label>'
-        + sel('onError', 'If it fails', s.onError || 'inherit', [['inherit', 'as the sequence says'], ['review', 'pause for me'], ['stop', 'stop the run'], ['skip', 'skip it']])
+        + sel('onError', 'If it fails', s.onError || 'inherit', [['inherit', 'as the chain says'], ['review', 'pause for me'], ['stop', 'stop the run'], ['skip', 'skip it']])
         + sel('expect.kind', 'Expected result', s.expect ? s.expect.kind : '', [['', 'none'], ['changed', 'the screen changes'], ['text', 'the screen says…'], ['gone', 'words disappear…']])
         + (s.expect && s.expect.kind !== 'changed' ? inp('expect.text', 'Words', s.expect.text, ' maxlength="120"') : '') + (s.expect ? msField('expect.timeoutMs', 'Within', s.expect.timeoutMs) : '')
         + sel('color', 'Colour', s.color || '', [['', 'none'], 'green', 'sand', 'red', 'blue', 'grey'])
@@ -506,6 +641,7 @@
     if (SB.error) h += '<p class="err">' + esc(SB.error) + '</p>';
     // Reteach from here: this step and the ones after it are replaced by what the owner shows next (top-level steps only).
     const at = locate(s.id), top = !!at && at.list === def().steps;
+    if (b.group) h += '<button class="small" data-do="fold">' + (SB.folded.has(s.id) ? 'Show actions inside' : 'Fold into one block') + '</button>';
     h += '<div class="reteach"><button class="sbteachbtn" data-do="reteach"' + (top && !S.teaching && !liveRun() ? '' : ' disabled') + ' title="' + esc(top ? 'Remove this step and the ones after it, then show Falcor again from here' : 'Reteach works on steps outside groups and loops') + '">' + icon('rec') + 'Reteach from here</button>'
       + '<p class="muted small">' + (top ? 'Steps ' + (at.i + 1) + ' to ' + def().steps.length + ' are replaced by what you show. Teach starts at once, from the screen the phone is on now (no Home step).' : 'Reteach works on steps outside groups and loops.') + '</p></div>';
     h += '<div class="acts"><button class="small" data-do="test">' + icon('target') + 'Test step</button><button class="small" data-do="dup">' + icon('copy') + 'Duplicate</button><button class="small" data-do="group">Group</button><button class="small" data-do="preset">Save as preset</button><button class="small danger" data-do="del">' + icon('trash') + 'Delete</button></div>';
@@ -561,7 +697,7 @@
     const pg = e.target.closest('[data-pickg]'); if (pg) { setMode('gesture'); return; }
     const n = e.target.closest('[data-nudge]'); if (n) { const k = n.dataset.nudge, dx = Number(n.dataset.dx || 0) * 0.005, dy = Number(n.dataset.dy || 0) * 0.005; edit(() => { const s = locate(SB.focus).step, p = s.params[k] || [0.5, 0.5], lo = k === 'offset' ? -0.2 : 0, hi = k === 'offset' ? 0.2 : 1; s.params[k] = [Math.min(hi, Math.max(lo, Math.round((p[0] + dx) * 10000) / 10000)), Math.min(hi, Math.max(lo, Math.round((p[1] + dy) * 10000) / 10000))]; }, {merge: 'nudge' + k}); return; }
     const d = e.target.closest('[data-do]'); if (!d) return;
-    ({test: () => start('test'), reteach: () => reteach(SB.focus), dup: duplicate, group, del: removeSel, preset: presetSheet, sched: () => schedule(), history: historySheet, export: () => sb('export', {id: SB.seq.id}).then(ok => ok && toast('Exported.')), new: newSheet, open: openSheet})[d.dataset.do]();
+    ({fold: () => { if (SB.folded.has(SB.focus)) SB.folded.delete(SB.focus); else SB.folded.add(SB.focus); draw(); }, test: () => start('test'), reteach: () => reteach(SB.focus), dup: duplicate, group, del: removeSel, preset: presetSheet, sched: () => schedule(), history: historySheet, export: () => sb('export', {id: SB.seq.id}).then(ok => ok && toast('Exported.')), new: newSheet, open: openSheet})[d.dataset.do]();
   });
 
   // ------------------------------------------------------------------ the mirror: modes, picking, pins
@@ -569,26 +705,47 @@
     if (m === SB.mode && !auto) { if (m === 'target' || m === 'gesture') return; }
     const l = liveRun();
     if (l && m !== 'run') { if (!auto) toast('A run is playing: pause or stop it first.', 'warn'); return; }
+    if (S.teaching && m !== 'teach') { if (!auto) toast('End Teach before changing the phone mode.', 'warn'); return; }
+    if (buildPending && !auto) { toast('Wait for the phone action to finish before changing modes.', 'warn'); return; }
     if (m === 'teach' && !auto) { void toggleTeach(); return; }
     if (m === 'control' && !auto && !controlling) { const d = sdev(); if (d) void call('take', {deviceId: d.id}).then(() => toast('You have control. Click to tap, drag to swipe, wheel to scroll.')); }
-    if (!auto && SB.mode === 'control' && m !== 'control' && controlling && !S.teaching) { const d = sdev(); if (d) void call('release', {deviceId: d.id}); }
+    if (!auto && ['control', 'build'].includes(SB.mode) && !['control', 'build'].includes(m) && controlling && !S.teaching) { const d = sdev(); if (d) void call('release', {deviceId: d.id}); }
     SB.mode = m; SB.draw = null;
-    document.querySelectorAll('#sbmodes button').forEach(b => { cls(b, 'on', b.dataset.mode === m); if (b.dataset.mode !== 'run') b.disabled = !!l; });
-    const st = $('sbstage'); for (const c of ['view', 'control', 'target', 'gesture', 'teach', 'run']) cls(st, 'm-' + c, c === m);
+    $('sbmodes').querySelectorAll('button').forEach(b => { cls(b, 'on', b.dataset.mode === m); if (b.dataset.mode !== 'run') b.disabled = !!l || !!S.teaching; });
+    const st = $('sbstage'); for (const c of ['build', 'view', 'control', 'target', 'gesture', 'teach', 'run']) cls(st, 'm-' + c, c === m);
     const f = SB.focus && locate(SB.focus) && locate(SB.focus).step;
-    text($('sbhint'), {view: 'View: look only. Pick target or gesture to draw steps; Control to touch the phone yourself.', control: 'Control: click tap · drag swipe · hold press · wheel scroll. Nothing is recorded.',
+    text($('sbhint'), {build: 'Build: use the phone. Each tap, swipe, key or typed text adds a block to the grid. Nothing plays automatically.', view: 'View: look only. Build adds actions as blocks; Control uses the phone without adding blocks.', control: 'Control: click tap · drag swipe · hold press · wheel scroll. Nothing is recorded.',
       target: f && pointKeys(f).length ? 'Click the mirror to set "' + words(f) + '". Nothing is sent to the phone.' : 'Click the mirror to add a Tap there. Nothing is sent to the phone.',
       gesture: f && ['swipe', 'path', 'multiTap'].includes(f.type) ? 'Drag on the mirror to draw "' + words(f) + '".' : 'Drag on the mirror to add a Swipe (a curve becomes a path).',
-      teach: S.teaching ? 'Recording: play the app on the mirror. Stop adds what you did as blocks.' : 'Teach: Falcor records what you do on the mirror and adds it as blocks.', run: 'A run is playing. Pause, Stop or Stop after group above.'}[m]);
+      teach: S.teaching ? 'Recording: play the app on the mirror. Stop adds what you did as blocks.' : 'Teach: Falcor records what you do on the mirror and adds it as blocks.', run: 'A run is playing. Pause or Stop beside the blocks; Stop after group is in the toolbar.'}[m]);
     sbPins();
   }
   window.sbMode = m => setMode(m, false);
   $('sbmodes').onclick = e => { const b = e.target.closest('[data-mode]'); if (b && !b.disabled) setMode(b.dataset.mode); };
-  document.querySelectorAll('[data-sbkey]').forEach(b => b.onclick = () => { if (!controlling) { toast('Choose Control first.', 'warn'); return; } void send({kind: 'key', key: b.dataset.sbkey}); });
+  document.querySelectorAll('[data-sbkey]').forEach(b => b.onclick = () => {
+    if (SB.mode === 'build') { buildAction({kind: 'key', key: b.dataset.sbkey}); return; }
+    if (!['control', 'teach'].includes(SB.mode) || !controlling) { toast('Choose Build or Control first.', 'warn'); return; }
+    void send({kind: 'key', key: b.dataset.sbkey});
+  });
   $('sbgridbtn').onclick = () => { void sb('setPrefs', {prefs: {grid: !prefs().grid}}).then(p => { SB.data.prefs = p; sbPins(); }); };
   const pointKeys = s => (BLOCKS().get(s.type) || {params: []}).params.filter(p => p.kind === 'point' && p.key !== 'offset').map(p => p.key);
   // The mouse on the mirror while the Sandbox is open. True: handled here (nothing is sent to the phone).
   window.sbPointer = function (kind, p, e) {
+    if (SB.mode === 'build') {
+      if (kind === 'down' && e.button === 0) {
+        buildPointer = {x: p.x, y: p.y, at: Date.now(), pointer: e.pointerId};
+        $('mirrorbox').focus({preventScroll: true});
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } else if (kind === 'up' && buildPointer?.pointer === e.pointerId) {
+        const from = buildPointer; buildPointer = null;
+        const ms = Date.now() - from.at, moved = Math.hypot(p.x - from.x, p.y - from.y);
+        const action = moved > .03 ? {kind: 'swipe', x: from.x, y: from.y, toX: p.x, toY: p.y, ms: Math.min(2000, Math.max(120, ms))}
+          : from.y >= .935 && !document.body.classList.contains('phone-landscape') && ms <= 600 ? {kind: 'key', key: from.x < .37 ? 'APP_SWITCH' : from.x > .63 ? 'BACK' : 'HOME'}
+          : ms > 600 ? {kind: 'long_press', x: from.x, y: from.y, ms: Math.min(3000, ms)} : {kind: 'tap', x: from.x, y: from.y};
+        buildAction(action);
+      } else if (kind === 'cancel') buildPointer = null;
+      return true;
+    }
     if (SB.mode === 'control' || SB.mode === 'teach') return false;
     if (SB.pinDrag) return true;
     if (SB.mode === 'run') { if (kind === 'down') toast('A run is playing; the mirror is locked.', 'warn'); return true; }
@@ -602,9 +759,48 @@
     }
     return false;
   };
+  window.sbBuildAction = action => {
+    if (tab !== 'sandbox' || SB.mode !== 'build') return false;
+    buildAction(action); return true;
+  };
+  window.sbManualMode = () => SB.mode === 'control' || SB.mode === 'teach';
+  function buildAction(action) {
+    const q = SB.seq, d = sdev();
+    if (!q || SB.home || !d) { toast('Open a chain and connect a phone before building from its mirror.', 'warn'); return; }
+    if (liveRun() || S.teaching || SB.pendingTeach) { toast('Finish playback or the pending Teach review before building.', 'warn'); return; }
+    buildPending++;
+    buildQueue = buildQueue.then(async () => {
+      if (SB.seq !== q || tab !== 'sandbox' || SB.mode !== 'build') throw new Error('Phone action cancelled because the workspace changed. No block was added.');
+      const status = await quietStatus();
+      const phone = status.devices.find(x => x.id === d.id);
+      if (!phone?.connected || !phone.authorized || phone.locked || phone.emergency || phone.teaching || phone.running || phone.sandbox || status.teaching) throw new Error('The phone is not ready for Build. Finish Teach or playback and unlock it first.');
+      if (!phone?.control || phone.control.kind !== 'human') await window.hub.call('take', {deviceId: d.id});
+      controlling = true;
+      // Use the existing acknowledged Human input path. A refused action never becomes a successful-looking block.
+      await window.hub.call('input', {deviceId: d.id, action});
+      if (SB.seq !== q) throw new Error('The workspace closed before the phone action completed.');
+      const type = {tap: 'tap', long_press: 'longPress', swipe: 'swipe', scroll: 'scroll', key: 'key', type: 'typeText'}[action.kind];
+      if (!type) throw new Error('This phone action cannot be represented as a block.');
+      const step = make(type), p = step.params, point = [r4(action.x), r4(action.y)];
+      if (type === 'tap' || type === 'longPress') p.point = point;
+      if (type === 'longPress') p.durationMs = action.ms;
+      if (type === 'swipe') { p.start = point; p.end = [r4(action.toX), r4(action.toY)]; p.durationMs = action.ms; }
+      if (type === 'scroll') { p.direction = action.direction; p.amount = 1; }
+      if (type === 'key') p.key = action.key;
+      if (type === 'typeText') p.text = action.text;
+      const last = def().steps.at(-1);
+      if (type === 'typeText' && last?.type === 'typeText' && String(last.params.text).length + action.text.length <= 2000) {
+        edit(() => { last.params.text += action.text; }, {merge: 'build-type-' + last.id});
+      } else addBlocks([step], {into: 'root', at: def().steps.length});
+      text($('sbhint'), 'Added ' + words(step) + '. Keep using the phone to build the next block.');
+      nextFrame(0);
+    }).catch(e => { toast('Build: ' + errText(e) + ' No new block was saved for this action.', 'bad'); })
+      .finally(() => { buildPending--; });
+  }
+  const quietStatus = () => window.hub.call('status');
   const r4 = v => Math.round(Math.min(1, Math.max(0, v)) * 10000) / 10000;
   async function pickPoint(p) {
-    if (!def()) { toast('Open or create a sequence first.', 'warn'); return; }
+    if (!def()) { toast('Open or create a chain first.', 'warn'); return; }
     const pnt = [r4(p.x), r4(p.y)], f = SB.focus && locate(SB.focus) && locate(SB.focus).step, keys = f ? pointKeys(f) : [];
     const d = sdev();
     let id = f && f.id;
@@ -625,7 +821,7 @@
   }
   function simplify(pts, n) { if (pts.length <= n) return pts; const out = []; for (let i = 0; i < n; i++) out.push(pts[Math.round(i * (pts.length - 1) / (n - 1))]); return out; }
   function pickGesture(raw) {
-    if (!def()) { toast('Open or create a sequence first.', 'warn'); return; }
+    if (!def()) { toast('Open or create a chain first.', 'warn'); return; }
     const pts = raw.map(p => [r4(p[0]), r4(p[1])]), a = pts[0], b = pts[pts.length - 1];
     if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 0.02 && pts.length < 4) { void pickPoint({x: a[0], y: a[1]}); return; }
     // How far the stroke strays from the straight line: a curve is a path.
@@ -685,7 +881,7 @@
     const devEl = $('device'), host = t === 'sandbox' ? $('sbstage') : $('stage');
     if (devEl.parentElement !== host) host.appendChild(devEl);
     if (t !== 'sandbox') { devEl.hidden = false; $('offtag').hidden = true; $('sbpins').hidden = true; }
-    else { void load(); setMode(SB.mode === 'run' || SB.mode === 'teach' ? SB.mode : controlling ? 'control' : SB.mode, true); }
+    else { void load(); setMode(SB.mode, true); }
     setTimeout(fitDevice, 0);
     if (t === 'sandbox') { draw(); poll(); }
   };
@@ -694,12 +890,12 @@
   window.sbBeforeTeach = async () => { if (!SB.seq) return null; if (SB.dirty) await save({silent: true}); return SB.seq.id; };
 
   // ------------------------------------------------------------------ Teach → a run, in one press each way
-  // Teach (its own glowing button): Falcor watches the phone on the mirror at once, no form. It records into the open
+  // Recorded lessons: Falcor watches the phone on the mirror at once, no form. It records into the open
   // sequence while that is still empty, else into a new one. End Teach stops it: a progress bar follows the engine's real
   // stages (engine.ts#teachWork), then the panel says what Falcor saw (the app, taps, typing, pauses, swipes) beside the
   // blocks it built in the timeline, where each can be edited, moved or deleted, and Save to Library names and keeps it.
   const pause = ms => new Promise(r => setTimeout(r, ms));
-  async function toggleTeach() { if (SB.ending) return; if (S.teaching) await endTeach(); else await beginTeach(); }
+  async function toggleTeach() { if (SB.ending) return; window.sbWindows?.show('sbteachtools', true); if (S.teaching) await endTeach(); else await beginTeach(); }
   // Reteach from a step: it and the steps after it are removed (a new version, so History can bring them back), then
   // Teach starts at once on the screen the phone is on, without going Home and without opening the app again; End Teach
   // adds what was shown where the removed steps were.
@@ -713,11 +909,13 @@
     await save({force: true, silent: true});
     $('sbtaught').hidden = true;
     try { S.teaching = await call('teachStart', {deviceId: d.id, name: '', intent: '', home: false, sandbox: {sequenceId: SB.seq.id, launch: false, waits: true, check: true}}); } catch { return; }
+    window.sbWindows?.show('sbteachtools', true);
     setMode('teach', true); render(); draw();
     $('mirrorbox').focus();
     toast('Reteaching from step ' + (at.i + 1) + ': carry on from this screen on the mirror. Press End Teach when you are done.');
   }
   async function beginTeach() {
+    await buildQueue;
     const d = sdev(); if (!d) { toast('Plug in the phone first.', 'warn'); return; }
     if (liveRun()) { toast('A run is playing: pause or stop it first.', 'warn'); return; }
     SB.reteachFrom = null;
@@ -758,7 +956,7 @@
     const box = $('sbtaught');
     box.innerHTML = '<p class="eyebrow">// RECORDING STOPPED · ' + Math.max(0, Math.round(p.elapsedMs / 1000)) + ' S</p><h2>' + icon('rec') + 'What would you like to do?</h2>'
       + '<p class="small">Falcor recorded ' + p.touches + ' interaction' + (p.touches === 1 ? '' : 's') + ' across ' + p.screens + ' screen' + (p.screens === 1 ? '' : 's') + (p.name ? ' in <b>' + esc(p.name) + '</b>' : '') + '.</p>'
-      + '<p class="muted small">Nothing has been analyzed or added to your sequence yet. The empty draft stays in Sandbox if you discard this recording.</p>'
+      + '<p class="muted small">Nothing has been analyzed or added to your chain yet. The empty draft stays in Sandbox if you discard this recording.</p>'
       + (error ? '<p class="red small">' + esc(error) + '</p>' : '')
       + '<div class="row"><button class="primary" data-t="analyze">' + icon('rec') + 'Send for analysis</button><button class="ghost danger" data-t="discard-recording">' + icon('trash') + 'Delete recording</button></div>';
     box.hidden = false;
@@ -808,7 +1006,7 @@
     const title = /^Taught run /.test(def().title) ? (f.app || r.name) + ' run' : def().title;
     box.innerHTML = '<p class="eyebrow">// TAUGHT RUN · ' + esc(secs(s.ms || 0)) + ' recorded</p><h2>' + icon('check') + 'Your run is ready</h2>'
       + '<p class="small">Falcor saw:</p><ul class="taughtlist">' + seen + '</ul>'
-      + '<p class="muted small">' + s.added + ' step' + (s.added === 1 ? ' is' : 's are') + ' in the timeline below. Click one to change it, drag to reorder, Delete removes it, Preview plays it.</p>'
+      + '<p class="muted small">' + s.added + ' step' + (s.added === 1 ? ' is' : 's are') + ' on the workspace grid. Click one to change it, drag to reorder, Delete removes it, Play chain previews it.</p>'
       + (s.skipped && s.skipped.length ? '<p class="sand small">Left out: ' + esc(s.skipped.join(', ')) + '.</p>' : '')
       + '<label>Name<input id="sbtname" maxlength="80" value="' + esc(title) + '"></label>'
       + '<p class="muted small">It is a draft until you publish it: drafts can be edited and run by hand; published runs are in the Library and can be scheduled.</p><div class="row"><button class="primary" data-t="publish">' + icon('check') + 'Publish to Library</button><button data-t="close">' + icon('edit') + 'Keep as draft</button><button class="ghost danger" data-t="discard">' + icon('trash') + 'Discard</button></div>';
@@ -857,18 +1055,26 @@
   }
   $('sbpublish').onclick = () => void publishSeq();
   $('sbundo').onclick = undo; $('sbredo').onclick = redo;
-  $('sbtest').onclick = () => start('test'); $('sbpreview').onclick = () => start('preview'); $('sbstart').onclick = () => start('run');
-  $('sbpause').onclick = () => { const l = liveRun(); if (!l) return; const paused = l.status === 'PAUSED' || l.status === 'NEEDS_ATTENTION'; void ctl(paused ? 'resume' : 'pause', paused ? 'Resumed.' : 'Paused. Resume or Stop when you are ready.')(); };
-  $('sbskip').onclick = ctl('skip', 'Skipped that step.'); $('sbstop').onclick = ctl('stop', 'Stopped.'); $('sbafter').onclick = ctl('stopAfterGroup', 'It stops when this group or loop ends.');
+  $('sbtest').onclick = () => start('test');
+  $('sbplay').onclick = () => { const l = liveRun(); if (!l) return start('preview'); if (l.sequenceId === SB.seq?.id && ['PAUSED', 'NEEDS_ATTENTION'].includes(l.status)) return ctl('resume', 'Resumed from the current position.')(); };
+  $('sbpause').onclick = ctl('pause', 'Paused. Your chain position is held.');
+  $('sbplaystop').onclick = async () => {
+    const l = liveRun();
+    if (l && l.sequenceId !== SB.seq?.id) return;
+    if (l) await sb('stop', {runId: l.runId});
+    SB.resetRunId = l?.runId || SB.runInfo?.id; SB.follow = null;
+    marks(); drawHead(); drawRunbar(); window.sbWorkspace?.resetView();
+    toast('Player reset to the start. Actions already performed on the phone are not undone.');
+  };
+  $('sbskip').onclick = ctl('skip', 'Skipped that step.'); $('sbafter').onclick = ctl('stopAfterGroup', 'It stops when this group or loop ends.');
   // Schedules are the Daily Queue's (queue.js#openScheduler, the same editor as Games and Tasks).
-  const schedule = async () => { if (!SB.seq) { toast('Open a sequence first.', 'warn'); return; } if (SB.dirty) await save({silent: true}); const row = SB.data.sequences.find(x => x.id === SB.seq.id); if (row && !row.published) { toast('"' + def().title + '" is a draft. Publish it to the Library first, then schedule it.', 'warn'); return; } openScheduler({target: {type: 'sequence', id: SB.seq.id}, name: def().title, kind: 'sequence'}); };
-  $('sbsched').onclick = schedule; $('sbprefs').onclick = () => prefsSheet(); $('sbhelp').onclick = () => helpSheet();
-  $('sbqueue').onclick = async () => { if (!SB.seq) return; if (SB.dirty) await save({silent: true}); const d = sdev(); await call('queue', {op: 'add', target: {type: 'sequence', id: SB.seq.id}, deviceId: d && d.id}); toast('Added to today\'s queue: it runs in its turn while Autopilot runs (or press Run Ready on the Phone tab).'); };
-  $('sbsavetask').onclick = async () => { if (!SB.seq) return; await save({silent: true, force: SB.dirty}); await call('queue', {op: 'saveAsTask', id: SB.seq.id, on: true}); await refresh(); toast('Saved, and listed in Tasks with Run now, Schedule and its history.'); };
+  const schedule = async () => { if (!SB.seq) { toast('Open a chain first.', 'warn'); return; } if (SB.dirty) await save({silent: true}); const row = SB.data.sequences.find(x => x.id === SB.seq.id); if (row && !row.published) { toast('"' + def().title + '" is a draft. Publish it to the Library first, then schedule it.', 'warn'); return; } openScheduler({target: {type: 'sequence', id: SB.seq.id}, name: def().title, kind: 'sequence'}); };
+  $('sbprefs').onclick = () => prefsSheet(); $('sbhelp').onclick = () => helpSheet();
   window.sbOpen = id => load().then(() => open(id));
   window.addEventListener('keydown', e => {
     if (tab !== 'sandbox' || $('sbsheet').hidden === false && e.key !== 'Escape') return;
     if (e.key === 'Escape' && !$('sbsheet').hidden) { closeSheet(); return; }
+    if (e.key === 'Escape' && workspace.classList.contains('studio-focus')) { e.preventDefault(); setFocus(false); return; }
     const k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
     if (mod && k === 's') { e.preventDefault(); void save(); return; }
     if (mod && k === 'enter') { e.preventDefault(); void start('run'); return; }
@@ -904,11 +1110,63 @@
   const head = (eye, title) => '<div class="top"><div><p class="eyebrow">// ' + esc(eye) + '</p><h2>' + esc(title) + '</h2></div><button class="ghost icon" data-close title="Close">' + icon('close') + '</button></div>';
   $('sbsheetbody').addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheet(); });
 
+  $('sbai').onclick = () => aiSheet();
+  function aiSheet() {
+    const editor = SB.seq;
+    let generated = null, pending = false;
+    sheet(head('FALCOR CHAT', 'What shall we build?') + '<div class="sbaichat"><p>Describe the actions you want. I will build an editable draft for you to review.</p></div>'
+      + '<label>Build<select id="sbaikind"><option value="block"' + (!editor ? ' disabled' : '') + '>Custom block · add to this chain</option><option value="sequence"' + (!editor ? ' selected' : '') + '>New chain · individual action blocks</option></select></label>'
+      + '<label>Your idea<textarea id="sbaiprompt" rows="4" maxlength="3000" placeholder="Tap Daily reward, wait 2 seconds, then tap Claim and check for Success"></textarea></label>'
+      + '<p class="muted small">Uses your Settings > AI chat model. Only this description is sent, not your current chain. Nothing runs or publishes automatically.</p>'
+      + '<div class="row"><button class="primary" id="sbaigenerate">' + icon('chat') + 'Build draft</button><button data-close>Cancel</button></div>'
+      + '<p id="sbaistatus" role="status"></p><div class="sbaipreview" id="sbaipreview" hidden></div><button class="primary" id="sbaiapply" hidden></button>', b => {
+      const kind = b.querySelector('#sbaikind'), prompt = b.querySelector('#sbaiprompt'), status = b.querySelector('#sbaistatus'), preview = b.querySelector('#sbaipreview'), apply = b.querySelector('#sbaiapply'), generate = b.querySelector('#sbaigenerate');
+      const active = () => b.contains(status) && !$('sbsheet').hidden;
+      const reset = () => { generated = null; apply.hidden = preview.hidden = true; status.textContent = ''; };
+      kind.onchange = prompt.oninput = reset;
+      generate.onclick = async () => {
+        if (pending || !prompt.value.trim()) { if (!pending) status.textContent = 'Describe what you want Falcor to build first.'; return; }
+        pending = true; generated = null; apply.hidden = preview.hidden = true; generate.disabled = kind.disabled = prompt.disabled = true; status.textContent = 'Falcor is building your draft...';
+        try {
+          const result = await quiet('generate', {kind: kind.value, prompt: prompt.value});
+          if (!active()) return;
+          generated = result; status.textContent = result.warnings.join(' ');
+          const outline = steps => '<ol>' + steps.map(s => '<li>' + esc(words(s)) + (s.children ? outline(s.children) : '') + (s.else?.length ? '<b>Else</b>' + outline(s.else) : '') + '</li>').join('') + '</ol>';
+          preview.innerHTML = '<h3>' + esc(result.definition.title) + '</h3><p>' + esc(result.definition.description) + '</p>' + outline(result.definition.steps);
+          preview.hidden = apply.hidden = false; apply.textContent = result.kind === 'block' ? 'Add custom block to this chain' : 'Open as a new draft';
+        } catch (e) { if (active()) status.textContent = errText(e); }
+        finally { pending = false; if (active()) generate.disabled = kind.disabled = prompt.disabled = false; }
+      };
+      apply.onclick = async () => {
+        if (!generated || pending) return;
+        const result = generated; pending = true; apply.disabled = true;
+        try {
+          if (result.kind === 'block') {
+            if (!editor || SB.seq !== editor) throw new Error('The editor changed. Open Falcor from the chain you want to add to.');
+            const snapshot = JSON.stringify(def()), candidate = JSON.parse(snapshot), at = placeAfterFocus(), items = fresh(result.definition.steps);
+            const list = at.into === 'root' ? candidate.steps : (() => { let found; each(candidate.steps, s => { if (s.id === at.into.split(':')[0]) found = s; }); return found[at.into.split(':')[1]]; })();
+            list.splice(at.at, 0, ...items);
+            await quiet('check', {definition: candidate});
+            if (!active() || SB.seq !== editor || JSON.stringify(def()) !== snapshot) throw new Error('Your chain changed. Review it and press Add again.');
+            items.forEach(s => SB.folded.add(s.id)); addBlocks(items, at); closeSheet(); toast('Custom block added. Your existing blocks are unchanged.');
+          } else {
+            if (SB.dirty && !confirmLeave()) return;
+            const definition = {...result.definition, target: {...result.definition.target, deviceId: sdev()?.id || null}};
+            const r = await quiet('create', {definition}); if (!active()) return;
+            closeSheet(); await refresh(); await open(r.id, {newWorkspace: true}); toast('AI draft ready. Review the actions before playing.');
+          }
+        } catch (e) { if (active()) status.textContent = errText(e); }
+        finally { pending = false; if (active()) apply.disabled = false; }
+      };
+      prompt.focus();
+    });
+  }
+
   function newSheet(into) {
     if (!SB.cat) return;
     const d = sdev(), tpl = [['blank', 'Blank', 'Start with nothing.'], ['starter', 'Example', SB.cat.starter.description], ...SB.cat.presets.map(p => [p.id, p.name, p.help || ''])];
     let pick = 'blank';
-    sheet(head('NEW SEQUENCE', 'New sequence') + '<div class="grid2"><label>Name<input id="sbnname" maxlength="80" placeholder="e.g. Morning check-in"></label>' + '<label>Phone<select id="sbndev">' + S.devices.map(x => '<option value="' + esc(x.id) + '"' + (d && x.id === d.id ? ' selected' : '') + '>' + esc(x.label) + '</option>').join('') + '<option value="">No phone yet (a draft)</option></select></label></div>'
+    sheet(head('NEW CHAIN', 'New chain') + '<div class="grid2"><label>Name<input id="sbnname" maxlength="80" placeholder="e.g. Morning check-in"></label>' + '<label>Phone<select id="sbndev">' + S.devices.map(x => '<option value="' + esc(x.id) + '"' + (d && x.id === d.id ? ' selected' : '') + '>' + esc(x.label) + '</option>').join('') + '<option value="">No phone yet (a draft)</option></select></label></div>'
       + '<p class="eyebrow">// START FROM</p><div class="opts" id="sbntpl">' + tpl.map(([id, n, h]) => '<button type="button" class="opt' + (id === pick ? ' on' : '') + '" data-tpl="' + esc(id) + '"><b>' + esc(n) + '</b><small>' + esc(h) + '</small></button>').join('') + '</div>'
       + '<p class="muted small">Or press Teach after creating it and show Falcor on the mirror: what you do becomes blocks.</p><div class="row"><button class="primary" id="sbncreate">' + icon('plus') + 'Create</button><button data-close>Cancel</button>' + (into ? '<button id="sbnimport">' + icon('export') + 'Import .json</button>' : '') + '</div>', b => {
       const imp = b.querySelector('#sbnimport'); if (imp) imp.onclick = async () => { const r = await sb('import'); if (r) { await refresh(); await open(r.id); toast('Imported. Check the app and points before you run it.'); } };
@@ -916,11 +1174,11 @@
       b.querySelector('#sbncreate').onclick = async () => {
         if (SB.dirty && !confirmLeave()) return;
         const r = await sb('create', {title: b.querySelector('#sbnname').value, deviceId: b.querySelector('#sbndev').value || null, template: pick});
-        closeSheet(); await refresh(); await open(r.id); toast('Created. Add blocks from the library, pick points on the mirror, then Preview.');
+        closeSheet(); await refresh(); await open(r.id, {newWorkspace: true}); toast('Created. Add blocks from the library, pick points on the mirror, then Play chain.');
       };
     }, into);
   }
-  function confirmLeave() { return window.confirm('Your changes to "' + def().title + '" are not saved. Leave them? (They stay as a draft for this sequence.)'); }
+  function confirmLeave() { return window.confirm('Your changes to "' + def().title + '" are not saved. Leave them? (They stay as a draft for this chain.)'); }
   function openSheet(into) {
     if (!SB.data) return;
     let q = '', sort = local.get('sort', 'updated'), folder = '';
@@ -963,7 +1221,7 @@
   }
   function renderAll() { draw(); }
   // The tab's landing: Create (what the Sandbox is, and ways to start) and My sequences. The editor is its own page.
-  function goHome(v) { SB.home = v || (SB.data && SB.data.sequences.length ? 'mine' : 'create'); SB.homeDrawn = ''; draw(); }
+  function goHome(v) { if (buildPending) { toast('Wait for the phone action to finish before leaving this draft.', 'warn'); return; } setFocus(false); SB.home = v || (SB.data && SB.data.sequences.length ? 'mine' : 'create'); SB.homeDrawn = ''; draw(); }
   function drawHome(force) {
     if (SB.home && !$('rec').hidden) SB.home = null; // Teach records on the mirror: the editor's stage stays in view.
     const on = !!SB.home; cls(document.querySelector('[data-pane="sandbox"]'), 'home', on); $('sbhome').hidden = !on;
@@ -980,32 +1238,33 @@
       // (the tab's own heading, // SANDBOX, introduces it: no second heading here)
     } else openSheet(b);
   }
-  // The start box (the owner, 2026-10-21): what the Sandbox opens on, over the workspace grid. A quick tour, Teach, the
-  // example, the drafts, or a blank workspace that skips all of it.
+  // The start box offers entry points; AI drafting and Teach live inside every workspace.
   function startBox(b) {
     const drafts = SB.data.sequences.filter(s => !s.published).length;
     const opt = (k, ic, t, sub, cls = '') => '<button class="sbsopt ' + cls + '" data-start="' + k + '" aria-label="' + esc(t + '. ' + sub) + '">' + icon(ic) + '<span><b>' + esc(t) + '</b><small>' + esc(sub) + '</small></span></button>';
-    b.innerHTML = '<div class="sbstart rise"><p class="eyebrow">// SANDBOX</p><h2>What do you want to create?</h2><p class="muted small">Build a run from blocks or show Falcor once on the phone. New here? Take the one-minute tour.</p>'
-      + '<div class="sbsopts">' + opt('tour', 'help', 'Quick tour', 'A blank run and a one-minute walk through the workspace', 'tour') + opt('teach', 'rec', 'Teach Falcor', 'Use the phone on the mirror; Falcor builds the run') + opt('example', 'book', 'Start from the example', 'A finished run to look at and change')
-      + opt('drafts', 'sandbox', 'Your drafts' + (drafts ? ' · ' + drafts : ''), drafts ? 'Pick up where you left off' : 'Nothing saved yet') + '</div>'
-      + '<button class="sbsblank" data-start="blank" aria-label="Blank workspace. Skip all of this">' + icon('plus') + 'Blank workspace<small>skip all of this</small></button></div>';
+    b.innerHTML = '<div class="sbstart rise"><p class="eyebrow">// SANDBOX</p><h2>What do you want to create?</h2><p class="muted small">Start fresh, explore a template or continue a draft. Build automatically adds blocks as you use the phone. Build with Falcor can also draft a chain from your idea.</p>'
+      + '<div class="sbsopts">' + opt('blank', 'plus', 'Blank workspace', 'Start fresh and build your own chain') + opt('templates', 'book', 'Templates', 'Explore examples and ready-made starting points')
+      + opt('drafts', 'sandbox', 'My drafts' + (drafts ? ' · ' + drafts : ''), drafts ? 'Pick up where you left off' : 'Your saved work will appear here')
+      + opt('tour', 'help', 'Quick tour', 'A one-minute guide to the workspace', 'tour') + '</div></div>';
     b.onclick = async e => {
       const o = e.target.closest('[data-start]'); if (!o) return; const k = o.dataset.start;
-      if (k === 'drafts') { goHome('mine'); return; }
-      const d = sdev(), r = await sb('create', {title: '', deviceId: d ? d.id : null, template: k === 'example' ? 'starter' : 'blank'});
+      if (k === 'drafts') { SB.listPub = false; goHome('mine'); return; }
+      if (k === 'templates') { goHome('create'); return; }
+      const d = sdev(), r = await sb('create', {title: '', deviceId: d ? d.id : null, template: 'blank'});
       await refresh(); await open(r.id);
       if (k === 'tour') tour(0);
-      if (k === 'teach') { const t = $('sbteach'); if (t && !t.disabled) t.click(); else toast('Plug in the phone, then press Teach.', 'warn'); }
     };
   }
   // The quick tour: a light on each part of the editor in turn, with Back, Next and Skip.
-  const TOUR = [['sblib', 'Blocks', 'Click a block to add it to your run, or drag it onto the timeline.'], ['sbstage', 'Your phone, live', 'Pick target and Pick gesture place a step where you point; Control lets you use the phone yourself.'],
-    ['sbteach', 'Teach', 'Use the phone here and Falcor turns what you do into blocks for you.'], ['sbtl', 'The timeline', 'Your run, step by step. Click a step for its settings, or drag it to move it.'],
-    ['sbstart', 'Run and publish', 'Preview or Run it on the phone, then Publish to put it in your Library, where it can be scheduled.']];
+  const TOUR = [['sblib', 'Blocks', 'Click a block to add it to your run, or drag it onto the grid.'], ['sbstage', 'Your phone, live', 'Build uses the phone and adds each action as a block. Unlock its window to move, resize or pop it out. View is look-only.'],
+    ['sbpanels', 'Build tools', 'Build mode adds blocks automatically for each phone action. Add blocks opens the catalog; Build with Falcor turns a written idea into blocks. Windows opens optional tools and restores hidden windows.'], ['sbtl', 'Your workspace', 'Your blocks live on the grid. Roll the mouse wheel or pinch to zoom, drag empty space to pan, and click a block for settings. Drag a block to reorder it.'],
+    ['sbplay', 'Chain player', 'Play runs the chain on your phone. Pause holds your place; Resume continues. Stop resets the player, not the phone. Publish separately when your chain is ready.']];
   function tour(i) {
     let ov = document.getElementById('sbtour'); if (!ov) { ov = document.createElement('div'); ov.id = 'sbtour'; ov.className = 'sbtour'; document.body.appendChild(ov); }
     const step = TOUR[i], el = step && document.getElementById(step[0]);
-    if (!step) { ov.remove(); toast('That is the tour. Add your first block, or press Teach.'); return; }
+    if (step?.[0] === 'sblib') window.sbWorkspace?.openDrawer('blocks', true);
+    else window.sbWorkspace?.openDrawer('blocks', false);
+    if (!step) { ov.remove(); toast('That is the tour. Use the phone in Build mode to add your first block automatically.'); return; }
     if (!el || !el.offsetParent) { tour(i + 1); return; }
     const r = el.getBoundingClientRect(), W = innerWidth, H = innerHeight, cw = 320;
     const below = r.bottom + 190 < H, x = Math.min(Math.max(12, r.left + r.width / 2 - cw / 2), W - cw - 12), y = below ? r.bottom + 12 : Math.max(12, r.top - 182);
@@ -1024,7 +1283,7 @@
       + '<p class="eyebrow">// RUNS</p><ul class="seqlist">' + (runs.map(r => '<li><span>' + esc(r.status.toLowerCase()) + '</span><div class="meta">' + new Date(r.startedAt).toLocaleString() + ' · v' + r.revision + ' · ' + esc(r.reason || '') + ' · ' + (r.actions || 0) + ' actions</div><div class="row"><button class="small" data-log="' + esc(r.id) + '">Log</button></div></li>').join('') || '<li class="muted small">Not run yet.</li>') + '</ul>', b => {
       b.onclick = async e => {
         const rv = e.target.closest('[data-rev]'); if (rv) { if (SB.dirty && !confirmLeave()) return; const r = await sb('restore', {id: SB.seq.id, revisionId: rv.dataset.rev}); closeSheet(); await open(SB.seq.id, {discardDraft: true}); toast('Restored as version ' + r.number + '.'); }
-        const lg = e.target.closest('[data-log]'); if (lg) { closeSheet(); SB.logRun = lg.dataset.log; SB.view = 'log'; document.querySelectorAll('#sbviews button').forEach(x => cls(x, 'on', x.dataset.v === 'log')); draw(); poll(); }
+        const lg = e.target.closest('[data-log]'); if (lg) { closeSheet(); SB.logRun = lg.dataset.log; SB.view = 'log'; $('sbviews').querySelectorAll('button').forEach(x => cls(x, 'on', x.dataset.v === 'log')); draw(); poll(); }
       };
     });
   }
@@ -1041,7 +1300,7 @@
     const chk = (k, l) => '<label class="check"><input type="checkbox" data-pref="' + k + '"' + (p[k] ? ' checked' : '') + '> ' + esc(l) + '</label>';
     sheet(head('SANDBOX SETTINGS', 'Settings') + '<div class="grid2">' + chk('grid', 'Grid over the mirror') + chk('arrows', 'Arrows for swipes and paths') + chk('autosave', 'Keep unsaved changes as a draft') + chk('trail', 'Show touch trails') + '</div>'
       + '<div class="grid3"><label>Pins\' opacity<input type="number" data-pref="overlay" min="0.2" max="1" step="0.1" value="' + p.overlay + '"></label><label>New Wait (ms)<input type="number" data-pref="defaultWaitMs" min="50" max="600000" value="' + p.defaultWaitMs + '"></label><label>New long press (ms)<input type="number" data-pref="defaultHoldMs" min="400" max="8000" value="' + p.defaultHoldMs + '"></label>'
-      + '<label>New swipe (ms)<input type="number" data-pref="gestureMs" min="50" max="3000" value="' + p.gestureMs + '"></label><label>New sequences: on error<select data-pref="onError"><option value="review">pause for me</option><option value="stop">stop</option><option value="skip">skip the step</option></select></label><label>New sequences: max run (min)<input type="number" data-pref="maxRunMin" min="1" max="360" value="' + p.maxRunMin + '"></label>'
+      + '<label>New swipe (ms)<input type="number" data-pref="gestureMs" min="50" max="3000" value="' + p.gestureMs + '"></label><label>New chains: on error<select data-pref="onError"><option value="review">pause for me</option><option value="stop">stop</option><option value="skip">skip the step</option></select></label><label>New chains: max run (min)<input type="number" data-pref="maxRunMin" min="1" max="360" value="' + p.maxRunMin + '"></label>'
       + '<label>Run log<select data-pref="logLevel"><option value="steps">steps</option><option value="actions">every action</option></select></label><label>Pictures kept per run<input type="number" data-pref="keepShots" min="0" max="500" value="' + p.keepShots + '"></label><label>Time zone<input data-pref="tz" value="' + esc(p.tz || '') + '"></label></div>'
       + '<div class="row"><button class="primary" id="sbprefsave">Save settings</button><button data-close>Close</button></div>', b => {
       b.querySelector('[data-pref="onError"]').value = p.onError; b.querySelector('[data-pref="logLevel"]').value = p.logLevel;
@@ -1054,7 +1313,7 @@
   }
   function helpSheet() {
     const keys = [['Ctrl+S', 'Save a new version'], ['Ctrl+Z / Ctrl+Y', 'Undo / redo (100 steps)'], ['Ctrl+C / X / V / D', 'Copy, cut, paste, duplicate'], ['Ctrl+G', 'Group the selected steps'], ['Delete', 'Delete the selected steps'], ['← → ↑ ↓', 'Select the previous / next step (Shift adds)'], ['Alt+↑ / Alt+↓', 'Move the step'], ['E', 'Turn the step on or off'], ['T', 'Test the selected step'], ['Ctrl+Enter', 'Save and start'], ['V C P G R', 'View, Control, Pick target, Pick gesture, Teach'], ['Esc', 'Cancel picking / clear the selection'], ['Ctrl+Shift+X', 'Emergency Stop (everything)']];
-    sheet(head('HELP', 'Sandbox') + '<p class="eyebrow">// FIVE STEPS</p><ol class="walk"><li><b>New</b>: name it and pick the phone (or start from the example or a preset).</li><li><b>Add blocks</b>: click or drag them from the library. Taps and swipes ask for a point: click or drag on the mirror (nothing is sent to the phone while picking).</li><li><b>Or Teach</b>: press Teach and use the app on the mirror; Stop adds what you did as blocks.</li><li><b>Test step / Preview</b>: watch it on the phone; Pause, Stop and Stop after group are always at the top.</li><li><b>Save, Run now or Schedule</b>: every save is a version; a schedule puts it in the Daily Queue (it runs while Autopilot runs, or by itself with Automatic Start).</li></ol>'
+    sheet(head('HELP', 'Sandbox') + '<p class="eyebrow">// FIVE STEPS</p><ol class="walk"><li><b>New</b>: name your chain and pick the phone (or start from an example). Focus opens a larger workspace; Exit focus or Escape restores it.</li><li><b>Build</b>: Add blocks opens the action catalog. Block details edits your selection. Build with Falcor drafts blocks from an idea. Roll your mouse wheel or pinch to zoom; drag empty grid to pan.</li><li><b>Phone tools</b>: Build records successful phone actions as blocks. Pick target and Pick gesture only edit points; View sends no input. Teach records a lesson for you to review and analyze.</li><li><b>Chain player</b>: Play chain operates the phone. Pause holds the current step; Resume continues. Stop / reset returns the player to the beginning, without undoing phone actions. Test selected block runs just your selection.</li><li><b>Chain tools</b>: Save draft keeps your work in Sandbox. Publish to Library makes it available to run or schedule there. Run log shows the history, separately from the player.</li></ol>'
       + '<p class="eyebrow">// SHORTCUTS</p><div class="keys">' + keys.map(([k, v]) => '<kbd>' + esc(k) + '</kbd><span>' + esc(v) + '</span>').join('') + '</div>'
       + '<p class="eyebrow">// IF SOMETHING IS WRONG</p><ul class="walk"><li>A tap lands in the wrong place: the screen may have turned, or the button moved. Give the tap an anchor (Pick sets one from the button under the point) or use Tap by label.</li><li>It pauses with "needs you": a sign-in, payment, code or permission screen came up. Those are always yours. Do it on the phone, then Resume.</li><li>"Input unavailable": unlock the phone and allow USB debugging. Falcor never unlocks it.</li><li>The queue says missed: the phone was not ready or Autopilot was off while its start window was open.</li><li>Some blocks are greyed out: the phone link does not offer them (the reason is on the block).</li></ul><div class="row"><button class="primary" data-close>Got it</button></div>');
   }
@@ -1066,7 +1325,7 @@
     if (!SB.logRun && runs[0]) { SB.logRun = runs[0].id; poll(); }
     const evs = SB.eventsFor === SB.logRun ? SB.events : [];
     const html = '<div class="runs">' + (l && l.sequenceId === SB.seq.id && !runs.some(r => r.id === l.runId) ? '<button class="small on" data-run="' + esc(l.runId) + '">now</button>' : '') + runs.map(r => '<button class="small' + (r.id === SB.logRun ? ' on' : '') + '" data-run="' + esc(r.id) + '">' + esc(new Date(r.startedAt).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})) + ' · ' + esc(r.status.toLowerCase()) + '</button>').join('') + '</div>'
-      + (evs.length ? '<ol>' + evs.slice(-300).map(e => '<li><time>' + new Date(e.at).toLocaleTimeString([], {hour12: false}) + '</time><span class="t-' + esc(e.type) + '">' + esc(e.type) + '</span><span>' + esc(e.text) + (e.ms !== undefined ? ' · ' + fmtMs(e.ms) : '') + '</span>' + (e.shot ? '<img data-shot="' + esc(e.shot) + '" alt="">' : '<span></span>') + '</li>').join('') + '</ol>' : '<p class="muted small">' + (runs.length ? 'Loading…' : 'No runs yet. Press Preview or Start.') + '</p>');
+      + (evs.length ? '<ol>' + evs.slice(-300).map(e => '<li><time>' + new Date(e.at).toLocaleTimeString([], {hour12: false}) + '</time><span class="t-' + esc(e.type) + '">' + esc(e.type) + '</span><span>' + esc(e.text) + (e.ms !== undefined ? ' · ' + fmtMs(e.ms) : '') + '</span>' + (e.shot ? '<img data-shot="' + esc(e.shot) + '" alt="">' : '<span></span>') + '</li>').join('') + '</ol>' : '<p class="muted small">' + (runs.length ? 'Loading…' : 'No runs yet. Press Play chain.') + '</p>');
     if (box.dataset.h !== html) { const stick = box.scrollTop + box.clientHeight >= box.scrollHeight - 8; box.dataset.h = html; box.innerHTML = html; if (stick) box.scrollTop = box.scrollHeight; }
     for (const img of box.querySelectorAll('img[data-shot]:not([src])')) { const id = img.dataset.shot; const u = shots.get(id) || await quiet('shot', {shotId: id}).catch(() => null); if (u) { shots.set(id, u); img.src = u; } }
   }

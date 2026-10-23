@@ -1,9 +1,9 @@
-// The Profile tab (the owner, 2026-10-21): your picture, name, credentials and About me (kept on this computer and shared
+// The Profile tab: your picture and display name (kept on this computer and shared
 // with the phone app, IPC `profile`), the games you are active in, your record and rank, your workshop, and what Falcor
 // recommends next. A fixed page (a bento, nothing moves). Loaded after app.js and uses its helpers (S, call, go, $, P).
 (() => {
   const RANKS = [[0, 'Hatchling'], [5, 'Apprentice'], [25, 'Adept'], [100, 'Master of the Craft'], [500, 'Dragon Rider']];
-  let me = null, loading = false, saveT = 0, pending = {};   // (changes typed in quick succession are saved together)
+  let me = null, loading = false, saving = 0, saveT = 0, pending = {};   // (changes typed in quick succession are saved together)
   const num = v => (Number(v) || 0).toLocaleString();
   const tile = (v, label, cls = '') => '<div class="ptile ' + cls + '"><b>' + esc(v) + '</b><span>' + esc(label) + '</span></div>';
   async function load() {
@@ -13,7 +13,10 @@
   // The form gets the saved values once (never while the owner is typing in it).
   function fill() {
     if (!me) return;
-    for (const [id, k] of [['profname', 'name'], ['profcred', 'cred'], ['profabout', 'about']]) if (document.activeElement !== $(id)) $(id).value = me[k] || '';
+    if (!saving && !Object.keys(pending).length) {
+      if (document.activeElement !== $('profname')) $('profname').value = me.name || '';
+      if (document.activeElement !== $('profusername')) $('profusername').value = (me.username || '').replace(/^\/+/, '');
+    }
     drawPic(); look();
     text($('profsince'), 'With Falcor since ' + new Date(me.since).toLocaleDateString([], {month: 'long', year: 'numeric'}));
   }
@@ -36,14 +39,15 @@
     const has = !!(me && me.pic);
     $('profimg').hidden = !has; if (has) $('profimg').src = me.pic;
     $('profinit').hidden = has; text($('profinit'), ((me && me.name) || '?').trim().slice(0, 1).toUpperCase() || '?');
-    text($('profshow'), (me && me.name) || 'Your name'); text($('profcredshow'), (me && me.cred) || 'Add your credentials in About you');
     $('profpicdel').hidden = !has;
   }
   async function save(patch) {
+    saving++;
     try { me = await call('profile', {op: 'save', patch}); text($('profsaved'), 'Saved'); setTimeout(() => text($('profsaved'), ''), 1600); drawPic(); look(); }
     catch (e) { toast(errText(e), 'bad'); }
+    finally { saving--; fill(); }
   }
-  for (const [id, k] of [['profname', 'name'], ['profcred', 'cred'], ['profabout', 'about']]) $(id).addEventListener('input', () => { pending[k] = $(id).value; clearTimeout(saveT); text($('profsaved'), '…'); saveT = setTimeout(() => { const p = pending; pending = {}; void save(p); }, 600); });
+  for (const [id, key] of [['profname', 'name'], ['profusername', 'username']]) $(id).addEventListener('input', () => { if (key === 'username') $(id).value = $(id).value.replace(/^\/+/, ''); pending[key] = $(id).value; clearTimeout(saveT); text($('profsaved'), '…'); saveT = setTimeout(() => { const p = pending; pending = {}; void save(p); }, 600); });
   $('profavatar').onclick = () => $('proffile').click();
   $('profpicdel').onclick = () => void save({pic: null});
   // Any picture: a GIF up to 1.5 MB is kept as it is (it keeps moving); anything else is cut to its centre square at 512 px.
@@ -86,8 +90,17 @@
     const r = rank(all.verified || 0);
     text($('profrank'), r.name); $('profbar').style.width = r.pct + '%'; text($('profnext'), r.next);
     // Active now: running first, then what has open goals or needs the owner.
-    const act = list.filter(g => running(g) || g.active || g.needsYou || g.status === 'active').sort((a, b) => Number(running(b)) - Number(running(a)) || (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, 6);
-    htmlOnce($('profactive'), act.length ? act.map(g => { const s = gameState(g); return '<button class="pgame" data-pkg="' + esc(g.pkg) + '"><span class="pgicon">' + iconHtml(g) + '</span><span class="pgtxt"><b>' + esc(g.name) + '</b><span class="' + esc(s.mood) + '">' + esc(s.label) + '</span></span></button>'; }).join('') : '<p class="muted small">Nothing active. Capture an offer or start a game\'s Autopilot.</p>');
+    const act = list.filter(g => running(g) || g.active || g.needsYou || g.status === 'active').sort((a, b) => Number(running(b)) - Number(running(a)) || (b.updatedAt || 0) - (a.updatedAt || 0));
+    htmlOnce($('profactive'), act.length ? act.map(g => {
+      const s = gameState(g), goals = g.goals, earned = (g.totals || []).filter(t => t.earned);
+      const next = g.nextGoal || (g.tasks || []).find(t => !['VERIFIED', 'RECEIVED'].includes(t.state))?.objective || (g.objectives || [])[0];
+      return '<button class="pgame" data-pkg="' + esc(g.pkg) + '" aria-label="Open ' + esc(g.name) + '"><span class="pgart"><span class="pgicon">' + iconHtml(g) + '</span><span class="pgplatform">' + esc((g.platforms || []).join(' / ') || 'YOUR GAME') + '</span></span>'
+        + '<span class="pgtxt"><b>' + esc(g.name) + '</b><span class="pgstate ' + esc(s.mood) + '">' + esc(s.label) + '</span></span>'
+        + '<span class="pgfacts"><span><small>' + (goals?.of ? 'Milestones' : 'Runs') + '</small><b>' + esc(goals?.of ? goals.reached + ' / ' + goals.of : num(g.runs)) + '</b></span><span><small>' + (earned.length ? 'Earned' : 'Verified runs') + '</small><b>' + esc(earned.length ? earned.map(t => P.money(t.earned, t.unit)).join(' + ') : num(g.verified)) + '</b></span></span>'
+        + '<span class="pgnext"><small>NEXT GOAL</small><span>' + esc(next || (g.needsYou ? 'Review the step waiting for you.' : 'Choose your next run in game details.')) + '</span></span>'
+        + (g.deadline?.text ? '<span class="pgdeadline">' + esc(g.deadline.text) + '</span>' : '')
+        + '<span class="pgopen">Open game ' + icon('chevron') + '</span></button>';
+    }).join('') : '<p class="muted small">Nothing active. Capture an offer or start a game\'s Autopilot.</p>');
     htmlOnce($('proftiles'), tile(num(all.runs), 'runs') + tile(num(all.verified), 'verified', 'g') + tile(Math.round((all.completionRate || 0) * 100) + '%', 'complete') + tile(num(today.runs), 'today'));
     const earned = {}; for (const g of list) for (const t of g.totals || []) if (t.earned) earned[t.unit] = (earned[t.unit] || 0) + t.earned;
     htmlOnce($('profearn'), Object.keys(earned).length ? '<span class="muted small">Verified earnings</span><div class="pearn">' + Object.entries(earned).map(([u, v]) => '<span>' + esc(P.money(v, u)) + '</span>').join('') + '</div>' : '<span class="muted small">Verified earnings show here once a goal pays out.</span>');
