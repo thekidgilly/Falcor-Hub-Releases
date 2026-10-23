@@ -18,14 +18,8 @@ async function call(name, args) {
   try { return await window.hub.call(name, args); }
   catch (e) { toast(errText(e), 'bad'); throw e; }
 }
-// Toasts: blue done, sand attention, red errors (errors stay until closed). No layout shift.
-function toast(msg, kind = 'ok') {
-  const t = P.el('<div class="toast ' + (kind === 'bad' ? 'bad' : kind === 'warn' ? 'warn' : '') + '"><span class="led ' + (kind === 'bad' ? 'bad' : kind === 'warn' ? 'warn' : 'on') + '"></span><span>' + esc(msg) + '</span><button class="ghost small" title="Close">×</button></div>');
-  t.querySelector('button').onclick = () => P.motion.dismiss(t);
-  $('toasts').appendChild(t);
-  while ($('toasts').children.length > 4) $('toasts').firstElementChild.remove();
-  if (kind !== 'bad') setTimeout(() => P.motion.dismiss(t), kind === 'warn' ? 7000 : 4000);
-}
+// Notifications: typed see-through lines (blue prompt done, sand attention, red errors), gone after a few seconds.
+function toast(msg, kind = 'ok') { P.notify($('toasts'), String(msg), kind, {max: 4}); }
 const flash = (m, bad) => toast(m, bad ? 'bad' : 'ok');
 // −/+ pixel buttons for number inputs (the browser's spinners are hidden).
 function numbers(root = document) {
@@ -93,6 +87,7 @@ let wasEmergency = false, prevStates = new Map(), autoSeen = null;
 function render() {
   if (!S) return;
   const d = dev(); deviceId = d ? d.id : null;
+  renderMirrorState(d);
   renderPhoneCap();
   const human = !!(d && d.control && d.control.kind === 'human');
   if (controlling !== human) controlling = human;
@@ -190,16 +185,9 @@ $('clear').onclick = async () => { $('ebar').classList.add('stepout'); await cal
 
 // ------------------------------------------------------------------ phone
 function renderPhone(d) {
-  const ready = !!(d && d.connected && d.authorized && !d.locked);
-  const steps = [
-    ['Connect the phone with a USB-C cable that carries data', !!(d && d.connected), 'Many cables only charge. Try another cable or port.'],
-    ['Turn on USB debugging and tap Allow on the phone', !!(d && d.authorized), 'See "Settings for total control" below.'],
-    ['Unlock the phone', !!(d && d.authorized && !d.locked), 'Falcor never unlocks it for you.'],
-  ];
-  const first = steps.findIndex(s => !s[1]);
-  htmlOnce($('checks'), steps.map(([t, ok, hint], i) => '<li class="' + (ok ? 'done' : i === first ? 'now' : '') + '">' + (ok ? icon('check') : '<span class="led ' + (i === first ? 'warn' : '') + '"></span>') + '<span>' + esc(t) + (i === first ? '<br><span class="muted small">' + esc(hint) + '</span>' : '') + '</span></li>').join('') + (!S.adb ? '<li class="now red">Android platform tools are missing from this install. Reinstall Falcor.Hub.</li>' : ''));
-  $('setup').hidden = ready; $('phonegrid').hidden = !ready;
-  if (!ready) { if (window.renderDesk) renderDesk(d, false); return; }
+  // An empty device is presentation-only; control still uses dev() and the engine's readiness checks.
+  d = d || {id: '', label: 'No phone connected', connected: false, authorized: false, locked: false};
+  $('phonegrid').hidden = false;
   $('devpick').hidden = S.devices.length < 2;
   if (S.devices.length > 1) htmlOnce($('devpick'), S.devices.map(x => '<option value="' + esc(x.id) + '"' + (x.id === d.id ? ' selected' : '') + '>' + esc(x.label) + '</option>').join(''));
   text($('devname'), d.label);
@@ -211,8 +199,10 @@ function renderPhone(d) {
   $('d-batt').hidden = $('d-batt-l').hidden = d.battery === null || d.battery === undefined; text($('d-batt'), d.battery != null ? d.battery + '%' : '');
   text($('d-control'), d.control ? (d.control.kind === 'human' ? 'You' : 'Falcor') : 'Falcor idle');
   for (const p of [$('devicepanel'), $('mission')]) cls(p, 'shine', !!d.autopilot);
+  const unavailable = !!mirrorIssue(dev());
   $('take').hidden = controlling; $('release').hidden = !controlling || !!S.teaching;
-  $('viewer').disabled = S.simulated || !S.scrcpy;
+  for (const b of document.querySelectorAll('#toolbar [data-key], #kbd, #take, #phonecap')) b.disabled = unavailable;
+  $('viewer').disabled = unavailable || S.simulated || !S.scrcpy;
   $('hint').hidden = !controlling;
   // The device frame: control (sand), recording (red), Falcor acting (brackets pulse).
   const devEl = $('device');
@@ -226,6 +216,29 @@ function renderPhone(d) {
   renderLog();
   // The desk of windows (desk.js): laid out the first time it has a size; the windows from its menu draw themselves.
   if (window.renderDesk) renderDesk(d, true);
+}
+function mirrorIssue(d) {
+  return !d || !d.connected ? 'Phone not connected' : !d.authorized ? 'Allow USB debugging' : d.locked ? 'Phone locked or screen off' : '';
+}
+function renderMirrorState(d) {
+  const issue = mirrorIssue(d), was = $('device').classList.contains('unavailable');
+  cls($('device'), 'unavailable', !!issue);
+  text($('mirrorstatus'), issue || 'Waiting for the phone screen...');
+  $('setup').hidden = !issue;
+  if (issue) {
+    const steps = [
+      ['Connect with a USB data cable', !!d?.connected],
+      ['Enable USB debugging and allow this computer', !!d?.authorized],
+      ['Wake and unlock the phone', !!(d?.authorized && !d.locked)],
+    ];
+    htmlOnce($('checks'), steps.map(([label, ok]) => '<li class="' + (ok ? 'done' : '') + '">' + (ok ? icon('check') : '<span class="led warn"></span>') + '<span>' + esc(label) + '</span></li>').join('') + (!S.adb ? '<li class="red">Android platform tools are missing. Reinstall Falcor.Hub.</li>' : ''));
+    $('mirrorwait').hidden = false;
+    text($('mirrorhelp'), !d || !d.connected ? 'Connect and power on the phone when you want to use it. You can keep exploring and editing.' : !d.authorized ? 'Allow this computer on the phone. Your workspace is still available.' : 'Wake and unlock the phone to resume its mirror. Your workspace is still available.');
+    stopVideo();
+  } else {
+    text($('mirrorhelp'), '');
+    if (was) { $('mirrorwait').hidden = false; nextFrame(0); }
+  }
 }
 let logFilter = 'all';
 document.querySelectorAll('#logfilter button').forEach(b => b.onclick = () => { logFilter = b.dataset.f; document.querySelectorAll('#logfilter button').forEach(x => cls(x, 'on', x === b)); $('log').innerHTML = ''; delete $('log').dataset.ready; renderLog(); });
@@ -245,6 +258,7 @@ document.querySelectorAll('[data-key]').forEach(b => b.onclick = () => send({kin
 $('typeform').onsubmit = async e => { e.preventDefault(); const t = $('typetext').value; if (!t) return; await send({kind: 'type', text: t}); $('typetext').value = ''; };
 
 async function send(action) {
+  if (mirrorIssue(dev())) { toast(mirrorIssue(dev()) + '. You can still browse and edit.', 'warn'); return; }
   if (!controlling) { toast('Take Control first.', 'warn'); return; }
   // (the Back, Home and Apps buttons and the typing box: straight to the phone when the fast channel is up)
   if (typeof fast === 'function' && fast() && (action.kind === 'key' || action.kind === 'type' && action.text)) { touch(action.kind === 'key' ? 'key' : 'text', null, action.kind === 'key' ? {key: action.key} : {text: action.text}); return; }
@@ -273,7 +287,7 @@ let frameAt = 0, frameBusy = false, frameTimer = null, frames = 0, fpsAt = Date.
 function nextFrame(delay) { clearTimeout(frameTimer); frameTimer = setTimeout(pullFrame, delay); }
 async function pullFrame() {
   const d = dev();
-  if (!d || !d.connected || !d.authorized || (document.hidden && Date.now() - remoteMirrorAt > 3500)) { nextFrame(800); stopVideo(); return; }
+  if (mirrorIssue(d) || (document.hidden && Date.now() - remoteMirrorAt > 3500)) { nextFrame(800); stopVideo(); return; }
   // (the video keeps running on every tab while the window shows: its decoded frames are the engine's looks during a
   // run, ~50 ms each instead of a 2 s screen capture; only the picture mirror is for the Phone and Sandbox tabs)
   if (vid.on) { nextFrame(800); return; }
@@ -285,13 +299,13 @@ async function pullFrame() {
   frameBusy = true;
   try {
     const f = await window.hub.call('frame', {deviceId: d.id});
+    if (dev()?.id !== d.id || mirrorIssue(dev())) return;
     const img = $('mirror'); img.src = 'data:' + f.mime + ';base64,' + f.data; img.dataset.w = f.width; img.dataset.h = f.height;
     setAspect(f.width, f.height); frameAt = Date.now();
     $('mirrorwait').hidden = true;
     frames++; if (Date.now() - fpsAt > 2000) { setFps((frames / ((Date.now() - fpsAt) / 1000)).toFixed(1) + ' pictures/s' + (vid.failed && vid.error ? ' · picture mirror (' + vid.error + ')' : '')); frames = 0; fpsAt = Date.now(); }
   } catch (e) { setFps(errText(e)); }
-  frameBusy = false;
-  nextFrame(controlling ? 60 : 250);
+  finally { frameBusy = false; nextFrame(controlling ? 60 : 250); }
 }
 // The device frame is sized to the phone's aspect ratio, as large as fits where it is.
 let aspect = 9 / 20;
@@ -333,6 +347,7 @@ function codecOf(sps) {
 function videoDecoder() {
   return new VideoDecoder({
     output: frame => {
+      if (mirrorIssue(dev())) { frame.close(); return; }
       if (canvas.width !== frame.displayWidth || canvas.height !== frame.displayHeight) { canvas.width = frame.displayWidth; canvas.height = frame.displayHeight; setAspect(canvas.width, canvas.height); }
       ctx.drawImage(frame, 0, 0); frame.close(); frameAt = Date.now();
       if (canvas.hidden) { canvas.hidden = false; $('mirror').hidden = true; $('mirrorwait').hidden = true; }
@@ -367,9 +382,10 @@ let shotCanvas = null;
 if (window.hub.onFrameWanted) window.hub.onFrameWanted(async p => {
   const reply = r => { try { window.hub.frameTaken({req: p.req, ...r}); } catch { /* the engine falls back to a capture */ } };
   try {
+    if (mirrorIssue(dev())) { reply({png: null}); return; }
     if (p.mime === 'image/jpeg') {
       remoteMirrorAt = Date.now();
-      if (p.deviceId === deviceId && !vid.on && !vid.starting && !vid.failed && S && !S.simulated && S.scrcpy) void startVideo(deviceId);
+      if (p.deviceId === deviceId && !mirrorIssue(dev()) && !vid.on && !vid.starting && !vid.failed && S && !S.simulated && S.scrcpy) void startVideo(deviceId);
     }
     if (!vid.on || !vid.decoder || vid.decoder.state !== 'configured' || !frameAt || canvas.hidden || p.deviceId !== vid.deviceId || !canvas.width || !canvas.height) { reply({png: null}); return; }
     const w = Math.min(canvas.width, 576), h = Math.round(canvas.height * w / canvas.width);
@@ -384,7 +400,7 @@ if (window.hub.onFrameWanted) window.hub.onFrameWanted(async p => {
 async function startVideo(id) {
   if (typeof VideoDecoder === 'undefined') { vid.failed = true; vid.error = 'this window cannot decode video'; return; }
   vid.starting = true; vid.deviceId = id; vid.waitKey = true;
-  try { const r = await window.hub.call('videoStart', {deviceId: id}); vid.on = true; vid.tries = 0; vid.control = !!(r && r.control); }
+  try { const r = await window.hub.call('videoStart', {deviceId: id}); vid.on = true; vid.tries = 0; vid.control = !!(r && r.control); if (dev()?.id !== id || mirrorIssue(dev())) stopVideo(); }
   catch (e) { vid.error = errText(e); if (++vid.tries >= 2) { vid.failed = true; vid.failedAt = Date.now(); } }
   vid.starting = false;
 }
@@ -404,7 +420,7 @@ let down = null;
 // Full speed: with the video's control channel up (main.ts 'touch'), the finger goes down, moves and lifts on the phone
 // as the mouse does, in a few hundredths of a second; keys and typing go the same way. While Teach records, every touch
 // takes the gate's path so the lesson keeps it. (the phone app keeps its own simple live view)
-const fast = () => vid.on && vid.control && !S.teaching && !!window.hub.touch;
+const fast = () => vid.on && vid.control && !mirrorIssue(dev()) && !S.teaching && !!window.hub.touch;
 const touch = (kind, p, extra) => window.hub.touch({deviceId, kind, ...(p ? {x: p.x, y: p.y} : {}), ...(extra || {})});
 let moveAt = 0;
 // The navigation bar helper (the owner, 2026-10-21): a short tap anywhere in the bottom strip of an upright phone presses
@@ -424,7 +440,7 @@ for (const surface of [$('mirror'), canvas]) {
     const p0 = at(e); down = {...p0, t: Date.now(), fast: fast() && !inNav(p0), nav: inNav(p0)}; surface.setPointerCapture(e.pointerId);
     if (down.fast) touch('down', down);
   });
-  surface.addEventListener('pointercancel', () => { if (down && down.fast) touch('up', down); down = null; });
+  surface.addEventListener('pointercancel', e => { if (window.sbPointer && tab === 'sandbox') sbPointer('cancel', at(e), e); if (down && down.fast) touch('up', down); down = null; });
   surface.addEventListener('pointerup', e => {
     if (window.sbPointer && tab === 'sandbox' && sbPointer('up', at(e), e)) return;
     if (down && down.fast) {
@@ -441,10 +457,24 @@ for (const surface of [$('mirror'), canvas]) {
   });
 }
 let lastTouch = {x: 50, y: 50}, wheelAt = 0;
-$('mirrorbox').addEventListener('wheel', e => { if (!controlling) return; e.preventDefault();
+$('mirrorbox').addEventListener('wheel', e => {
+  if (tab === 'sandbox' && window.sbManualMode && !sbManualMode()) {
+    e.preventDefault();
+    if (Date.now() - wheelAt >= 400) { wheelAt = Date.now(); window.sbBuildAction?.({kind: 'scroll', direction: e.deltaY > 0 ? 'down' : 'up'}); }
+    return;
+  }
+  if (!controlling) return; e.preventDefault();
   if (fast()) { const t = e.target === canvas || e.target === $('mirror') ? at({currentTarget: e.target, clientX: e.clientX, clientY: e.clientY}) : {x: 0.5, y: 0.5}; touch('wheel', t, {dir: e.deltaY > 0 ? 'down' : 'up'}); return; }
   if (Date.now() - wheelAt < 400) return; wheelAt = Date.now(); void send({kind: 'scroll', direction: e.deltaY > 0 ? 'down' : 'up'}); }, {passive: false});
 $('mirrorbox').addEventListener('keydown', e => {
+  if (tab === 'sandbox' && window.sbManualMode && !sbManualMode()) {
+    const key = {Enter: 'ENTER', Backspace: 'DEL', Tab: 'TAB', Escape: 'BACK'}[e.key];
+    if (key || e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault(); e.stopPropagation();
+      window.sbBuildAction?.(key ? {kind: 'key', key} : {kind: 'type', text: e.key});
+    }
+    return;
+  }
   if (!controlling) return;
   const k = {Enter: 'ENTER', Backspace: 'DEL', Tab: 'TAB', Escape: 'BACK'}[e.key];
   if (k) { e.preventDefault(); if (fast()) touch('key', null, {key: k}); else void send({kind: 'key', key: k}); }
@@ -1033,9 +1063,9 @@ document.querySelectorAll('#taskfilter button').forEach(b => b.onclick = () => {
 const schedHtml = list => (list || []).length ? '<div class="tsched">' + list.map(x => '<label class="check small" title="In the Daily Queue"><input type="checkbox" data-qtoggle="' + esc(x.id) + '"' + (x.enabled ? ' checked' : '') + '>' + icon('calendar') + '<span>' + esc(x.words) + (x.autoStart ? ' · starts by itself' : '') + (x.enabled && x.next ? ' · next ' + esc(when(x.next)) : x.enabled ? '' : ' · off') + (x.lastError ? ' · ' + esc(x.lastError) : '') + '</span></label>').join('') + '</div>' : '';
 // A Sandbox sequence saved as a task: Run now, Schedule, History, Edit (in the Sandbox) and its schedules.
 function drawSeqTask(node, q) {
-  htmlOnce(node.querySelector('.main'), '<div class="obj"><b>' + esc(q.title) + '</b></div><div class="meta"><span>' + icon('sandbox') + ' Sandbox sequence</span><span>' + q.steps + ' steps · v' + q.revision + '</span>' + (q.lastRun ? '<span>last ' + esc(q.lastRun.status.toLowerCase()) + ' ' + esc(when(q.lastRun.at) === 'now' ? time(q.lastRun.at) : new Date(q.lastRun.at).toLocaleString()) + '</span>' : '<span>never run</span>') + (q.running ? '<span class="pill green">Running</span>' : '') + '</div>' + schedHtml(q.schedules));
+  htmlOnce(node.querySelector('.main'), '<div class="obj"><b>' + esc(q.title) + '</b></div><div class="meta"><span>' + icon('sandbox') + ' Sandbox chain</span><span>' + q.steps + ' steps · v' + q.revision + '</span>' + (q.lastRun ? '<span>last ' + esc(q.lastRun.status.toLowerCase()) + ' ' + esc(when(q.lastRun.at) === 'now' ? time(q.lastRun.at) : new Date(q.lastRun.at).toLocaleString()) + '</span>' : '<span>never run</span>') + (q.running ? '<span class="pill green">Running</span>' : '') + '</div>' + schedHtml(q.schedules));
   const qt = 'sequence:' + q.id;
-  htmlOnce(node.querySelector('.acts'), '<button class="primary small" data-qrun="' + esc(qt) + '" data-name="' + esc(q.title) + '"' + (q.running ? ' disabled' : '') + '>' + icon('play') + 'Run now</button><button class="icon small" title="Schedule it in the Daily Queue" data-qsched="' + esc(qt) + '" data-name="' + esc(q.title) + '" data-kind="sequence">' + icon('calendar') + '</button><button class="icon small" title="View history" data-qhist="' + esc(qt) + '" data-name="' + esc(q.title) + '">' + icon('clock') + '</button><button class="icon small" title="Edit in the Sandbox" data-sbopen="' + esc(q.id) + '">' + icon('edit') + '</button><button class="icon small" title="Take it out of Tasks (the sequence stays in the Sandbox)" data-unseq="' + esc(q.id) + '">' + icon('close') + '</button>');
+  htmlOnce(node.querySelector('.acts'), '<button class="primary small" data-qrun="' + esc(qt) + '" data-name="' + esc(q.title) + '"' + (q.running ? ' disabled' : '') + '>' + icon('play') + 'Run now</button><button class="icon small" title="Schedule it in the Daily Queue" data-qsched="' + esc(qt) + '" data-name="' + esc(q.title) + '" data-kind="sequence">' + icon('calendar') + '</button><button class="icon small" title="View history" data-qhist="' + esc(qt) + '" data-name="' + esc(q.title) + '">' + icon('clock') + '</button><button class="icon small" title="Edit in the Sandbox" data-sbopen="' + esc(q.id) + '">' + icon('edit') + '</button><button class="icon small" title="Take it out of Tasks (the chain stays in the Sandbox)" data-unseq="' + esc(q.id) + '">' + icon('close') + '</button>');
 }
 function renderTasks() {
   const seqs = (S.seqTasks || []).filter(q => taskFilter === 'all' || (taskFilter === 'scheduled' && q.schedules.some(x => x.enabled)));
@@ -1084,7 +1114,7 @@ document.addEventListener('click', async e => {
   const u = e.target.closest('[data-unpair]'); if (u) await call('unpairPhone', {id: u.dataset.unpair});
   const s = e.target.closest('[data-unsecret]'); if (s) await call('removeSecret', {name: s.dataset.unsecret});
   const so = e.target.closest('[data-sbopen]'); if (so) { go('sandbox'); if (window.sbOpen) await sbOpen(so.dataset.sbopen); }
-  const us = e.target.closest('[data-unseq]'); if (us) { await call('queue', {op: 'saveAsTask', id: us.dataset.unseq, on: false}); toast('Taken out of Tasks. The sequence stays in the Sandbox.'); }
+  const us = e.target.closest('[data-unseq]'); if (us) { await call('queue', {op: 'saveAsTask', id: us.dataset.unseq, on: false}); toast('Taken out of Tasks. The chain stays in the Sandbox.'); }
 });
 
 // A custom task's steps in plain words, with how it repeats.

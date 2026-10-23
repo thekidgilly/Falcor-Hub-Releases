@@ -1,12 +1,12 @@
 {
-  "version": "0.21.60",
-  "notes": "The desktop Sandbox zooming grid now fills the entire workspace in normal and Focus views, without fixed top or bottom bands. Header controls and zoom buttons float over the canvas, and tool windows and the phone can move flush to every workspace edge. Default and maximized windows stay below the header controls. The Hub desk also fills its workspace edge to edge, from the tab bar to the status bar, removing blocked padded margins while preserving the heading spacing.",
-  "publishedAt": "2026-10-23T01:22:53.728Z",
+  "version": "0.21.61",
+  "notes": "Desktop and phone notifications are now typed, see-through code-style lines that hold briefly and scroll away, with reduced-motion support. Wizard's Kit is the optimized default phone Studio layout, arranging the phone and tidier widgets with improved placement. Teach & Build now has a left-side LED status light plus Runs and Editor buttons and a shorter Ask label. The phone profile icon is a rounded square, Active game cards are shorter on both apps, and the desktop Profile layout is centered.",
+  "publishedAt": "2026-10-23T02:28:45.279Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "662920e67e7bd710cd36b900d6eee2dc47405e1a65be0e099b35897f9f8b798c",
-      "size": 1218360
+      "sha256": "931f8fa0725043f2f12cddaf6e4912a7c1fe906492487f05779b4ab0a2e16aaa",
+      "size": 1219238
     },
     {
       "path": "dist/preload.js",
@@ -34,14 +34,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-BULelK-c.css",
-      "sha256": "d430d362a310f6117d2a1ded8b875dab733e7a4c3806b0f74a1b40ccf414d165",
-      "size": 112069
+      "path": "remote-ui/assets/index-CLRE7a_O.js",
+      "sha256": "ce4dec75d8cf72b310cfb4b121cef02d72c4898123c81087fa6004b12ba35ada",
+      "size": 279653
     },
     {
-      "path": "remote-ui/assets/index-ekY8d1R9.js",
-      "sha256": "69c1fa0bba33cff4a7fa089c42b3396dce34141ac2fc90c30be0042a84e55c62",
-      "size": 274947
+      "path": "remote-ui/assets/index-DwN4u44S.css",
+      "sha256": "125d18b75c3233221bdc24aafacdf19913b9412fe7c6e25b84c598c6c508502b",
+      "size": 113903
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -70,7 +70,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "47d2d4fc8e6b1573fc5cd1cf66b1677d3dcdef31ee71143e237e73d1c6ea6e5d",
+      "sha256": "6a3cfe6ef172a83e0129da5fe5e5b5db028d409e63951a26a7c7a5dc21825bd3",
       "size": 3885
     },
     {
@@ -85,8 +85,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "d427ecd8beddfdf55c03661018893ddfc93183e62b6f6e2bb7f2e7312aebd4a4",
-      "size": 152919
+      "sha256": "79e3ade6fa697f1ce5fd6a924b6b6e9106e4f447a7a5e3c223e9c07a15b80c05",
+      "size": 152438
     },
     {
       "path": "ui/app.png",
@@ -145,13 +145,13 @@
     },
     {
       "path": "ui/motion.css",
-      "sha256": "5faeae9ea6bab80764d65e05974e0e8e4892b834924165159c0745f2533be6b6",
-      "size": 28126
+      "sha256": "ddfd9412b6cf1624939355e78c6b0e1290eaf333728ed8ae00cd81823e2c7ae6",
+      "size": 29981
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "346a51372bb4a1ec551b97e7cf87cd592a110edfd1db1c462f4312ccbe6d3005",
-      "size": 71030
+      "sha256": "da68ca5291f36e643a3cec9101c227e4ebc899e3fbf5c61c9859ee38ae3ed450",
+      "size": 72918
     },
     {
       "path": "ui/popout.js",
@@ -205,8 +205,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "c3da06b3695f2f3c328c268f8bc8ebcec45391f44fe40680f797cdb0fa3dfdd9",
-      "size": 149172
+      "sha256": "2128e428e8db6a36f1c7aae2b25d893e9621ce8975a204119c2122e4a57db8d5",
+      "size": 148989
     },
     {
       "path": "ui/tokens.css",

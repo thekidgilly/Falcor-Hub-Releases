@@ -102,7 +102,19 @@ button.primary:hover:not(:disabled)::after { animation: sweep .45s steps(6) 1; }
 @keyframes sweep { to { transform: translateX(400px); } }
 
 /* Toasts step in. */
-.toast { animation: toastin var(--motion-base) var(--ease-out) both; } @keyframes toastin { from { transform: translateX(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+/* Notifications (the owner, 2026-10-22): see-through typed lines, no banner. A dark halo keeps white text readable on anything. */
+.toasts { pointer-events: none !important; display: flex !important; flex-direction: column; align-items: stretch; gap: 3px !important; }
+.toast { pointer-events: none; display: flex; gap: 7px; align-items: baseline; max-height: 6em; overflow: hidden; background: transparent !important; border: 0 !important; box-shadow: none !important; border-radius: 0 !important; padding: 1px 2px !important; font: 13px/1.4 var(--voice) !important; letter-spacing: .02em; color: rgba(255,255,255,.94); text-shadow: 0 0 2px #000, 0 0 2px #000, 0 1px 3px #000, 0 0 10px rgba(0,0,0,.95); animation: none; }
+.toast .tp { flex: none; color: var(--accent); text-shadow: 0 0 6px rgba(var(--accent-rgb, 76,141,255), .7), 0 1px 3px #000; }
+.toast.warn .tp { color: var(--sand); } .toast.bad .tp { color: var(--red); } .toast.bad .tx { color: #ffd9d6; }
+.toast .tx { min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.toast .tx::after { content: ''; display: inline-block; width: .55em; height: 1em; margin-left: 2px; vertical-align: -2px; background: rgba(255,255,255,.9); box-shadow: 0 0 6px rgba(255,255,255,.6); animation: notecaret .7s steps(1) infinite; }
+.toast:not(.typing) .tx::after { animation: notecaret .7s steps(1) 3 forwards; }
+@keyframes notecaret { 50% { opacity: 0; } 100% { opacity: 0; } }
+.toast button { pointer-events: auto; flex: none; margin-left: auto; min-height: 0 !important; height: 18px; padding: 0 5px !important; border: 0 !important; background: transparent !important; color: rgba(255,255,255,.45); font: 13px/1 var(--voice); text-shadow: 0 1px 3px #000; opacity: .7; }
+.toast button:hover, .toast button:focus-visible { color: #fff; opacity: 1; } .toast:not(.bad) button { display: none; }
+.toast.gone { animation: noteup .45s cubic-bezier(.4,0,.2,1) forwards; }
+@keyframes noteup { 0% { opacity: 1; transform: none; } 60% { opacity: 0; transform: translateY(-12px); max-height: 6em; } 100% { opacity: 0; transform: translateY(-14px); max-height: 0; padding-top: 0; padding-bottom: 0; } }
 
 /* Startup begins black in the HTML, before application JavaScript runs. */
 .boot-screen { position: fixed; inset: 0; z-index: 2000; overflow: hidden; background: #0A0A0A; color: #F4F5F7; pointer-events: auto; animation: boot-failsafe 0s 12s forwards; }
@@ -123,7 +135,7 @@ button.primary:hover:not(:disabled)::after { animation: sweep .45s steps(6) 1; }
 /* Hidden window: idle loops pause. Reduced motion: no idle loops, no bursts. */
 .idle-off .logo, .idle-off .embers i, .idle-off .led, .idle-off .shine::after, .idle-off .load10 i, .idle-off .spin4 i { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) {
-  .logo, .logo .eye, .embers, .led, .shine::after, .rise, .typein, .caret::after, .flash, .glitch, .stepin, .stepout, .toast, .tapx, .trail, .flagdrop, .wipe i, button.primary::after, .thinking .avatar { animation: none !important; }
+  .logo, .logo .eye, .embers, .led, .shine::after, .rise, .typein, .caret::after, .flash, .glitch, .stepin, .stepout, .toast, .tapx, .trail, .flagdrop, .wipe i, button.primary::after, .thinking .avatar, .toast .tx::after, .toast.gone { animation: none !important; }
   .embers { display: none; } .wipe { display: none; }
 }
 
@@ -251,8 +263,7 @@ input[type=range] { accent-color: var(--accent); }
 .logo .eye { animation: none; }
 .logo.live .eye { animation: blink 3s steps(1) infinite; }
 .embers, .shine::after { display: none; }
-.toast { border-radius: var(--r1); box-shadow: var(--depth-overlay); animation: toast var(--motion-base) var(--ease-out) both; }
-.toast .led.on, #led-auto.on, #autopilot .led.on { background: var(--accent); }
+#led-auto.on, #autopilot .led.on { background: var(--accent); }
 .thinking .avatar { animation-duration: 1.6s; }
 .flash { animation: flash2 360ms var(--ease-out) 1; }
 @keyframes flash2 { from { box-shadow: 0 0 0 2px var(--glow-accent); } to { box-shadow: 0 0 0 0 transparent; } }
