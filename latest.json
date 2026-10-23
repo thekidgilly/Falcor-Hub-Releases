@@ -1,11 +1,11 @@
 {
-  "version": "0.21.62",
-  "notes": "Fix Remote pairing when the operating system cannot list network adapters. Keep the authenticated API available and recover address discovery automatically.",
-  "publishedAt": "2026-10-23T05:30:40.004Z",
+  "version": "0.21.63",
+  "notes": "Subtle pixel status glows and selected-tab feedback. Faster phone UI by skipping hidden panels and updating only the recording clock. Stable counters, reduced-motion canvas decor, immediate font fallback and clearer notification dismissal.",
+  "publishedAt": "2026-10-23T14:37:12.090Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "f826c59d3e22b7bea333e71a61a1212e3fd8dccae58ee23008408b7d5c9df348",
+      "sha256": "4296348c23bdb8e056d08aea97d1ad504aa8a492c50d799caf9a831cce3dd7ac",
       "size": 1218669
     },
     {
@@ -34,14 +34,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-CLRE7a_O.js",
-      "sha256": "ce4dec75d8cf72b310cfb4b121cef02d72c4898123c81087fa6004b12ba35ada",
-      "size": 279653
+      "path": "remote-ui/assets/index-D3EHJrIK.js",
+      "sha256": "0ea22323af5464effbb620a054948940047f1d388a5d7bf9b035131522e768c7",
+      "size": 280093
     },
     {
-      "path": "remote-ui/assets/index-DwN4u44S.css",
-      "sha256": "125d18b75c3233221bdc24aafacdf19913b9412fe7c6e25b84c598c6c508502b",
-      "size": 113903
+      "path": "remote-ui/assets/index-D8w6rvp2.css",
+      "sha256": "4f6405682dc78f3cc2bf81fd6d60aca16d0a51bf0bb5d5dce0483e0af9b42095",
+      "size": 114675
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -70,7 +70,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "6a3cfe6ef172a83e0129da5fe5e5b5db028d409e63951a26a7c7a5dc21825bd3",
+      "sha256": "efd470d5a37b34905b0054f1f597583d2ba7eacc7666ff3127b76533fea1f90f",
       "size": 3885
     },
     {
@@ -145,13 +145,13 @@
     },
     {
       "path": "ui/motion.css",
-      "sha256": "ddfd9412b6cf1624939355e78c6b0e1290eaf333728ed8ae00cd81823e2c7ae6",
-      "size": 29981
+      "sha256": "fb4b733099aedcbcb35bcb3d8403091090925d30f96b55f6023958b32654b6cb",
+      "size": 30896
     },
     {
       "path": "ui/pixel.js",
-      "sha256": "da68ca5291f36e643a3cec9101c227e4ebc899e3fbf5c61c9859ee38ae3ed450",
-      "size": 72918
+      "sha256": "1090d11f2008b7ecabcff4216faf1583a4120852c416d2d22edcc89c7cfa0162",
+      "size": 73695
     },
     {
       "path": "ui/popout.js",
@@ -205,8 +205,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "2128e428e8db6a36f1c7aae2b25d893e9621ce8975a204119c2122e4a57db8d5",
-      "size": 148989
+      "sha256": "72eb50ea92b4600d29ac04ab22f57e9f931f87bd0d74a263ab0adfe3d565529c",
+      "size": 149039
     },
     {
       "path": "ui/tokens.css",
@@ -215,8 +215,8 @@
     },
     {
       "path": "ui/widgets.js",
-      "sha256": "4fc9bfdb10ecb8417612e9fef02716e912fd2f1c2c7ac1c2fde10aee4ae2c1e5",
-      "size": 13655
+      "sha256": "00cca6f3f94d66901ed55f14d3cd58a3eea334d314461924cd6ccd7875eef50c",
+      "size": 14426
     }
   ]
 }

@@ -49,10 +49,10 @@
   function layout() {
     if (!grid.clientWidth || !grid.clientHeight) return;
     const home = phone.parentElement === grid;
-    grid.style.setProperty('--phone-reserve', home && state.docked && !maxed ? Math.min(360, grid.clientWidth * .36) + 12 + 'px' : '0px');
+    grid.style.setProperty('--phone-reserve', home && !phone.hidden && state.docked && !maxed ? Math.min(360, grid.clientWidth * .36) + 12 + 'px' : '0px');
     if (!home) { phone.removeAttribute('style'); return; }
-    const W = grid.clientWidth, H = grid.clientHeight, w = Math.min(360, W * .36);
-    const r = maxed ? {x: 0, y: 0, w: W, h: H} : state.docked || !state.rect ? {x: W - w, y: 0, w, h: H} : bounded({x: state.rect.x * W, y: state.rect.y * H, w: state.rect.w * W, h: state.rect.h * H});
+    const W = grid.clientWidth, H = grid.clientHeight, w = Math.min(360, W * .36), head = $('sbhead'), t = head.offsetParent ? Math.max(0, Math.min(H / 2, head.offsetTop + head.offsetHeight)) : 0;
+    const r = maxed ? {x: 0, y: t, w: W, h: H - t} : state.docked || !state.rect ? {x: W - w, y: t, w, h: H - t} : bounded({x: state.rect.x * W, y: state.rect.y * H, w: state.rect.w * W, h: state.rect.h * H});
     put(r);
     cls(phone, 'phone-locked', state.locked); cls(phone, 'phone-maxed', maxed);
     $('sbphonelock').setAttribute('aria-pressed', String(state.locked));

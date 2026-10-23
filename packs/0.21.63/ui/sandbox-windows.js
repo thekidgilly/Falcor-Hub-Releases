@@ -12,7 +12,7 @@
     {id: 'sbteachtools', name: 'Recorded lessons', about: 'Optional: record a demonstration for Falcor to analyze', min: [290, 170]},
     {id: 'sbinsights', name: 'Chain insights', about: 'Estimated one-run AI cost, runtime, blocks and safety limits', defaultOpen: true, min: [280, 180]},
   ];
-  let saved = {rects: {}, visible: {}, locked: false, compactPlayer: true}, moving = null, top = 8, maxed = null, compactOnLoad = true;
+  let saved = {rects: {}, visible: {}, minimized: {}, locks: {}, locked: false, compactPlayer: true}, moving = null, top = 8, maxed = null, compactOnLoad = true;
   try {
     const value = JSON.parse(localStorage.getItem(key) || 'null');
     if (value && typeof value === 'object') {
@@ -20,6 +20,8 @@
       saved.locked = value.locked === true;
       for (const d of definitions) {
         if (typeof value.visible?.[d.id] === 'boolean') saved.visible[d.id] = value.visible[d.id];
+        if (value.minimized?.[d.id] === true) saved.minimized[d.id] = true;
+        if (value.locks?.[d.id] === true) saved.locks[d.id] = true;
         const r = value.rects?.[d.id];
         if (r && ['x', 'y', 'w', 'h'].every(k => Number.isFinite(r[k])) && r.w > 0 && r.h > 0) saved.rects[d.id] = r;
       }
@@ -40,6 +42,12 @@
   create('sbviewtools', $('sbtl').querySelector(':scope > .top'));
   grid.appendChild($('sbplayback'));
   const focus = $('sbfocus'); head.appendChild(focus); head.querySelector('.sbacts').remove();
+  const minimizeAll = document.createElement('button'); minimizeAll.id = 'sbminimizeall'; minimizeAll.className = 'small';
+  minimizeAll.innerHTML = icon('minus') + 'Minimize windows';
+  minimizeAll.title = 'Minimize unlocked windows to the bottom bar; locked windows and blocks stay visible';
+  head.appendChild(minimizeAll);
+  const tray = document.createElement('div'); tray.id = 'sbminimized'; tray.className = 'sbminimized'; tray.hidden = true;
+  tray.setAttribute('role', 'group'); tray.setAttribute('aria-label', 'Minimized Sandbox windows'); grid.appendChild(tray);
   const menu = document.createElement('details'); menu.className = 'sbwindowmenu';
   menu.innerHTML = '<summary>' + icon('apps') + 'Windows</summary><div class="sbwindowlist"></div>';
   head.appendChild(menu);
@@ -49,19 +57,20 @@
   const windows = new Map();
   $('sbcenter').addEventListener('pointerdown', () => { if ($('sbcenter').parentElement === grid) $('sbcenter').style.zIndex = String(++top); });
   const size = () => ({w: Math.max(1, grid.clientWidth - parseFloat(getComputedStyle(grid).getPropertyValue('--phone-reserve') || '0')), h: Math.max(1, grid.clientHeight)});
+  const headSpace = () => head.offsetParent ? Math.max(0, Math.min(grid.clientHeight / 2, head.offsetTop + head.offsetHeight)) : 0;
   function defaults(id) {
-    const {w, h} = size(), gap = 10, half = (w - gap * 3) / 2;
+    const {w, h: full} = size(), gap = 10, half = (w - gap * 3) / 2, t = headSpace(), h = full - t;
     const narrow = w < 760;
     const map = {
-      sbbuildtools: {x: gap, y: gap, w: narrow ? w - 2 * gap : half, h: 104},
-      sbchaintools: {x: narrow ? gap : half + 2 * gap, y: narrow ? 124 : gap, w: narrow ? w - 2 * gap : half, h: 104},
-      sbplayback: {x: gap, y: narrow ? 238 : 124, w: w - 2 * gap, h: narrow ? 130 : 98},
-      sblib: {x: gap, y: narrow ? 378 : 232, w: 260, h: Math.max(220, Math.min(420, h - (narrow ? 388 : 242)))},
-      sbinsp: {x: Math.max(gap, w - 340), y: Math.min(290, h / 3), w: 330, h: Math.min(440, h * .65)},
-      sbviewtools: {x: gap, y: Math.max(gap, h - 180), w: 420, h: 130},
-      sbhelptools: {x: Math.max(gap, w - 270), y: Math.max(gap, h - 150), w: 260, h: 100},
-      sbteachtools: {x: gap, y: Math.min(290, h / 3), w: 350, h: 240},
-      sbinsights: {x: Math.max(gap, w - (narrow ? 310 : 350)), y: narrow ? 378 : 232, w: narrow ? 300 : 340, h: Math.max(180, Math.min(460, h - (narrow ? 388 : 242)))},
+      sbbuildtools: {x: gap, y: t + gap, w: narrow ? w - 2 * gap : half, h: 104},
+      sbchaintools: {x: narrow ? gap : half + 2 * gap, y: t + (narrow ? 124 : gap), w: narrow ? w - 2 * gap : half, h: 104},
+      sbplayback: {x: gap, y: t + (narrow ? 238 : 124), w: w - 2 * gap, h: narrow ? 130 : 98},
+      sblib: {x: gap, y: t + (narrow ? 378 : 232), w: 260, h: Math.max(220, Math.min(420, h - (narrow ? 388 : 242)))},
+      sbinsp: {x: Math.max(gap, w - 340), y: t + Math.min(290, h / 3), w: 330, h: Math.min(440, h * .65)},
+      sbviewtools: {x: gap, y: Math.max(t + gap, full - 180), w: 420, h: 130},
+      sbhelptools: {x: Math.max(gap, w - 270), y: Math.max(t + gap, full - 150), w: 260, h: 100},
+      sbteachtools: {x: gap, y: t + Math.min(290, h / 3), w: 350, h: 240},
+      sbinsights: {x: Math.max(gap, w - (narrow ? 310 : 350)), y: t + (narrow ? 378 : 232), w: narrow ? 300 : 340, h: Math.max(180, Math.min(460, h - (narrow ? 388 : 242)))},
     };
     return map[id];
   }
@@ -85,16 +94,40 @@
         if (r) r.h = defaults(d.id).h / h;
         compactOnLoad = false; keep();
       }
-      put(el, maxed === d.id ? {x: 0, y: 0, w, h} : bounded(r ? {x: r.x * w, y: r.y * h, w: r.w * w, h: r.h * h} : defaults(d.id), d));
+      put(el, maxed === d.id ? {x: 0, y: headSpace(), w, h: h - headSpace()} : bounded(r ? {x: r.x * w, y: r.y * h, w: r.w * w, h: r.h * h} : defaults(d.id), d));
       el.classList.toggle('maxed', maxed === d.id);
       const button = el.querySelector('[data-toolmax]'); button.title = (maxed === d.id ? 'Restore ' : 'Maximize ') + d.name;
       htmlOnce(button, icon(maxed === d.id ? 'restore' : 'max'));
     }
-    const coreAtHome = definitions.some(d => d.core && !windows.get(d.id).hidden && windows.get(d.id).parentElement === grid);
-    const clearance = coreAtHome ? Math.max(0, Math.min(h - 130, w < 760 ? 378 : 232)) + 'px' : '0px';
+    const space = headSpace() + 'px';
+    if (grid.parentElement.style.getPropertyValue('--head-space') !== space) grid.parentElement.style.setProperty('--head-space', space);
+    const clearance = Math.max(0, Math.min(h - 130, w < 760 ? 378 : 232)) + 'px';
     if (grid.style.getPropertyValue('--tool-clearance') !== clearance) grid.style.setProperty('--tool-clearance', clearance);
     grid.classList.toggle('tools-locked', saved.locked);
     $('sbwindowslock').checked = saved.locked;
+    for (const d of definitions) {
+      const el = windows.get(d.id), locked = saved.locked || saved.locks[d.id] === true;
+      el.classList.toggle('tool-locked', locked);
+      const button = el.querySelector('[data-toollock]');
+      button.setAttribute('aria-pressed', String(locked));
+      button.title = (locked ? 'Unlock ' : 'Lock ') + d.name;
+      button.disabled = saved.locked;
+      htmlOnce(button, icon(locked ? 'lock' : 'unlock'));
+    }
+  }
+  function drawTray() {
+    const items = definitions.filter(d => saved.minimized[d.id]);
+    tray.innerHTML = items.map(d => '<button class="small" data-restore="' + d.id + '" title="Restore ' + esc(d.name) + '">' + icon('restore') + esc(d.name) + '</button>').join('')
+      + ($('sbcenter').hidden ? '<button class="small" data-restore="sbcenter" title="Restore Phone">' + icon('phone') + 'Phone</button>' : '');
+    tray.hidden = !tray.children.length;
+    grid.style.setProperty('--minimized-height', tray.hidden ? '0px' : '38px');
+  }
+  function minimize(id) {
+    const el = windows.get(id); if (!el || el.hidden) return;
+    window.popBack('sb-' + id);
+    el.hidden = true; el.dataset.minimized = ''; saved.minimized[id] = true; saved.visible[id] = true;
+    keep(); drawTray(); layout();
+    tray.querySelector('[data-restore="' + id + '"]')?.focus({preventScroll: true});
   }
   function show(id, force) {
     const el = windows.get(id); if (!el) return;
@@ -103,16 +136,18 @@
       window.popBack('sb-' + id);
     }
     const on = force === undefined ? el.hidden : force;
+    delete saved.minimized[id];
+    delete el.dataset.minimized;
     el.hidden = !on; saved.visible[id] = on;
     list.querySelector('[data-window="' + id + '"]').checked = on;
     if (id === 'sblib') $('sbpanels').setAttribute('aria-expanded', String(on));
     if (id === 'sbinsp') $('sbsettings').setAttribute('aria-expanded', String(on));
     if (on) el.style.zIndex = String(++top);
-    keep(); layout();
+    keep(); drawTray(); layout();
   }
   function begin(d, e, kind, target) {
     const el = windows.get(d.id);
-    if (saved.locked || maxed === d.id || e.button !== 0 || el.parentElement !== grid) return;
+    if (saved.locked || saved.locks[d.id] || maxed === d.id || e.button !== 0 || el.parentElement !== grid) return;
     el.style.zIndex = String(++top);
     e.preventDefault(); e.stopPropagation(); target.setPointerCapture(e.pointerId);
     moving = {d, el, id: e.pointerId, kind, x: e.clientX, y: e.clientY, r: {x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight}};
@@ -123,9 +158,12 @@
     body.append(...children);
     const bar = document.createElement('div'); bar.className = 'winbar'; bar.tabIndex = 0;
     bar.setAttribute('aria-label', d.name + ' window: drag or use arrows to move; Shift and arrows resize');
-    bar.innerHTML = '<span class="wingrip"></span><b class="wintitle">' + esc(d.name) + '</b><span class="grow"></span><span class="winbtns"><button title="Pop out ' + esc(d.name) + '" data-toolpop>' + icon('popout') + '</button><button title="Maximize ' + esc(d.name) + '" data-toolmax>' + icon('max') + '</button><button title="Hide ' + esc(d.name) + '" data-toolhide>' + icon('close') + '</button></span>';
-    el.append(bar, body); el.hidden = !(saved.visible[d.id] ?? d.core ?? d.defaultOpen);
-    list.querySelector('[data-window="' + d.id + '"]').checked = !el.hidden;
+    bar.innerHTML = '<span class="wingrip"></span><b class="wintitle">' + esc(d.name) + '</b><span class="grow"></span><span class="winbtns"><button title="Lock ' + esc(d.name) + '" data-toollock>' + icon('unlock') + '</button><button title="Pop out ' + esc(d.name) + '" data-toolpop>' + icon('popout') + '</button><button title="Maximize ' + esc(d.name) + '" data-toolmax>' + icon('max') + '</button><button title="Minimize ' + esc(d.name) + '" data-toolmin>' + icon('minus') + '</button><button title="Hide ' + esc(d.name) + '" data-toolhide>' + icon('close') + '</button></span>';
+    el.append(bar, body); el.hidden = !!saved.minimized[d.id] || !(saved.visible[d.id] ?? d.core ?? d.defaultOpen);
+    if (saved.minimized[d.id]) el.dataset.minimized = '';
+    list.querySelector('[data-window="' + d.id + '"]').checked = !el.hidden || !!saved.minimized[d.id];
+    bar.querySelector('[data-toolmin]').onclick = () => minimize(d.id);
+    bar.querySelector('[data-toollock]').onclick = () => { saved.locks[d.id] = !saved.locks[d.id]; keep(); layout(); };
     bar.querySelector('[data-toolhide]').onclick = () => show(d.id, false);
     const toggleMax = () => { if (el.parentElement !== grid) return; maxed = maxed === d.id ? null : d.id; el.style.zIndex = String(++top); layout(); };
     bar.querySelector('[data-toolmax]').onclick = toggleMax;
@@ -136,7 +174,7 @@
     bar.addEventListener('keydown', e => {
       if (e.target !== bar || el.parentElement !== grid) return;
       if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); toggleMax(); return; }
-      if (saved.locked || maxed === d.id || !e.key.startsWith('Arrow')) return;
+      if (saved.locked || saved.locks[d.id] || maxed === d.id || !e.key.startsWith('Arrow')) return;
       e.preventDefault(); e.stopPropagation();
       const r = {x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight}, dx = e.key === 'ArrowRight' ? 8 : e.key === 'ArrowLeft' ? -8 : 0, dy = e.key === 'ArrowDown' ? 8 : e.key === 'ArrowUp' ? -8 : 0;
       if (e.shiftKey) { r.w += dx; r.h += dy; } else { r.x += dx; r.y += dy; }
@@ -162,9 +200,26 @@
   }
   list.onchange = e => { const id = e.target.dataset.window; if (id) show(id, e.target.checked); else { saved.locked = $('sbwindowslock').checked; keep(); layout(); } };
   $('sbwindowsreset').onclick = () => {
-    saved.rects = {}; saved.locked = false; maxed = null;
+    saved.rects = {}; saved.locks = {}; saved.locked = false; maxed = null;
     for (const d of definitions) { window.popBack('sb-' + d.id); show(d.id, !!(d.core || d.defaultOpen)); }
     keep(); layout(); menu.open = false;
+  };
+  const phoneMin = document.createElement('button'); phoneMin.id = 'sbphonemin'; phoneMin.title = 'Minimize Phone'; phoneMin.innerHTML = icon('minus');
+  $('sbphonebar').appendChild(phoneMin);
+  phoneMin.onclick = () => {
+    window.popBack('sb-sbcenter'); $('sbcenter').hidden = true;
+    window.sbWorkspace.layout(); drawTray();
+    tray.querySelector('[data-restore="sbcenter"]').focus({preventScroll: true});
+  };
+  tray.onclick = e => {
+    const button = e.target.closest('[data-restore]'); if (!button) return;
+    if (button.dataset.restore === 'sbcenter') { $('sbcenter').hidden = false; window.sbWorkspace.layout(); drawTray(); $('sbphonemin').focus({preventScroll: true}); }
+    else { show(button.dataset.restore, true); windows.get(button.dataset.restore).querySelector('.winbar').focus({preventScroll: true}); }
+  };
+  minimizeAll.onclick = () => {
+    for (const d of definitions) if (!saved.locked && !saved.locks[d.id]) minimize(d.id);
+    if (!$('sbcenter').hidden && !$('sbcenter').classList.contains('phone-locked')) phoneMin.onclick();
+    minimizeAll.focus({preventScroll: true});
   };
   grid.classList.add('floating-tools');
   new ResizeObserver(() => { if (!moving) layout(); }).observe(grid);
@@ -175,8 +230,8 @@
     show(id, true);
     window.popOut('sb-' + id, el, d.name, {free: true, at, onOut: () => { el.style.cssText = ''; el.classList.remove('maxed'); }, onBack: layout});
   }
-  window.sbWindows = {show, layout, pop};
+  window.sbWindows = {show, layout, pop, minimize, isMinimized: id => !!saved.minimized[id]};
   $('sbpanels').setAttribute('aria-expanded', String(!windows.get('sblib').hidden));
   $('sbsettings').setAttribute('aria-expanded', String(!windows.get('sbinsp').hidden));
-  layout();
+  drawTray(); layout();
 })();

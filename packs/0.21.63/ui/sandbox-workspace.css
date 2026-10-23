@@ -14,8 +14,17 @@
 .sandbox .steps.flow .blk.falcor-request .tile { padding: 0; }
 .sandbox .steps.flow .blk.falcor-request .tile .falcor-avatar { position: absolute; left: 50%; top: 50%; margin: 0; transform: translate(-50%, -50%); }
 .sandbox .lib[data-type="falcorRequest"] { border-color: #c3d9e988; background: linear-gradient(120deg, #283746, #161c23); color: #f1f7ff; }
+/* One zooming grid fills the whole Sandbox workspace: the header floats over it, and windows can use every pixel. */
+main:has(> .pane.sandbox:not([hidden]):not(.home)) { padding: 0; overflow: hidden; }
+.pane.sandbox:not(.home) { position: relative; display: block; min-height: 100%; isolation: isolate; }
+.pane.sandbox.studio-focus:not(.home) { position: fixed; padding: 0; }
+.pane.sandbox:not(.home) > .sbhead { position: absolute; top: 0; left: 0; right: 0; z-index: 2; padding: 8px 12px; pointer-events: none; }
+.pane.sandbox:not(.home) > .sbhead:has(details[open]) { z-index: 10002; }
+.pane.sandbox:not(.home) > .sbhead > * { pointer-events: auto; }
+.pane.sandbox:not(.home) > .sbhead > .grow { pointer-events: none; }
+.pane.sandbox:not(.home) > .teachstrip { position: absolute; top: var(--head-space, 48px); left: 12px; right: 12px; width: auto; z-index: 2; background: #1a0d0c; }
 .pane.sandbox:not(.home) > .sbgrid {
-  position: relative; display: block; isolation: isolate; overflow: hidden;
+  position: absolute; inset: 0; display: block; overflow: hidden; background: #0A0A0A;
   --phone-reserve: 372px; --canvas-scale: 1;
 }
 .pane.sandbox .sbgrid > .sbtl {
@@ -41,7 +50,7 @@
 .sbgrid .sbrun { flex-wrap: wrap; }
 .sbcanvas { flex: 1; min-height: 0; position: relative; }
 .sbgrid #sbsteps {
-  display: block; position: absolute; inset: 0; min-height: 0; padding: 0; touch-action: none;
+  display: block; position: absolute; inset: 0; min-height: 0; margin: 0; padding: 0; touch-action: none;
   overscroll-behavior: contain; scrollbar-gutter: auto; cursor: grab;
   scrollbar-width: none;
   background-color: #0A0A0A;
@@ -72,6 +81,8 @@
 .sbgrid .steps.flow .dz { min-height: 108px; height: 108px; align-self: flex-start; }
 .sbgrid .steps.tree .dz { min-height: 6px; }
 .sbcanvasnav { display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding: 6px 8px; flex: none; }
+.sbgrid > .sbtl > .sbcanvasnav { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; pointer-events: none; }
+.sbgrid > .sbtl > .sbcanvasnav > * { pointer-events: auto; }
 .sbcanvasnav > span { margin-right: auto; font-size: 11px; }
 .sbcanvasnav button { min-width: 32px; }
 .sbgrid > .sblib, .sbgrid > .sbinsp {
@@ -118,8 +129,10 @@
 .popbody .sbcenter .sbphonerz, .popbody #sbphonelock, .popbody #sbphonemax, .popbody #sbphonedock, .popbody .sbphonebar .popbtn { display: none; }
 .popbody .sbphonebar { cursor: default; }
 .popbody .sbinsp, .popbody .sblib { display: flex; position: relative; inset: auto; width: 100%; }
-.pane.sandbox .sbgrid.floating-tools > .sbtl { top: var(--tool-clearance, 280px); }
-.floating-tools:has(> #sblib:not([hidden])) #sbcontent { padding-left: 290px; }
+.pane.sandbox .sbgrid.floating-tools > .sbtl { top: 0; bottom: 0; }
+.sbgrid.floating-tools > .sbtl > .sbcanvasnav { bottom: var(--minimized-height, 0px); }
+.floating-tools #sbcontent { padding-top: calc(64px + (var(--head-space, 0px) + var(--tool-clearance, 0px)) / var(--canvas-scale)); }
+.floating-tools:has(> #sblib:not([hidden]), > #sblib[data-minimized]) #sbcontent { padding-left: 290px; }
 .floating-tools .sbcenter.phone-maxed { z-index: 10000 !important; }
 .floating-tools > .sbtoolwindow { position: absolute; display: flex; flex-direction: column; align-items: stretch; gap: 0; min-width: 0; min-height: 0; max-height: none; margin: 0; padding: 0; resize: none; overflow: visible; border: 1px solid var(--line); border-radius: var(--r2); background: var(--panel); box-shadow: var(--depth-panel); z-index: 8; }
 .floating-tools > .sbtoolwindow:not([hidden]) { display: flex; }
@@ -140,6 +153,12 @@
 .sbtoolwindow .rz { position: absolute; z-index: 10; touch-action: none; }
 .tools-locked .sbtoolwindow .rz { display: none; }
 .tools-locked .sbtoolwindow .winbar { cursor: default; }
+.sbtoolwindow.tool-locked > .rz { display: none; }
+.sbtoolwindow.tool-locked > .winbar { cursor: default; }
+.sbtoolwindow [data-toollock][aria-pressed="true"] { color: var(--green); }
+.sbminimized { position: absolute; bottom: 0; left: 0; right: var(--phone-reserve); height: 38px; display: flex; align-items: center; gap: 6px; padding: 4px 8px; overflow-x: auto; background: var(--panel); border-top: 1px solid var(--line-strong); z-index: 10001; }
+.sbminimized button { flex: none; white-space: nowrap; }
+.sbminimized[hidden], .floating-tools > .sbcenter[hidden] { display: none; }
 .sbwindowmenu { position: relative; font-size: 12px; z-index: 70; }
 .sbwindowmenu summary { cursor: pointer; display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; background: var(--panel); }
 .sbwindowlist { position: absolute; top: 100%; right: 0; width: 320px; max-height: 70vh; overflow: auto; padding: 12px; background: var(--panel); border: 1px solid var(--line-strong); box-shadow: var(--depth-panel); display: grid; gap: 10px; }

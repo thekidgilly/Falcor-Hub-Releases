@@ -158,9 +158,12 @@
     else local.set('draft.' + g.id, null);
     SB.events = []; SB.eventsFor = ''; SB.logRun = null; SB.home = null;
     if (!S.teaching && !liveRun()) setMode('build', true);
-    if (!o.keepSel) { window.sbWorkspace?.openDrawer('blocks', !flat().length); window.sbWorkspace?.openDrawer('settings', false); }
+    if (!o.keepSel) {
+      if (!window.sbWindows?.isMinimized('sblib')) window.sbWorkspace?.openDrawer('blocks', !flat().length);
+      if (!window.sbWindows?.isMinimized('sbinsp')) window.sbWorkspace?.openDrawer('settings', false);
+    }
     window.sbWorkspace?.resetView();
-    if (o.newWorkspace || !flat().length) window.sbWindows?.show('sbinsights', true);
+    if ((o.newWorkspace || !flat().length) && !window.sbWindows?.isMinimized('sbinsights')) window.sbWindows?.show('sbinsights', true);
     draw();
   }
   async function save(o = {}) {
