@@ -1,11 +1,11 @@
 {
-  "version": "0.21.72",
-  "notes": "Window banners highlight blue only while grabbed; release clears the highlight consistently in Hub and Sandbox.",
-  "publishedAt": "2026-10-23T23:42:23.846Z",
+  "version": "0.21.73",
+  "notes": "Sandbox: release phone control directly; consolidated Chain editor and Workspace panels; tidier phone controls. Hub widgets unchanged.",
+  "publishedAt": "2026-10-23T23:58:37.696Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "831b3bc2fa1d1f563cda28af726a71b02e295838efee85de2a182fdebffccf36",
+      "sha256": "283382cf9c227813e88de3da98e1ff6b8b18aa734520f0d38365c28cf984cb73",
       "size": 1233267
     },
     {
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "57ff28a2fea4bbe3b5bbb86d40a8de635052d61b89974d1f9471a941a8a5acfb",
-      "size": 71065
+      "sha256": "ad58f725630ecbe999eda334e60ede11eaf89ee02d795ce8e030302e7c612166",
+      "size": 71196
     },
     {
       "path": "ui/mirror-capture.js",
@@ -185,13 +185,13 @@
     },
     {
       "path": "ui/sandbox-windows.js",
-      "sha256": "e19c49f5db474a4d9da18ef93ca8ad168def446f9b82346aac999a116c58761b",
-      "size": 17823
+      "sha256": "d1cbbe0f4ac1276c5c8ba7e96f8aeabb1ce30469ace0407bcaae0a8dbef78608",
+      "size": 17277
     },
     {
       "path": "ui/sandbox-workspace.css",
-      "sha256": "3ad3730288996b5ee68b13186d03dcbbdf54d939b76e736fa0e6ef73e80308a1",
-      "size": 14804
+      "sha256": "22d4d88eaf5a443da57ca448634b3000e8c336e5e2b2dfe5350eb0c54538b31a",
+      "size": 15923
     },
     {
       "path": "ui/sandbox-workspace.js",
@@ -200,8 +200,8 @@
     },
     {
       "path": "ui/sandbox.js",
-      "sha256": "619e5a91f9033eee0a6b2c19f25dc032a3531df75a5c5cc18e2429bd0bbe2e72",
-      "size": 131934
+      "sha256": "c2c60259d7e48802c1628fe940cb83c952debc0cb00ea0f4e672246a8a5490de",
+      "size": 132659
     },
     {
       "path": "ui/sequence-icons.css",

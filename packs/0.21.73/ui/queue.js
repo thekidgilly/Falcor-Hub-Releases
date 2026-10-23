@@ -1,0 +1,437 @@
+// Falcor.Hub's Daily Queue in the window: Today's Queue and the current activity on the Phone tab, the one schedule
+// editor (the queue, Games, Tasks and the Sandbox all open it), Play now / Run now with the one-controller question,
+// and the details and history sheets. Loaded after app.js and sandbox.js and uses their helpers (S, call, toast, go,
+// dev, icons). Everything is checked again on the computer's side (queue/index.ts); this page only asks.
+(function () {
+  const Q = {view: 'today', data: null, dataAt: 0, loading: false, fold: true, menuFor: null};
+  const qcall = (op, a = {}) => call('queue', {op, ...a});
+  const quiet = (op, a = {}) => window.hub.call('queue', {op, ...a});
+  const qs = () => S && S.queue || null;
+  const qdev = () => { const q = qs(), d = dev(); return q && d ? q.devices[d.id] || null : null; };
+  const KIND = {game: ['game', 'Game'], task: ['tasks', 'Task'], sequence: ['sandbox', 'Chain']};
+  const MOOD = {SCHEDULED: 'muted', READY: 'ready', RUNNING: 'run', PAUSED: 'sand', BLOCKED: 'red', WAITING_FOR_USER: 'sand', COMPLETED: 'green', FAILED: 'red', SKIPPED: 'muted', MISSED: 'sand', CANCELLED: 'muted', INTERRUPTED: 'sand'};
+  const ENDED = new Set(['COMPLETED', 'FAILED', 'SKIPPED', 'MISSED', 'CANCELLED', 'INTERRUPTED']);
+  // (what waits on the owner: shown in its own group, never in the line-up)
+  const ATTN = new Set(['WAITING_FOR_USER', 'BLOCKED', 'PAUSED']);
+  const PRI = ['', 'Lowest', 'Low', 'Normal', 'High', 'Highest'];
+  const hm = at => new Date(at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'});
+  const dayOf = at => { const d = new Date(at), t = new Date(), y = new Date(Date.now() + 86_400_000); return d.toDateString() === t.toDateString() ? 'Today' : d.toDateString() === y.toDateString() ? 'Tomorrow' : d.toLocaleDateString([], {weekday: 'short', month: 'short', day: 'numeric'}); };
+  const pad2 = n => String(n).padStart(2, '0');
+  const tgt = v => { const i = String(v).indexOf(':'); return {type: v.slice(0, i), id: v.slice(i + 1)}; };
+  const tv = t => t.type + ':' + t.id;
+  // (a game's own launcher icon, asked for here if the Games tab has not yet: app.js#iconOf)
+  const gameOf = pkg => pkg ? (S.games || []).find(g => g.pkg === pkg) || null : null;
+  const kindIcon = (kind, pkg) => { const g = gameOf(pkg), u = g && window.iconOf ? iconOf(g) : null; return u ? '<img src="' + esc(u) + '" alt="">' : icon((KIND[kind] || KIND.task)[0]); };
+  // What the current activity is about, at a glance: for a game its level and the goal it plays to, the next milestone
+  // and its reward, the goals and rewards reached so far and the offer's time left; for a task its app and objective.
+  function infoHtml(cur) {
+    const g = gameOf(cur.pkg), t = cur.target && cur.target.type === 'mission' ? (S.tasks || []).find(x => x.id === cur.target.id) : null, facts = [];
+    if (g) {
+      if (g.level != null || t && t.targetLevel) facts.push(['Level', (g.level ?? '?') + (t && t.targetLevel ? ' → ' + t.targetLevel : '')]);
+      const nx = g.smart && g.smart.next;
+      if (nx) facts.push(['Next goal', nx.text + (nx.amount != null ? ' · ' + P.money(nx.amount, nx.unit) : '')]); else if (g.nextGoal) facts.push(['Next goal', g.nextGoal]);
+      if (g.goals && g.goals.of) facts.push(['Goals', g.goals.reached + ' of ' + g.goals.of + ' reached']);
+      const u = (g.totals || [])[0];
+      if (u && u.potential) facts.push(['Rewards', P.money((u.reached || 0) + (u.pending || 0) + (u.earned || 0), u.unit) + ' reached of ' + P.money(u.potential, u.unit)]);
+      if (g.deadline && g.deadline.text) facts.push(['Offer', g.deadline.text + (g.platforms && g.platforms.length ? ' · ' + g.platforms.join(', ') : '')]);
+    } else if (t) { facts.push(['App', t.app]); facts.push(['Task', t.objective]); }
+    return facts.length ? '<dl class="qinfo">' + facts.map(([k, v]) => '<dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd>').join('') + '</dl>' : '';
+  }
+  const pill = (status, label) => '<span class="qpill s-' + (MOOD[status] || 'muted') + '">' + (status === 'RUNNING' ? '<i class="led active"></i>' : '') + esc(String(label || status).toUpperCase()) + '</span>';
+  const minsOf = ms => Math.max(0, Math.floor(ms / 60000));
+  // The run's step line; while Falcor AI is asked, how long it has been thinking, so a slow answer never looks frozen.
+  let seenStep = {t: '', at: 0};
+  const stepLine = t => { if (t !== seenStep.t) seenStep = {t, at: Date.now()}; return '<div class="step">' + esc(t) + (/^Asking Falcor AI/.test(t) ? ' <span class="muted" data-since="' + seenStep.at + '"></span>' : '') + '</div>'; };
+
+  // ------------------------------------------------------------------ the current activity (a window on the Phone tab)
+  window.renderCurrent = function (d) {
+    const q = qdev(), cur = q && q.current, run = !cur && S.tasks.find(t => t.state === 'RUNNING' && t.deviceId === d.id), sbl = !cur && d.sandbox, next = q && q.next;
+    const mode = !q ? '' : q.mode === 'autopilot' ? (q.paused ? 'QUEUE PAUSED' : 'AUTOPILOT') : q.mode === 'ready' ? 'RUN READY · ' + q.batch : q.paused ? 'QUEUE PAUSED' : '';
+    text($('qmode'), mode); $('qmode').className = 'winx qmode' + (q && q.paused ? ' sand' : q && q.mode ? ' on' : '');
+    const nextLine = next ? '<div class="qnext">Next: <b>' + esc(next.name) + '</b> · ' + (dayOf(next.at) === 'Today' ? '' : esc(dayOf(next.at)) + ' ') + esc(hm(next.at)) + ' <span class="muted">(' + esc(when(next.at)) + ')</span></div>' : '';
+    let html;
+    if (cur) {
+      const word = (KIND[cur.kind] || KIND.task)[1];
+      const n = 20, on = cur.durationMin ? Math.round(Math.min(1, (Date.now() - cur.startedAt) / (cur.durationMin * 60000)) * n) : 0;
+      html = '<div class="qcur s-' + (MOOD[cur.status] || 'run') + '"><div class="qhead"><span class="qico">' + kindIcon(cur.kind, cur.pkg) + '</span><b>' + esc(cur.name) + '</b><span class="qtime" data-start="' + cur.startedAt + '" data-dur="' + (cur.durationMin || '') + '"></span></div>'
+        + '<div class="qsub">' + pill(cur.status, cur.label) + '<span>' + esc(word) + ' · ' + esc(cur.triggerLabel) + (cur.attempt > 1 ? ' · attempt ' + cur.attempt : '') + '</span></div>' + infoHtml(cur)
+        + (cur.durationMin ? '<div class="progress qprog" data-style="--n:' + n + '">' + Array.from({length: n}, (_, i) => '<i class="' + (i < on ? 'on' : '') + '"></i>').join('') + '</div>' : '')
+        + stepLine(cur.reason || d.step || 'Working…') + perfLine(d.perf)
+        + nextLine + '</div>';    } else if (run) {
+      const n = run.targetLevel ? Math.min(20, run.targetLevel) : 10, done = run.targetLevel ? Math.round(Math.min(1, (run.level || 0) / run.targetLevel) * n) : 0;
+      html = '<div class="mission"><div class="what"><b>' + esc(run.app) + '</b> · ' + esc(run.objective) + ' <span class="muted small">· when due</span></div>'
+        + (run.targetLevel ? '<div class="progress" data-style="--n:' + n + '">' + Array.from({length: n}, (_, i) => '<i class="' + (i < done ? 'on' : '') + '"></i>').join('') + '</div><span class="muted small">Level ' + esc(run.level ?? '?') + ' of ' + esc(run.targetLevel) + '</span>' : '')
+        + stepLine(d.step || 'Working…') + '<div class="muted small">Elapsed ' + clock(Date.now() - (run.history.find(h => h.to === 'Running')?.at || Date.now())) + '</div></div>';
+    } else if (sbl) {
+      const paused = sbl.status === 'PAUSED' || sbl.status === 'NEEDS_ATTENTION';
+      html = '<div class="qcur s-run"><div class="qhead"><span class="qico">' + icon('sandbox') + '</span><b>' + esc(sbl.title) + '</b><span class="qtime">' + clock(sbl.elapsedMs || 0) + '</span></div><div class="qsub">' + pill(paused ? 'PAUSED' : 'RUNNING', paused ? 'Paused' : 'Running') + '<span>Chain · Sandbox</span></div><div class="step">' + esc(sbl.step || sbl.reason || '') + '</div>'
+        + nextLine + '</div>';
+    } else {
+      // Nothing running: a quiet resting view (the owner, 2026-10-21), no buttons: what runs is started from the queue.
+      html = '<div class="qrest"><span class="qrestdragon"><img src="dragon.png" alt=""><i>z</i><i>z</i><i>z</i></span><b>NOTHING IS RUNNING</b><span class="qdots"><i></i><i></i><i></i></span></div>';
+    }
+    htmlOnce($('missionbody'), html); tickTimes();
+    const paused = !!(q && q.paused), active = automationActive(d);
+    $('autostart').disabled = !d.connected || !d.authorized || d.locked || !!d.emergency || (active && !paused && sbl?.status !== 'PAUSED');
+    $('autostop').disabled = !active;
+    text($('automationstatus'), d.emergency ? 'Emergency stop is on' : active ? (cur || d.running || d.sandbox ? 'Automation running' : 'Autopilot on · waiting for the next task') : 'Autopilot off');
+  };
+  // The run measured as it goes (engine.ts#perf): AI asks and their average time, moves made without the AI, words
+  // placed and time lost to ads. Nothing shown before the first count.
+  function perfLine(p) {
+    if (!p || !p.running) return '';
+    const sec = ms => ms == null ? '–' : (ms / 1000).toFixed(ms < 10000 ? 1 : 0) + ' s', mins = Math.max(p.minutes, 1 / 60);
+    const parts = [['AI', p.aiCalls + (p.aiCalls ? ' · ' + sec(p.aiAvgMs) + ' avg' : '')], ['Local', p.local + (p.burst ? ' · ' + p.burst + ' fast' : '')]];
+    if (p.words) parts.push(['Words', p.words + ' · ' + (p.words / mins).toFixed(1) + '/min']);
+    parts.push(['Ads', clock(p.adMs)]);
+    // (how fast the phone is looked at: the average look, how many took the video frame, and what the UI dumps cost)
+    if (p.looks) parts.push(['Look', sec(p.looks.avgMs) + (p.looks.video ? ' · ' + Math.round(100 * p.looks.video / p.looks.n) + '% video' : '') + (p.looks.dumps ? ' · ' + p.looks.dumps + ' dumps ' + sec(p.looks.dumpAvgMs) : '')]);
+    return '<div class="qperf">' + parts.map(([k, v]) => '<span><b>' + esc(k) + '</b> ' + esc(v) + '</span>').join('') + '</div>';
+  }
+  function tickTimes() {
+    for (const el of document.querySelectorAll('[data-start]')) { const ms = Date.now() - Number(el.dataset.start), dur = Number(el.dataset.dur); text(el, dur ? minsOf(ms) + ' / ' + dur + ' MIN' : clock(ms)); }
+    for (const el of document.querySelectorAll('[data-since]')) text(el, '· thinking ' + Math.max(0, Math.round((Date.now() - Number(el.dataset.since)) / 1000)) + ' s');
+  }
+  setInterval(() => { if (tab === 'phone') tickTimes(); }, 1000);
+  $('autostart').onclick = async () => { const d = dev(); if (!d) return; await call('autopilot', {deviceId: d.id, on: true}); go('phone'); toast('Autopilot on. Scheduled activities run in turn.'); };
+  $('autostop').onclick = async () => { const d = dev(); if (!d) return; await call('automationStop', {deviceId: d.id}); toast('Automation stopped. Start Autopilot to resume the queue.'); };
+
+  // ------------------------------------------------------------------ Today's Queue (a window on the Phone tab)
+  document.querySelectorAll('#qviews button').forEach(b => b.onclick = () => { Q.view = b.dataset.v; Q.data = null; document.querySelectorAll('#qviews button').forEach(x => cls(x, 'on', x === b)); $('qlist').innerHTML = ''; delete $('qlist').dataset.ready; void load(true); });
+  async function load(force) {
+    if (Q.view === 'today' || Q.loading || (!force && Date.now() - Q.dataAt < 4000)) return;
+    const d = dev(); if (!d) return;
+    Q.loading = true;
+    try { Q.data = await quiet('view', {range: Q.view, deviceId: d.id}); Q.dataAt = Date.now(); } catch { /* the next status tries again */ }
+    Q.loading = false;
+    if (tab === 'phone') renderQueue(d);
+  }
+  window.renderQueue = function (d) {
+    const q = qs(); if (!q || !d) return;
+    if (Q.view !== 'today') { void load(false); if (!Q.data) { htmlOnce($('qlist'), '<li class="qempty" data-empty>Loading…</li>'); return; } }
+    const v = Q.view === 'today' ? {items: q.items.filter(i => i.deviceId === d.id), counts: q.counts, notes: q.notes, doneBy: q.doneBy, whenDue: q.whenDue.filter(w => w.deviceId === d.id)} : Q.data;
+    const box = $('qlist'), rows = [];
+    if (Q.view === 'history') {
+      const st = v.stats;
+      text($('qsum'), st.runs ? st.completed + ' of ' + st.runs + ' completed · 14 days' : '14 days');
+      for (const r of v.items) rows.push({k: 'h:' + r.id, h: r});
+    } else {
+      const items = v.items.slice().sort((a, b) => a.at - b.at), ended = items.filter(i => ENDED.has(i.status) && !i.live), left = items.length - ended.length;
+      text($('qsum'), Q.view === 'today' ? (v.counts.total ? 'COMPLETED ' + v.counts.completed + ' / ' + v.counts.total + '' : '') : items.length + ' planned');
+      if (Q.view === 'today') {
+        // The line-up (the owner, 2026-10-21): what plays now, then what is next in line, in order; what waits on the
+        // owner in its own group below; what finished folded away. No status boxes: the position says it.
+        const live = items.filter(i => i.live), wait = items.filter(i => !i.live && ATTN.has(i.status));
+        const next = items.filter(i => !i.live && !ENDED.has(i.status) && !ATTN.has(i.status));
+        const dueNow = v.whenDue.filter(w => w.state === 'RUNNING'), dueLater = v.whenDue.filter(w => w.state !== 'RUNNING' && w.state !== 'NEEDS_ATTENTION' && w.state !== 'ACTION_VERIFIED'), dueWait = v.whenDue.filter(w => w.state === 'NEEDS_ATTENTION');
+        let pos = 0;
+        for (const i of live) rows.push({k: i.key, i, pos: '#' + (++pos) + ' · RUNNING'});
+        // (a Play now started by hand is no scheduled item: the current activity is shown as NOW all the same)
+        const cur = qdev() && qdev().current;
+        if (cur && !live.length && !dueNow.length) rows.push({k: 'cur:' + (cur.sessionId || cur.name), i: {key: 'cur', name: cur.name, kind: cur.kind, pkg: cur.pkg, at: cur.startedAt, live: true, status: 'RUNNING', label: cur.label, reason: '', durationMin: cur.durationMin, startedAt: cur.startedAt, elapsedMs: cur.elapsedMs}, pos: '#' + (++pos) + ' · RUNNING'});
+        for (const w of dueNow) rows.push({k: 'w:' + w.id, w, pos: '#' + (++pos) + ' · RUNNING'});
+        for (const i of next) rows.push({k: i.key, i, pos: '#' + (++pos) + (pos === (live.length || dueNow.length || cur ? 2 : 1) ? ' · NEXT' : '')});
+        for (const w of dueLater) rows.push({k: 'w:' + w.id, w, pos: '#' + (++pos) + (pos === (live.length || dueNow.length || cur ? 2 : 1) ? ' · NEXT' : '')});
+        if (wait.length || dueWait.length) { rows.push({k: 'g:wait', head: 'NEEDS YOU · ' + (wait.length + dueWait.length), tip: 'These stopped and wait for you: open one (click) to see why, or ··· to run it again or skip it.'}); for (const i of wait) rows.push({k: i.key, i, pos: 'WAITING'}); for (const w of dueWait) rows.push({k: 'w:' + w.id, w, pos: 'WAITING'}); }
+        if (ended.length) rows.push(Q.fold ? {k: 'fold', fold: ended} : {k: 'unfold', unfold: true});
+        if (!Q.fold) for (const i of ended) rows.push({k: i.key, i, pos: 'DONE'});
+      } else {
+        let day = '';
+        for (const i of items) {
+          if (Q.view === 'upcoming' && i.day !== day) { day = i.day; rows.push({k: 'd:' + day, head: dayOf(i.at)}); }
+          rows.push({k: i.key, i, pos: ''});
+        }
+      }
+      if (!items.length && !v.whenDue?.length) rows.push({k: 'empty', empty: S.queue.schedules ? (Q.view === 'today' ? 'Nothing scheduled today.' : 'Nothing scheduled ' + (Q.view === 'tomorrow' ? 'tomorrow' : 'in the next 7 days') + '.') + (qdev() && qdev().next ? ' Next: ' + qdev().next.name + ', ' + dayOf(qdev().next.at).toLowerCase() + ' ' + hm(qdev().next.at) + '.' : '') : 'No activities scheduled yet. Add them from the Library.'});
+      else if (Q.view === 'today' && !left && items.length) rows.push({k: 'alldone', empty: 'All of today\'s activities are done.'});
+    }
+    // (a row: the activity's icon, large, at the far left; its place in line and time; its title; one line about it)
+    const ROW = '<li class="qrow"><span class="qico"></span><div class="qmain"><span class="qpos"></span><span class="qname"></span><span class="qmeta"></span><span class="qwhy"></span></div><button class="ghost icon small qmore" title="Actions">' + icon('dots') + '</button></li>';
+    keyed(box, rows, r => r.k, r => P.el(r.i || r.h || r.w ? ROW
+      : r.fold || r.unfold ? '<li class="qfold"><button class="ghost small"></button></li>' : r.head ? '<li class="qhead2"></li>' : '<li class="qempty"></li>'), (n, r) => {
+      if (r.i) drawItem(n, r.i, r.pos);
+      else if (r.h) drawHist(n, r.h);
+      else if (r.w) drawDue(n, r.w, r.pos);
+      else if (r.fold) { const c = r.fold.filter(i => i.status === 'COMPLETED').length; htmlOnce(n.firstElementChild, icon('check') + esc(r.fold.length + ' finished today' + (c !== r.fold.length ? ' (' + c + ' completed)' : '') + ' · show')); }
+      else if (r.unfold) htmlOnce(n.firstElementChild, icon('chevron') + 'Hide finished');
+      else if (r.head) { text(n, r.head); n.title = r.tip || ''; }
+      else text(n, r.empty);
+    });
+    // Advice from the queue's own record: never applied by itself.
+    const notes = v.notes || [];
+    htmlOnce($('qnotes'), notes.slice(0, 2).map(x => '<p class="qnote ' + esc(x.kind) + '"' + (x.key ? ' data-qkey="' + esc(x.key) + '"' : '') + ' title="' + esc(x.text) + '">' + icon(x.kind === 'overlap' || x.kind === 'long' ? 'clock' : x.kind === 'failing' ? 'stop' : 'lock') + '<span>' + esc(x.text) + '</span></p>').join('') + (notes.length > 2 ? '<p class="qnote more" data-allnotes>+' + (notes.length - 2) + ' more</p>' : ''));
+  };
+  // A name "Word Yatzy - Fun Word Puzzler: Complete Level 6" read as its title (the goal) and its game; "(Game
+  // Autopilot)" and the like are dropped from titles (the icon says what it is).
+  const split = (name, app) => { const s = String(name || ''), i = s.lastIndexOf(': '), title = (i > 0 ? s.slice(i + 2) : s).replace(/\s*\((?:Game Autopilot|Smart Playbook)\)$/i, ''); return {title, app: app || (i > 0 ? s.slice(0, i) : '')}; };
+  const short = app => String(app || '').replace(/\s+-\s+.*$/, '');
+  function posLine(n, pos, when) { htmlOnce(n.querySelector('.qpos'), (pos ? '<b>' + esc(pos) + '</b>' : '') + (when ? (pos ? ' · ' : '') + esc(when) : '')); }
+  function drawItem(n, i, pos) {
+    n.className = 'qrow s-' + (MOOD[i.status] || 'muted') + (i.live ? ' live' : '') + (pos === 'WAITING' ? ' wait' : '') + (pos === 'DONE' ? ' done' : '');
+    if (i.key === 'cur') n.querySelector('.qmore').hidden = true;
+    htmlOnce(n.querySelector('.qico'), kindIcon(i.kind, i.pkg)); n.querySelector('.qico').title = (KIND[i.kind] || KIND.task)[1];
+    const {title, app} = split(i.name);
+    posLine(n, pos, Q.view === 'upcoming' ? dayOf(i.at) : '');
+    text(n.querySelector('.qname'), gameOf(i.pkg)?.name || i.name);
+    const dep = (i.deps || []).filter(x => x.state !== 'ok').map(x => x.name);
+    htmlOnce(n.querySelector('.qmeta'), esc([(KIND[i.kind] || KIND.task)[1], i.durationMin ? i.durationMin + ' min' : i.estMin ? '≈' + i.estMin + ' min' : ''].filter(Boolean).join(' · ')) + (dep.length ? ' · after ' + esc(dep.join(', ')) : '') + (i.live && i.elapsedMs !== null ? ' · <span class="qtime" data-start="' + i.startedAt + '" data-dur="' + (i.durationMin || '') + '"></span>' : ''));
+    // (only what the owner should know: why it waits on them or failed; a finished one says what it did)
+    const why = pos === 'WAITING' || i.status === 'FAILED' || i.status === 'BLOCKED' ? i.reason : pos === 'DONE' && i.status === 'COMPLETED' ? (i.verified ? '✓ ' : '') + (i.result || '') : '';
+    text(n.querySelector('.qwhy'), why || ''); n.querySelector('.qwhy').hidden = !why; n.title = i.name + ' · ' + i.label + (i.reason ? ': ' + i.reason : '');
+  }
+  function drawDue(n, w, pos) {
+    n.className = 'qrow due' + (w.state === 'RUNNING' ? ' live' : '') + (pos === 'WAITING' ? ' wait' : '');
+    htmlOnce(n.querySelector('.qico'), kindIcon(w.type === 'game_level' ? 'game' : 'task', w.pkg));
+    const {title} = split(w.name, w.app);
+    posLine(n, pos, '');
+    text(n.querySelector('.qname'), w.app || w.name); text(n.querySelector('.qmeta'), w.type === 'game_level' ? 'Game' : 'Task');
+    const why = pos === 'WAITING' ? (w.needs && w.needs.reason) || 'Stopped: open it to see why.' : '';
+    text(n.querySelector('.qwhy'), why); n.querySelector('.qwhy').hidden = !why; n.dataset.w = w.id; n.title = w.name;
+  }
+  function drawHist(n, h) {
+    n.className = 'qrow hist s-' + (MOOD[h.status] || 'muted');
+    htmlOnce(n.querySelector('.qico'), kindIcon(h.kind, h.pkg));
+    const {title, app} = split(h.name);
+    posLine(n, String(h.label || h.status).toUpperCase(), new Date(h.at).toLocaleDateString([], {month: 'numeric', day: 'numeric'}) + ' ' + hm(h.at));
+    text(n.querySelector('.qname'), title);
+    text(n.querySelector('.qmeta'), [short(app), h.durationMs !== null ? (h.durationMs < 60000 ? Math.max(1, Math.round(h.durationMs / 1000)) + ' s' : minsOf(h.durationMs) + ' min') : '', h.retries ? 'retry ' + h.retries : ''].filter(Boolean).join(' · '));
+    const why = h.status === 'COMPLETED' ? (h.verified ? '✓ ' : '') + (h.result || h.reason) : h.reason;
+    text(n.querySelector('.qwhy'), why || ''); n.querySelector('.qwhy').hidden = !why; n.title = why || '';
+    n.querySelector('.qmore').hidden = !h.key;
+  }
+  $('qlist').addEventListener('click', e => {
+    const f = e.target.closest('.qfold'); if (f) { Q.fold = !Q.fold; renderQueue(dev()); return; }
+    const m = e.target.closest('.qmore'), li = e.target.closest('.qrow'); if (!li) return;
+    if (m) { e.stopPropagation(); openMenu(m, li); return; }
+    if (li.dataset.w) { followLink('tasks', li.dataset.w); return; }
+    const key = li.dataset.key.startsWith('h:') ? (Q.data && Q.data.items.find(x => 'h:' + x.id === li.dataset.key) || {}).key : li.dataset.key;
+    if (key) void qDetails(key);
+  });
+  $('qnotes').addEventListener('click', e => {
+    if (e.target.closest('[data-allnotes]')) { const v = Q.view === 'today' ? qs() : Q.data; sheet(head('ADVICE', 'From the queue\'s own record') + '<ul class="qenotes">' + ((v && v.notes) || []).map(x => '<li>' + icon('clock') + esc(x.text) + '</li>').join('') + '</ul><p class="muted small">Nothing here is changed by itself: edit a schedule to act on it.</p><div class="row"><button data-close>Close</button></div>'); return; }
+    const p = e.target.closest('[data-qkey]'); if (p) void qDetails(p.dataset.qkey);
+  });
+
+  // The row menu: details, run now, edit, priority, skip today, remove from the queue, schedule off, history.
+  function itemOf(key) { const q = qs(); return (q && q.items.find(i => i.key === key)) || (Q.data && Q.data.items && Q.data.items.find(i => i.key === key)) || null; }
+  function openMenu(btn, li) {
+    const menu = $('qmenu'), w = li.dataset.w, key = li.dataset.key.startsWith('h:') ? (Q.data && Q.data.items.find(x => 'h:' + x.id === li.dataset.key) || {}).key : li.dataset.key, i = key && itemOf(key);
+    if (Q.menuFor === li.dataset.key && !menu.hidden) { closeMenu(); return; }
+    Q.menuFor = li.dataset.key;
+    const opt = (act, label, ic, extra = '') => '<button class="small ghost" data-m="' + act + '"' + extra + '>' + icon(ic) + esc(label) + '</button>';
+    if (w) menu.innerHTML = (li.classList.contains('wait') ? opt('wadd', 'Add back to queue', 'plus') : '') + opt('wrun', 'Run now', 'play') + opt('wsched', 'Schedule…', 'calendar') + opt('wopen', 'Open in Tasks', 'tasks');
+    else if (i) {
+      const live = i.live, ended = ENDED.has(i.status) && i.status !== 'WAITING_FOR_USER', skipped = i.status === 'SKIPPED' && /today by you/.test(i.reason);
+      // (one that waits on the owner can go back in line: at the end of today's queue)
+      menu.innerHTML = (ATTN.has(i.status) && !live ? opt('requeue', 'Add back to queue', 'plus') : '') + opt('details', 'View details', 'eye') + (!live && !ended ? opt('run', 'Run now', 'play') : '') + (!i.adhoc ? opt('edit', 'Edit schedule', 'calendar') : '')
+        + '<div class="qpri"><span class="muted small">Priority</span>' + [1, 2, 3, 4, 5].map(p => '<button class="small' + (p === i.priority ? ' on' : '') + '" data-m="pri" data-p="' + p + '" title="' + PRI[p] + '">' + p + '</button>').join('') + '</div>'
+        + (!i.adhoc ? opt('skip', skipped ? 'Back in today\'s queue' : 'Skip today', 'skip') : '') + (!live && !ended ? opt('cancel', 'Remove from queue', 'close') : '')
+        + (!i.adhoc ? opt('off', 'Disable schedule', 'pause') : '') + opt('history', 'View history', 'clock');
+    } else return;
+    menu.hidden = false; P.fix(menu);
+    const r = btn.getBoundingClientRect(), mw = menu.offsetWidth, mh = menu.offsetHeight;
+    menu.style.left = Math.max(8, Math.min(innerWidth - mw - 8, r.right - mw)) + 'px'; menu.style.top = (r.bottom + mh + 8 > innerHeight ? Math.max(8, r.top - mh - 4) : r.bottom + 4) + 'px';
+    menu.onclick = async e => {
+      const b = e.target.closest('[data-m]'); if (!b) return;
+      const a = b.dataset.m; closeMenu();
+      if (a === 'wadd') { await qcall('add', {target: {type: 'mission', id: w}, deviceId: (dev() || {}).id}); toast('Added back to today\'s queue.'); return; }
+      if (a === 'wrun') return qRun({type: 'mission', id: w});
+      if (a === 'wsched') return openScheduler({target: {type: 'mission', id: w}});
+      if (a === 'wopen') return followLink('tasks', w);
+      if (a === 'requeue') { await qcall('requeue', {key: i.key, deviceId: (dev() || {}).id}); toast(i.name + ' is back in today\'s queue, at the end of the line.'); return; }
+      if (a === 'details') return qDetails(i.key);
+      if (a === 'run') return qRun(i.target, {key: i.key, name: i.name});
+      if (a === 'edit') return openScheduler({target: i.target, scheduleId: i.scheduleId});
+      if (a === 'pri') { await qcall('priority', {scheduleId: i.scheduleId, priority: Number(b.dataset.p)}); toast('Priority: ' + PRI[Number(b.dataset.p)] + '.'); return; }
+      if (a === 'skip') { const on = !(i.status === 'SKIPPED' && /today by you/.test(i.reason)); await qcall('skipToday', {scheduleId: i.scheduleId, on}); toast(on ? i.name + ' is skipped today. Its schedule stays.' : i.name + ' is back in today\'s queue.'); return; }
+      if (a === 'cancel') { await qcall('cancel', {key: i.key}); toast('Removed from the queue. Its schedule (and its other times) stay.'); return; }
+      if (a === 'off') { await qcall('toggle', {scheduleId: i.scheduleId, on: false}); toast(i.name + ': schedule off. Turn it on again in its schedule.'); return; }
+      if (a === 'history') return qHistory({scheduleId: i.scheduleId, name: i.name});
+    };
+  }
+  function closeMenu() { $('qmenu').hidden = true; Q.menuFor = null; }
+  document.addEventListener('click', e => { if (!e.target.closest('#qmenu') && !e.target.closest('.qmore')) closeMenu(); });
+  window.addEventListener('resize', closeMenu);
+
+  // ------------------------------------------------------------------ sheets
+  function sheet(html, wire) { const b = $('qsheetbody'); b.innerHTML = html; P.fix(b); numbers(b); $('qsheet').hidden = false; b.classList.remove('stepin'); void b.offsetWidth; b.classList.add('stepin'); if (wire) wire(b); const f = b.querySelector('input:not([type=checkbox]), select, button.primary'); if (f) f.focus(); }
+  function closeSheet() { $('qsheet').hidden = true; $('qsheetbody').innerHTML = ''; }
+  $('qsheet').addEventListener('mousedown', e => { if (e.target === $('qsheet')) closeSheet(); });
+  $('qsheetbody').addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheet(); });
+  window.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('qsheet').hidden) { closeSheet(); e.stopPropagation(); } }, true);
+  const head = (eye, title) => '<div class="top"><div><p class="eyebrow">// ' + esc(eye) + '</p><h2>' + esc(title) + '</h2></div><button class="ghost icon" data-close title="Close">' + icon('close') + '</button></div>';
+
+  // Play now / Run now: one activity on its own. While the queue runs something else on that phone, the owner chooses.
+  window.qRun = async function (target, o = {}) {
+    const d = dev(); if (!d) { toast('Plug in the phone first.', 'warn'); return null; }
+    let r = await qcall('runNow', {target, key: o.key, deviceId: d.id});
+    if (r.conflict) {
+      const choice = await ask(r.conflict); if (!choice) return null;
+      r = await qcall('runNow', {target, key: o.key, deviceId: d.id, choice});
+    }
+    if (r.already) toast((o.name || 'It') + ' is already running.', 'warn');
+    else if (r.queued) toast('Added to the queue: it runs in its turn.');
+    else if (r.started) toast('Running ' + (r.session.name || o.name || 'it') + ' now. The queue itself does not start.');
+    if (r.started || r.queued) go('phone');
+    return r;
+  };
+  // The one-controller question: pause the queue and run this, add this to the queue, or cancel.
+  function ask(c) {
+    return new Promise(resolve => {
+      const word = (KIND[c.wantKind] || KIND.task)[1].toUpperCase();
+      sheet(head('ONE CONTROLLER PER PHONE', 'The queue is running ' + c.name) + '<p class="small">Only one activity can use the phone at a time. ' + esc(c.name) + ' is ' + esc(String(c.status || 'running').toLowerCase().replace(/_/g, ' ')) + ' now. What should Falcor do with ' + esc(c.want) + '?</p>'
+        + '<div class="qask"><button class="primary" data-a="pause">' + icon('pause') + 'PAUSE QUEUE AND RUN ' + esc(word) + '</button><button data-a="queue">' + icon('queue') + 'ADD TO QUEUE</button><button data-a="cancel" data-close>CANCEL</button></div>'
+        + '<p class="muted small">Pausing keeps the queue where it is: a task starts again on Resume (its claims are never repeated), a chain that already acted waits for you.</p>', b => {
+        b.querySelectorAll('[data-a]').forEach(x => x.onclick = () => { const a = x.dataset.a; closeSheet(); resolve(a === 'cancel' ? null : a); });
+      });
+      const obs = new MutationObserver(() => { if ($('qsheet').hidden) { obs.disconnect(); resolve(null); } });
+      obs.observe($('qsheet'), {attributes: true, attributeFilter: ['hidden']});
+    });
+  }
+  // The Sandbox's own Run now asks the same question (sandbox.js): true to go on, false when added or cancelled.
+  window.qGuard = async function (target, name) {
+    const q = qdev(), d = dev(); if (!q || !q.current || !d) return true;
+    if (q.current.target.type === target.type && q.current.target.id === target.id) return true;
+    const choice = await ask({name: q.current.name, status: q.current.status, want: name, wantKind: target.type === 'sequence' ? 'sequence' : 'task'});
+    if (choice === 'queue') { await qcall('add', {target, deviceId: d.id}); toast('Added to the queue: it runs in its turn.'); return false; }
+    if (choice === 'pause') { await qcall('yield', {deviceId: d.id, name}); return true; }
+    return false;
+  };
+
+  // ------------------------------------------------------------------ the schedule editor (one for every tab)
+  const RULES = [['once', 'Once'], ['daily', 'Daily'], ['weekdays', 'Weekdays'], ['weekly', 'Weekly'], ['monthly', 'Monthly'], ['interval', 'Every…']];
+  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  window.openScheduler = async function (o = {}) {
+    const d = dev(), tz = (S.queue && S.queue.tz) || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const [targets, all] = await Promise.all([o.target ? Promise.resolve(null) : qcall('targets'), quiet('schedules').catch(() => [])]);
+    const list = o.target ? all.filter(s => s.target.type === o.target.type && s.target.id === o.target.id) : [];
+    const cur = o.scheduleId ? all.find(s => s.id === o.scheduleId) || null : null;
+    const now = new Date(), next = new Date(Math.ceil((now.getTime() + 5 * 60000) / 900000) * 900000);
+    const s = cur || {rule: {kind: 'daily', time: pad2(next.getHours()) + ':' + pad2(next.getMinutes())}, tz, durationMin: null, priority: 3, enabled: true, autoStart: false, earlyMin: 0, lateMin: 30, missed: 'skip', maxAttempts: 2, retry: 'safe', retryMin: 5, startDate: null, endDate: null, maxRuns: null, deps: [], revisionId: null, name: o.name || ''};
+    const r = s.rule, today = new Date().toISOString().slice(0, 10);
+    const title = o.title || (cur ? cur.name : o.name) || 'Schedule an activity';
+    const pick = targets ? '<label>Activity<select id="qe-target"><option value="">Pick a game, a task or a chain…</option>' + ['game', 'task', 'sequence'].map(k => { const g = targets.filter(t => t.kind === k); return g.length ? '<optgroup label="' + (KIND[k][1] + 's') + '">' + g.map(t => '<option value="' + esc(tv(t.target)) + '"' + (t.approved ? '' : ' disabled') + '>' + esc(t.name) + ' · ' + esc(t.app) + (t.approved ? '' : ' (approve it first)') + '</option>').join('') + '</optgroup>' : ''; }).join('') + '</select></label>' : '';
+    const others = all.filter(x => !cur || x.id !== cur.id);
+    const depRow = dp => '<div class="qdep"><select data-dep>' + '<option value="">—</option>' + others.map(x => '<option value="' + esc(x.id) + '"' + (dp && dp.scheduleId === x.id ? ' selected' : '') + '>' + esc(x.name) + ' · ' + esc(x.words) + '</option>').join('') + '</select><select data-mode>' + [['success', 'succeeds'], ['skip', 'succeeds (else skip this)'], ['finish', 'finishes, either way'], ['wait', 'is done or not due']].map(([v, n]) => '<option value="' + v + '"' + (dp && dp.mode === v ? ' selected' : '') + '>' + n + '</option>').join('') + '</select><button type="button" class="small icon ghost" data-deldep title="Remove">' + icon('close') + '</button></div>';
+    const existing = list.length ? '<ul class="seqlist qexisting">' + list.map(x => '<li data-id="' + esc(x.id) + '"><label class="check"><input type="checkbox" data-sx="toggle"' + (x.enabled ? ' checked' : '') + ' title="In the queue"></label><div><b>' + esc(x.name) + '</b> <span class="muted small">' + esc(x.words) + (x.autoStart ? ' · starts by itself' : '') + '</span><div class="meta">' + (x.enabled && x.next ? 'next ' + esc(dayOf(x.next)) + ' ' + esc(hm(x.next)) : x.enabled ? 'no upcoming time' : 'off') + (x.lastError ? ' · <span class="sand">' + esc(x.lastError) + '</span>' : '') + '</div></div><div class="row"><button class="small" data-sx="edit">Edit</button><button class="small icon danger" data-sx="del" title="Delete">' + icon('trash') + '</button></div></li>').join('') + '</ul><p class="eyebrow">// ' + (cur ? 'EDIT' : 'ADD ANOTHER TIME') + '</p>' : '';
+    const seqTarget = (o.target && o.target.type === 'sequence') || (cur && cur.target.type === 'sequence');
+    sheet(head(cur ? 'EDIT SCHEDULE' : 'SCHEDULE', title) + existing + '<div class="qform">'
+      + '<div class="grid2">' + pick + '<label>Name in the queue<input id="qe-name" maxlength="80" value="' + esc(s.name || '') + '" placeholder="' + esc(o.name || 'Named after the activity') + '"></label>'
+      + (S.devices.length > 1 ? '<label>Phone<select id="qe-dev">' + S.devices.map(x => '<option value="' + esc(x.id) + '"' + ((cur ? cur.deviceId : d && d.id) === x.id ? ' selected' : '') + '>' + esc(x.label) + '</option>').join('') + '</select></label>' : '') + '</div>'
+      + '<div class="seg qrules" id="qe-kind">' + RULES.map(([v, n]) => '<button type="button" data-k="' + v + '" class="' + (r.kind === v ? 'on' : '') + '">' + n + '</button>').join('') + '</div>'
+      + '<div class="grid3"><label>Starts at<input id="qe-time" type="time" value="' + esc(r.time || '09:00') + '"></label><label>Runs for (min)<input id="qe-dur" type="number" min="1" max="360" placeholder="its own" value="' + esc(s.durationMin ?? '') + '"></label><label>Priority<select id="qe-pri">' + [1, 2, 3, 4, 5].map(p => '<option value="' + p + '"' + (s.priority === p ? ' selected' : '') + '>' + PRI[p] + '</option>').join('') + '</select></label></div>'
+      + '<div class="grid3" id="qe-extra"></div>'
+      + '<div class="qchecks"><label class="check"><input type="checkbox" id="qe-on"' + (s.enabled ? ' checked' : '') + '> Add to the Daily Queue: it starts by itself at its time, one after another with the rest (while this computer is on, Falcor.Hub is open and the phone is plugged in and unlocked)</label>'
+      + '</div>'
+      + '<details class="qadv"' + (cur && (cur.deps.length || cur.earlyMin || cur.missed !== 'skip' || cur.retry !== 'safe') ? ' open' : '') + '><summary>Advanced: window, missed runs, retries, prerequisites</summary>'
+      + '<div class="grid3"><label>May start early (min)<input id="qe-early" type="number" min="0" max="240" value="' + s.earlyMin + '"></label><label>May start late (min)<input id="qe-late" type="number" min="1" max="1440" value="' + s.lateMin + '"></label><label>If it was missed<select id="qe-missed"><option value="skip">skip it (missed)</option><option value="late">run when available</option><option value="ask">ask me before running</option></select></label></div>'
+      + '<div class="grid3"><label>Attempts<input id="qe-att" type="number" min="1" max="5" value="' + s.maxAttempts + '"></label><label>Try again<select id="qe-retry"><option value="safe">only when safe</option><option value="never">never</option><option value="always">always (it may repeat steps)</option></select></label><label>Minutes between tries<input id="qe-rmin" type="number" min="1" max="120" value="' + s.retryMin + '"></label></div>'
+      + '<div class="grid3"><label>Starting (optional)<input id="qe-start" type="date" value="' + esc(s.startDate || '') + '"></label><label>Until (optional)<input id="qe-end" type="date" value="' + esc(s.endDate || '') + '"></label><label>At most (runs)<input id="qe-max" type="number" min="1" placeholder="no limit" value="' + esc(s.maxRuns ?? '') + '"></label></div>'
+      + '<div class="grid3"><label>End time (optional)<input id="qe-endtime" type="time" value="' + esc(s.endTime || '') + '"><small>No new runs at or after this time on the end date.</small></label><label>Time zone<input id="qe-tz" value="' + esc(s.tz || tz) + '"></label>' + (seqTarget ? '<label>Version<select id="qe-ver"><option value="">the latest saved</option></select></label>' : '') + '</div>'
+      + '<p class="eyebrow">// RUNS AFTER (OPTIONAL)</p><div id="qe-deps">' + (s.deps || []).map(depRow).join('') + '</div><button type="button" class="small ghost" id="qe-adddep"' + (others.length ? '' : ' disabled title="Schedule another activity first"') + '>' + icon('plus') + 'Waits for another activity</button>'
+      + '</details>'
+      + '<p class="eyebrow">// NEXT RUNS</p><ul class="upc" id="qe-upc"><li class="muted">…</li></ul><ul class="qenotes" id="qe-notes"></ul>'
+      + '<div class="row"><button class="primary" id="qe-save">' + icon('calendar') + (cur ? 'Save schedule' : 'Save') + '</button>' + (cur ? '<button id="qe-now">' + icon('play') + 'Run now</button>' : '') + '<button data-close>Cancel</button>' + (cur ? '<span class="grow"></span><button class="danger" id="qe-del">' + icon('trash') + 'Delete schedule</button>' : '') + '</div></div>', b => {
+      b.querySelector('#qe-missed').value = s.missed; b.querySelector('#qe-retry').value = s.retry;
+      let kind = r.kind;
+      const target = () => o.target || cur && cur.target || (b.querySelector('#qe-target') && b.querySelector('#qe-target').value ? tgt(b.querySelector('#qe-target').value) : null);
+      const extra = () => {
+        const x = b.querySelector('#qe-extra');
+        x.innerHTML = kind === 'once' ? '<label>Date<input id="qe-date" type="date" value="' + esc(r.date || today) + '"></label>'
+          : kind === 'weekdays' ? '<label class="wide3">Days<span class="days">' + DAYS.map((n, i) => '<label class="check"><input type="checkbox" data-day="' + i + '"' + ((r.days || [1, 2, 3, 4, 5]).includes(i) ? ' checked' : '') + '>' + n + '</label>').join('') + '</span></label>'
+          : kind === 'weekly' ? '<label>Day<select id="qe-wday">' + DAYS.map((n, i) => '<option value="' + i + '"' + ((r.day ?? new Date().getDay()) === i ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></label>'
+          : kind === 'monthly' ? '<label>Day of the month<input id="qe-mday" type="number" min="1" max="31" value="' + (r.day || new Date().getDate()) + '"></label><label>A short month<select id="qe-short"><option value="last">runs on its last day</option><option value="skip"' + (r.missing === 'skip' ? ' selected' : '') + '>is skipped</option></select></label>'
+          : kind === 'interval' ? '<label>Every (minutes, 15 or more)<input id="qe-every" type="number" min="15" max="10080" value="' + (r.minutes || 60) + '"></label><label>Starting<input id="qe-date" type="date" value="' + esc(r.date || today) + '"></label>' : '';
+        numbers(x);
+      };
+      const plan = () => {
+        const rule = {kind, time: b.querySelector('#qe-time').value};
+        if (kind === 'once') rule.date = b.querySelector('#qe-date').value;
+        if (kind === 'weekdays') rule.days = [...b.querySelectorAll('[data-day]')].filter(c => c.checked).map(c => Number(c.dataset.day));
+        if (kind === 'weekly') rule.day = Number(b.querySelector('#qe-wday').value);
+        if (kind === 'monthly') { rule.day = Number(b.querySelector('#qe-mday').value); rule.missing = b.querySelector('#qe-short').value; }
+        if (kind === 'interval') { rule.minutes = Number(b.querySelector('#qe-every').value); rule.date = b.querySelector('#qe-date').value; }
+        const v = id => b.querySelector(id) ? b.querySelector(id).value : '', t = target(), info = targets && t ? targets.find(x => tv(x.target) === tv(t)) : null;
+        const deps = [...b.querySelectorAll('.qdep')].map(row => ({scheduleId: row.querySelector('[data-dep]').value, mode: row.querySelector('[data-mode]').value})).filter(x => x.scheduleId);
+        return {target: t, kind: info ? info.kind : o.kind, pkg: info ? info.pkg : o.pkg, name: v('#qe-name').trim() || (info ? info.name : o.name || ''), deviceId: v('#qe-dev') || (cur && cur.deviceId) || (d && d.id), rule, tz: v('#qe-tz').trim() || tz,
+          durationMin: v('#qe-dur') === '' ? null : Number(v('#qe-dur')), priority: Number(v('#qe-pri')), enabled: b.querySelector('#qe-on').checked, autoStart: true,
+          earlyMin: Number(v('#qe-early') || 0), lateMin: Number(v('#qe-late') || 30), missed: v('#qe-missed'), maxAttempts: Number(v('#qe-att') || 2), retry: v('#qe-retry'), retryMin: Number(v('#qe-rmin') || 5),
+          startDate: v('#qe-start') || null, endDate: v('#qe-end') || null, endTime: v('#qe-endtime') || null, maxRuns: v('#qe-max') === '' ? null : Number(v('#qe-max')), deps, revisionId: v('#qe-ver') || null, scheduleId: cur ? cur.id : null};
+      };
+      let pv = null;
+      const preview = () => { clearTimeout(pv); pv = setTimeout(async () => {
+        const u = b.querySelector('#qe-upc'), nt = b.querySelector('#qe-notes'); if (!u) return;
+        const p = plan();
+        try {
+          const x = await quiet('preview', {plan: {...p, target: p.target || {type: 'sequence', id: 'preview'}, name: p.name || 'Preview', deviceId: p.deviceId || 'preview'}});
+          u.innerHTML = '<li class="muted">' + esc(x.words) + (x.window && x.upcoming[0] ? ' · it may start ' + esc(hm(x.window.start)) + '–' + esc(hm(x.window.late)) : '') + '</li>' + x.upcoming.map(t => '<li>' + esc(new Date(t).toLocaleString([], {weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'})) + '</li>').join('') + (x.upcoming.length ? '' : '<li class="sand">No upcoming time with these settings.</li>');
+          nt.innerHTML = x.notes.map(t => '<li>' + icon('clock') + esc(t) + '</li>').join('');
+        } catch (err) { u.innerHTML = '<li class="red">' + esc(errText(err)) + '</li>'; nt.innerHTML = ''; }
+      }, 180); };
+      extra(); preview();
+      if (seqTarget) { const t = o.target || cur.target; window.hub.call('sandbox', {op: 'get', id: t.id}).then(g => { const sel = b.querySelector('#qe-ver'); if (!sel) return; sel.innerHTML = '<option value="">the latest saved (v' + g.revision.number + ' now)</option>' + g.revisions.map(x => '<option value="' + esc(x.id) + '"' + (cur && cur.revisionId === x.id ? ' selected' : '') + '>v' + x.number + ' only</option>').join(''); }).catch(() => {}); }
+      b.querySelector('#qe-kind').onclick = e => { const k = e.target.closest('[data-k]'); if (!k) return; kind = k.dataset.k; b.querySelectorAll('#qe-kind button').forEach(x => cls(x, 'on', x === k)); extra(); preview(); };
+      b.addEventListener('input', preview); b.addEventListener('change', preview);
+      b.querySelector('#qe-adddep').onclick = () => { if (b.querySelectorAll('.qdep').length >= 3) return; b.querySelector('#qe-deps').insertAdjacentHTML('beforeend', depRow(null)); };
+      b.querySelector('#qe-deps').onclick = e => { const x = e.target.closest('[data-deldep]'); if (x) { x.closest('.qdep').remove(); preview(); } };
+      const tsel = b.querySelector('#qe-target'); if (tsel) tsel.onchange = () => { const t = targets.find(x => tv(x.target) === tsel.value); if (t && !b.querySelector('#qe-name').value) b.querySelector('#qe-name').placeholder = t.name; preview(); };
+      b.querySelector('#qe-save').onclick = async () => {
+        const p = plan();
+        if (!p.target) { toast('Pick the activity it runs.', 'warn'); return; }
+        const saved = cur ? await qcall('update', {scheduleId: cur.id, plan: p}) : await qcall('create', {plan: p});
+        closeSheet();
+        toast((cur ? 'Schedule saved: ' : 'Scheduled: ') + saved.name + ' · ' + saved.words + (saved.next ? ' · next ' + dayOf(saved.next).toLowerCase() + ' ' + hm(saved.next) : '') + (saved.enabled ? saved.autoStart ? '. It starts by itself.' : '. It is in the Daily Queue.' : '. It is off.'));
+        if (tab === 'phone' && Q.view !== 'today') void load(true);
+      };
+      const now2 = b.querySelector('#qe-now'); if (now2) now2.onclick = async () => { closeSheet(); await qRun(cur.target, {name: cur.name}); };
+      const del = b.querySelector('#qe-del'); if (del) del.onclick = async () => { if (!confirm('Delete the schedule "' + cur.name + '"? Its history is kept.')) return; await qcall('remove', {scheduleId: cur.id}); closeSheet(); toast('Schedule deleted.'); };
+      const ex = b.querySelector('.qexisting');
+      if (ex) ex.onclick = async e => {
+        const a = e.target.closest('[data-sx]'), li = e.target.closest('li[data-id]'); if (!a || !li) return;
+        const x = list.find(y => y.id === li.dataset.id);
+        if (a.dataset.sx === 'toggle') { await qcall('toggle', {scheduleId: x.id, on: a.checked}).catch(() => { a.checked = !a.checked; }); return; }
+        if (a.dataset.sx === 'edit') return openScheduler({...o, scheduleId: x.id});
+        if (a.dataset.sx === 'del') { if (!confirm('Delete this schedule? Its history is kept.')) return; await qcall('remove', {scheduleId: x.id}); openScheduler(o); }
+      };
+    });
+  };
+
+  // ------------------------------------------------------------------ details and history
+  async function qDetails(key) {
+    const r = await qcall('details', {key}), i = r.item, s = r.schedule, live = i.live, ended = ['COMPLETED', 'FAILED', 'SKIPPED', 'MISSED', 'CANCELLED', 'INTERRUPTED'].includes(i.status);
+    const dl = [['Status', pill(i.status, i.label) + (i.reason ? ' <span class="small">' + esc(i.reason) + '</span>' : '')], ['What it runs', esc((KIND[i.kind] || KIND.task)[1])], ['When', esc(dayOf(i.at) + ' ' + i.time) + (i.window ? ' <span class="muted small">(may start ' + esc(hm(i.window.start)) + '–' + esc(hm(i.window.late)) + (i.window.cutoff > i.window.late ? ', at the latest ' + esc(hm(i.window.cutoff)) : '') + ')</span>' : '')],
+      ['Schedule', esc(s ? s.words + (s.enabled ? '' : ' (off)') : 'deleted')], ['Runs for', esc(i.durationMin ? i.durationMin + ' min' : i.estMin ? 'about ' + i.estMin + ' min (from its runs)' : 'its own limit')], ['Priority', esc(PRI[i.priority] || 'Normal')],
+      ['Attempts', esc(i.attempts + ' of ' + i.maxAttempts + (i.failures ? ' (' + i.failures + ' failed)' : ''))], ['Starts by itself', 'Yes, at its time (unless the queue is paused)'],
+      ...(i.deps.length ? [['Waits for', i.deps.map(x => esc(x.name) + ' <span class="muted small">(' + esc({success: 'succeeds', skip: 'succeeds, else skip', finish: 'finishes', wait: 'is done or not due'}[x.mode]) + ': ' + esc(x.state === 'ok' ? 'ready' : x.why || x.state) + ')</span>').join('<br>')]] : []),
+      ...(i.result ? [['Result', (i.verified ? '<span class="green">✓ verified</span> ' : '<span class="muted">not verified</span> ') + esc(i.result)]] : [])];
+    sheet(head('ACTIVITY', i.name) + '<dl class="qdl">' + dl.map(([k, v]) => '<dt>' + esc(k) + '</dt><dd>' + v + '</dd>').join('') + '</dl>'
+      + '<p class="eyebrow">// RUNS OF THIS TIME</p><ul class="seqlist">' + (r.sessions.map(x => '<li><span>' + pill(x.status, x.label) + '</span><div><b>' + esc(x.triggerLabel) + ' · ' + esc(hm(x.startedAt)) + (x.endedAt ? '–' + esc(hm(x.endedAt)) : '') + '</b><div class="meta">' + esc(x.reason || '') + (x.result ? ' · ' + esc(x.result) : '') + '</div></div><span></span></li>').join('') || '<li class="muted small">Not run yet.</li>') + '</ul>'
+      + '<div class="row">' + (!live && !ended ? '<button class="primary" data-d="run">' + icon('play') + 'Run now</button>' : '') + (s && !s.adhoc ? '<button data-d="edit">' + icon('calendar') + 'Edit schedule</button>' : '') + (!live && !ended ? '<button data-d="cancel">' + icon('close') + 'Remove from queue</button>' : '') + '<button data-d="hist">' + icon('clock') + 'History</button><span class="grow"></span><button data-close>Close</button></div>', b => {
+      b.onclick = async e => {
+        const a = e.target.closest('[data-d]'); if (!a) return;
+        if (a.dataset.d === 'run') { closeSheet(); await qRun(i.target, {key: i.key, name: i.name}); }
+        if (a.dataset.d === 'edit') openScheduler({target: i.target, scheduleId: i.scheduleId});
+        if (a.dataset.d === 'cancel') { await qcall('cancel', {key: i.key}); closeSheet(); toast('Removed from the queue. Its schedule stays.'); }
+        if (a.dataset.d === 'hist') qHistory({scheduleId: i.scheduleId, name: i.name});
+      };
+    });
+  }
+  window.qDetails = qDetails;
+  async function qHistory(o) {
+    const r = await qcall('history', {scheduleId: o.scheduleId, target: o.target});
+    const rows = r.sessions.map(x => '<li><span>' + pill(x.status, x.label) + '</span><div><b>' + esc(new Date(x.startedAt).toLocaleString([], {weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'})) + ' · ' + esc(x.triggerLabel) + (x.attempt > 1 ? ' · attempt ' + x.attempt : '') + '</b><div class="meta">' + (x.durationMs !== null ? esc(x.durationMs < 60000 ? Math.max(1, Math.round(x.durationMs / 1000)) + ' s' : minsOf(x.durationMs) + ' min') + ' · ' : '') + esc(x.reason || '') + (x.result ? ' · ' + (x.verified ? '✓ ' : '') + esc(x.result) : '') + '</div></div><span></span></li>');
+    const older = (r.runs || []).filter(x => !r.sessions.some(y => y.startedAt <= x.startedAt + 2000 && y.startedAt >= x.startedAt - 2000)).map(x => '<li><span class="qpill s-' + (/VERIFIED|PENDING/.test(x.outcome) ? 'green' : x.outcome === 'RUNNING' ? 'run' : 'muted') + '">' + esc(x.outcome.replace(/_/g, ' ')) + '</span><div><b>' + esc(new Date(x.startedAt).toLocaleString([], {weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'})) + ' · Autopilot (when due)</b><div class="meta">' + esc(x.reason || '') + '</div></div><span></span></li>');
+    sheet(head('HISTORY', o.name || 'History') + '<ul class="seqlist">' + ([...rows, ...older].join('') || '<li class="muted small">No runs yet.</li>') + '</ul><div class="row"><button data-close>Close</button></div>');
+  }
+  window.qHistory = qHistory;
+  window.qAsk = ask; window.qSheet = {open: sheet, head, close: closeSheet};
+
+  // ------------------------------------------------------------------ the Tasks, Games and Sandbox tabs' buttons
+  document.addEventListener('click', async e => {
+    const run = e.target.closest('[data-qrun]'), sch = e.target.closest('[data-qsched]'), hist = e.target.closest('[data-qhist]'), tog = e.target.closest('[data-qtoggle]');
+    if (run) { e.stopPropagation(); run.classList.add('busy'); try { await qRun(tgt(run.dataset.qrun), {name: run.dataset.name}); } finally { run.classList.remove('busy'); } }
+    if (sch) { e.stopPropagation(); openScheduler({target: tgt(sch.dataset.qsched), name: sch.dataset.name, kind: sch.dataset.kind, pkg: sch.dataset.pkg || null}); }
+    if (hist) { e.stopPropagation(); qHistory({target: tgt(hist.dataset.qhist), name: hist.dataset.name}); }
+    if (tog) { e.stopPropagation(); await qcall('toggle', {scheduleId: tog.dataset.qtoggle, on: tog.checked}).catch(() => { tog.checked = !tog.checked; }); toast(tog.checked ? 'Schedule on: it is in the Daily Queue.' : 'Schedule off: it stays saved.'); }
+  });
+})();
