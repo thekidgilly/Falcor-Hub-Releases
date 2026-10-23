@@ -1,12 +1,12 @@
 {
-  "version": "0.21.58",
-  "notes": "Falcor request is the first block in the new AI category at the top of desktop, phone and offline catalogs. Add bounded runtime AI instructions and completion goals to Chains using the configured Gaming model and existing safeguards. Sandbox gains organized floating tool windows, a dedicated Chain player, live Chain insights cost scenarios, context menus, improved focus and pointer zoom, and clearer low-zoom blocks. Phone Sandbox matches the desktop tools with a consolidated pull-out menu, long-press actions and improved mirror availability. Profiles share editable display names and //usernames with portrait activity cards. Falcor blocks feature a centered dragon and subtle pixel effects.",
-  "publishedAt": "2026-10-23T00:19:47.983Z",
+  "version": "0.21.59",
+  "notes": "Desktop Sandbox now uses one continuous grid from the top of the workspace, with tool clearance applied to block content instead of cropping the canvas. Floating tools can move flush to the top. Minimize windows clears unlocked tools and the unlocked phone to a bottom restore bar while locked windows stay visible. Individual tool locks and minimize controls preserve window geometry, block positions and saved tool states. Minimized catalog, details and insights windows stay minimized when reopening a Chain; reset restores the organized tool layout, and minimizing a popped-out tool returns it to the workspace.",
+  "publishedAt": "2026-10-23T00:55:55.312Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "0b26f889c66dc4f3eb40de8c1e8aa16d73de5ca8aed948c4fcf556c0314b4837",
-      "size": 1217581
+      "sha256": "72b832f218c4923f366a3d69138b89a26875d5fe5f8b2d46a7291e5ddd8c085f",
+      "size": 1218002
     },
     {
       "path": "dist/preload.js",
@@ -180,23 +180,23 @@
     },
     {
       "path": "ui/sandbox-windows.js",
-      "sha256": "93dda4ad87701b25d3e64391610a6ad4f8db776908d3edca947fdc6dae9e5760",
-      "size": 13109
+      "sha256": "379302aaa9439f86f09048ac11a4c2daa2618504d2b128b05154ca959123e31a",
+      "size": 16834
     },
     {
       "path": "ui/sandbox-workspace.css",
-      "sha256": "5207e51087df265f51aae7eb5ddc0c8e33d18a43fced2cd87eb608e48b8cb75f",
-      "size": 12641
+      "sha256": "b49410e3618f60640de43077c329b281b60199f421d5aec0d8450620e14a544e",
+      "size": 13380
     },
     {
       "path": "ui/sandbox-workspace.js",
-      "sha256": "9c906ae2aee429d5b7e9d0584a23fb8150e8aa13f2d4d3b6852998e3fd8d01e1",
-      "size": 11359
+      "sha256": "9649edcc71a4be70c08b1811561ebf68eb9324aa2231408cc069629a306070af",
+      "size": 11376
     },
     {
       "path": "ui/sandbox.js",
-      "sha256": "4d02b994a505b5f7f46331c956dbde5158cc7860c4865d80960943522ff552a8",
-      "size": 131886
+      "sha256": "9b6fe6af5ac672ed6266afcc185c3af4a96acecefe864810b6be533505bb1e1a",
+      "size": 132043
     },
     {
       "path": "ui/sequence-icons.css",

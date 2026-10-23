@@ -37,6 +37,8 @@ var CALLS = [
   "teachPause",
   "teachMark",
   "teachStop",
+  "teachAnalyze",
+  "teachDiscard",
   "teachProgress",
   "teachEstimate",
   "teachWrite",
