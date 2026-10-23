@@ -1,11 +1,11 @@
 {
-  "version": "0.21.71",
-  "notes": "Persistent highlighted window banners throughout Hub, Sandbox and pop-outs; consistent appearance after tab changes and dragging; distinct keyboard focus.",
-  "publishedAt": "2026-10-23T23:31:46.611Z",
+  "version": "0.21.72",
+  "notes": "Window banners highlight blue only while grabbed; release clears the highlight consistently in Hub and Sandbox.",
+  "publishedAt": "2026-10-23T23:42:23.846Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "422128dc15430d55c399238ce571660fcfeb9cafb6435b7a44ae319b928f6d0d",
+      "sha256": "831b3bc2fa1d1f563cda28af726a71b02e295838efee85de2a182fdebffccf36",
       "size": 1233267
     },
     {
@@ -105,8 +105,8 @@
     },
     {
       "path": "ui/desk.js",
-      "sha256": "cfff6b83eb762b04047a7c59849bf97ad51e8a78e7b04750ce7630dadfb559f7",
-      "size": 48899
+      "sha256": "2013dd64426bf72568cdbfefc63956c2a306bfd95ac1fd1f1b9eb8cf5f2ec65e",
+      "size": 49100
     },
     {
       "path": "ui/dragon.png",
@@ -185,8 +185,8 @@
     },
     {
       "path": "ui/sandbox-windows.js",
-      "sha256": "853f689a1566617c715232b3145eec021405c1afafb1f5b6dc4a164e34d28ba0",
-      "size": 17732
+      "sha256": "e19c49f5db474a4d9da18ef93ca8ad168def446f9b82346aac999a116c58761b",
+      "size": 17823
     },
     {
       "path": "ui/sandbox-workspace.css",
@@ -195,8 +195,8 @@
     },
     {
       "path": "ui/sandbox-workspace.js",
-      "sha256": "2fdf28e57f7dc855ae5e8daff198b7497b54ff5e2ae1e3ec0241d4f22cd5ec87",
-      "size": 11498
+      "sha256": "dad6cbf581ee98f9aa6d77b010e9b17396593ea00a0168cc709152c35aba4b57",
+      "size": 11646
     },
     {
       "path": "ui/sandbox.js",
@@ -210,8 +210,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "032059671d64f4f434cb7b3acdb54aa1086d38d6fbc4b57e422e3d3f8e23f458",
-      "size": 152483
+      "sha256": "3d8f96d31a26b055e881aa6713bc07872e65d4b63b2a4a1c0b63308321ae80ae",
+      "size": 152448
     },
     {
       "path": "ui/tokens.css",
