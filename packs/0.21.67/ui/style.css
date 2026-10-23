@@ -1,7 +1,7 @@
 @import "tokens.css";
 @import "sequence-icons.css";
-@font-face { font-family: 'Departure Mono'; src: url('fonts/DepartureMono-Regular.woff2') format('woff2'); }
-@font-face { font-family: 'Geist Mono'; src: url('fonts/GeistMono-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Departure Mono'; src: url('fonts/DepartureMono-Regular.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Geist Mono'; src: url('fonts/GeistMono-Regular.woff2') format('woff2'); font-display: swap; }
 /* Design tokens: the same names in the phone app. */
 :root {
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --r1: 6px; --r2: 10px; --r3: 14px;
@@ -690,7 +690,7 @@ section[data-pane="sandbox"] .teachstrip { flex: none; }
 .desk { position: relative; min-height: 0; overflow: clip; isolation: isolate; border-radius: var(--r2); background: radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px) 0 0 / 24px 24px; }
 .desk > .win { position: absolute; left: 0; top: 0; width: 320px; height: 240px; display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--line); border-radius: var(--r2); box-shadow: var(--depth-panel);
   --tick: linear-gradient(var(--line-strong) 0 0); background: var(--tick) left 3px bottom 3px / 2px 2px no-repeat, var(--tick) right 3px bottom 3px / 2px 2px no-repeat, var(--panel); }
-.desk > .win.front { border-color: var(--line-strong); box-shadow: var(--depth-panel), 0 12px 28px rgba(0,0,0,.32); }
+.desk > .win.front { border-color: rgba(var(--accent-rgb),.38); box-shadow: var(--depth-panel), 0 12px 28px rgba(0,0,0,.32); }
 .desk > .win.maxed { border-radius: var(--r1); }
 .desk.anim > .win { transition: left var(--motion-panel) var(--ease-move), top var(--motion-panel) var(--ease-move), width var(--motion-panel) var(--ease-move), height var(--motion-panel) var(--ease-move); }
 .winbar { display: flex; align-items: center; gap: 7px; height: 30px; flex: none; min-width: 0; padding: 0 3px 0 9px; border-bottom: 1px solid var(--line); border-radius: var(--r2) var(--r2) 0 0; background: rgba(255,255,255,.015); cursor: grab; user-select: none; touch-action: none; }

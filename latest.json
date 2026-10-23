@@ -1,12 +1,12 @@
 {
-  "version": "0.21.66",
-  "notes": "Faster Companion Sandbox selection and dragging; lighter live previews; shared desktop frame encoding; exact mirror tap coordinates; cancelled obsolete screen requests and refined touch controls.",
-  "publishedAt": "2026-10-23T17:08:55.581Z",
+  "version": "0.21.67",
+  "notes": "Fix Chrome WebView control reads, visible completion checks and slow-observation lease expiry. Includes verified Companion 0.3.5 screens and the desktop/mobile Sandbox and mirror improvements.",
+  "publishedAt": "2026-10-23T17:57:17.551Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "37e4e98d65ca0d5f26b867b4fc359a1c3d1d24ec22ab03cf963164b85cb858ea",
-      "size": 1221683
+      "sha256": "6fac04a147a94f0660c9dc6f83f4ed5d9b4ee3404d938d62c97df3de98f1a8e7",
+      "size": 1222855
     },
     {
       "path": "dist/preload.js",

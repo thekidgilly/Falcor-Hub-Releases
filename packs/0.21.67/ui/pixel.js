@@ -208,15 +208,27 @@
 
   // ------------------------------------------------------------------ motion helpers
   const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const rolling = new Map();
+  const finishRoll = (node, state) => { clearInterval(state.timer); rolling.delete(node); text(node, state.fmt(state.to)); };
   // Numbers roll up in steps like an arcade counter.
   function roll(node, to, fmt = v => String(v)) {
     if (!node) return;
-    const from = Number(node.dataset.v ?? to);
+    const previous = rolling.get(node), quiet = reduced() || node.ownerDocument.hidden;
+    // Repeated status snapshots keep the current animation; a new target starts at the displayed value.
+    if (previous && previous.to === to && !quiet) return;
+    const from = previous ? previous.value : Number(node.dataset.v ?? to);
+    if (previous) { clearInterval(previous.timer); rolling.delete(node); }
     node.dataset.v = String(to);
-    if (from === to || reduced() || !Number.isFinite(from) || !Number.isFinite(to)) { text(node, fmt(to)); return; }
+    if (from === to || quiet || !Number.isFinite(from) || !Number.isFinite(to)) { text(node, fmt(to)); return; }
     let i = 0; const steps = 8;
-    clearInterval(node._roll);
-    node._roll = setInterval(() => { i++; const v = i >= steps ? to : from + (to - from) * i / steps; text(node, fmt(Number.isInteger(to) ? Math.round(v) : v)); if (i >= steps) clearInterval(node._roll); }, 45);
+    const state = {to, fmt, value: from, timer: null};
+    state.timer = setInterval(() => {
+      if (!node.isConnected || node.ownerDocument.hidden || reduced()) { finishRoll(node, state); return; }
+      i++; const v = i >= steps ? to : from + (to - from) * i / steps;
+      state.value = Number.isInteger(to) ? Math.round(v) : v; text(node, fmt(state.value));
+      if (i >= steps) finishRoll(node, state);
+    }, 45);
+    rolling.set(node, state);
   }
   // Shared finite motion: never changes application state or delays an action.
   const moving = new Set();
@@ -281,7 +293,7 @@
     type();
     return t;
   }
-  const stopMotion = () => { for (const a of moving) a.cancel(); };
+  const stopMotion = () => { for (const a of moving) a.cancel(); for (const [node, state] of rolling) finishRoll(node, state); };
   matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', e => { if (e.matches) stopMotion(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopMotion(); });
 
