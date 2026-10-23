@@ -198,6 +198,7 @@
     const r = await sb('start', {id: SB.seq.id, deviceId: d.id, mode, stepId: mode === 'test' ? SB.focus : undefined});
     SB.events = []; SB.eventsFor = r.id; SB.logRun = r.id;
     toast(mode === 'test' ? 'Testing one step on the phone.' : mode === 'preview' ? 'Preview: watch the phone. Pause or Stop any time.' : 'Running "' + def().title + '" (version ' + r.revision + ').');
+    go('phone');
   }
   const ctl = (op, label) => async () => { const l = liveRun(); if (!l) return; await sb(op, {runId: l.runId}); if (label) toast(label); };
   let pollTimer = null;
@@ -740,7 +741,6 @@
         const from = buildPointer; buildPointer = null;
         const ms = Date.now() - from.at, moved = Math.hypot(p.x - from.x, p.y - from.y);
         const action = moved > .03 ? {kind: 'swipe', x: from.x, y: from.y, toX: p.x, toY: p.y, ms: Math.min(2000, Math.max(120, ms))}
-          : from.y >= .935 && !document.body.classList.contains('phone-landscape') && ms <= 600 ? {kind: 'key', key: from.x < .37 ? 'APP_SWITCH' : from.x > .63 ? 'BACK' : 'HOME'}
           : ms > 600 ? {kind: 'long_press', x: from.x, y: from.y, ms: Math.min(3000, ms)} : {kind: 'tap', x: from.x, y: from.y};
         buildAction(action);
       } else if (kind === 'cancel') buildPointer = null;
@@ -1208,7 +1208,7 @@
         const a = e.target.closest('[data-act]'), li = e.target.closest('li[data-id]'); if (!a || !li) return;
         const id = li.dataset.id, s = SB.data.sequences.find(x => x.id === id);
         if (a.dataset.act === 'edit') { if (SB.dirty && SB.seq && SB.seq.id !== id && !confirmLeave()) return; closeSheet(); await open(id); }
-        if (a.dataset.act === 'start') { const d = sdev(); if (!d) { toast('Plug in the phone first.', 'warn'); return; } const r = await sb('start', {id, deviceId: d.id}); toast('Running "' + s.title + '" (version ' + r.revision + ').'); closeSheet(); if (!SB.seq || SB.seq.id !== id) await open(id); }
+        if (a.dataset.act === 'start') { const d = sdev(); if (!d) { toast('Plug in the phone first.', 'warn'); return; } const r = await sb('start', {id, deviceId: d.id}); toast('Running "' + s.title + '" (version ' + r.revision + ').'); closeSheet(); go('phone'); }
         if (a.dataset.act === 'sched') { closeSheet(); if (!SB.seq || SB.seq.id !== id) await open(id); schedule(); }
         if (a.dataset.act === 'pub') { await sb('publish', {id}); await refresh(); draw(b); toast('"' + s.title + '" is in your Library now.'); }
         if (a.dataset.act === 'unpub') { if (!window.confirm('Unpublish "' + s.title + '"? It leaves the Library and its schedules turn off. It stays here as a draft.')) return; await sb('unpublish', {id}); await refresh(); draw(b); toast('"' + s.title + '" is a draft again.'); }

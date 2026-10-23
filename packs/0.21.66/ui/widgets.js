@@ -4,9 +4,18 @@
 // Loaded after desk.js; uses app.js's $, P, S, dev and deviceId.
 (() => {
   const VOICE = getComputedStyle(document.documentElement).getPropertyValue('--voice').trim() || 'monospace';
-  const COLORS = {green: '#5CE59A', sand: '#F5B544', red: '#F0544F', blue: '#7AA7FF', white: '#EDEDED'};
+  const palette = getComputedStyle(document.documentElement);
+  const COLORS = Object.fromEntries(Object.entries({green: '--green', sand: '--sand', red: '--red', blue: '--accent', white: '--text'}).map(([k, token]) => [k, palette.getPropertyValue(token).trim()]));
   const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(',');
   const seen = id => { const n = $(id); return n && n.offsetParent && !n.ownerDocument.hidden ? n : null; };
+  // Reduced motion keeps one still frame, repainting only when its size or underlying content changes.
+  const stills = new WeakMap();
+  function decor(id, content = '') {
+    const c = seen(id); if (!c) return null;
+    const quiet = P.reduced(), key = c.clientWidth + ':' + c.clientHeight + ':' + content;
+    if (quiet && stills.get(c) === key) return null;
+    stills.set(c, quiet ? key : null); return c;
+  }
   // A canvas at its box's size in device pixels; returns its 2D context and size in CSS pixels.
   function fit(c) {
     const r = c.ownerDocument.defaultView.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
@@ -33,12 +42,12 @@
     return {w, rows: rows.slice(a, b + 1)};
   }
   function ticker() {
-    const c = seen('tkcanvas'); if (!c) return;
+    const c = decor('tkcanvas', tk.text + tk.color + tk.speed + VOICE); if (!c) return;
     const key = tk.text + '|' + VOICE; if (bitsFor !== key) { bits = bitmap(tk.text || ' '); bitsFor = key; off = 0; }
     const {g, w, h} = fit(c), n = bits.rows.length, p = Math.max(3, Math.floor(h / (n + 2))), cols = Math.ceil(w / p) + 1;
     const total = bits.w + cols, col = rgb(COLORS[tk.color] || COLORS.green), y0 = (h - n * p) / 2, rad = p * .36;
     g.fillStyle = '#050605'; g.fillRect(0, 0, w, h);
-    off = (off + tk.speed) % total;
+    off = P.reduced() ? cols : (off + tk.speed) % total;
     g.fillStyle = 'rgba(' + col + ',.07)';
     for (let x = 0; x < cols; x++) for (let y = 0; y < n; y++) { g.beginPath(); g.arc(x * p + p / 2, y0 + y * p + p / 2, rad, 0, 7); g.fill(); }
     g.fillStyle = 'rgb(' + col + ')'; g.shadowColor = 'rgba(' + col + ',.9)'; g.shadowBlur = p * 1.1;
@@ -70,7 +79,7 @@
   // ------------------------------------------------------------------ Data rain
   const GLYPHS = '01<>/\\#*+=:;ABCDEFXYZ$%&@', drops = [];
   function rain() {
-    const c = seen('raincanvas'); if (!c) return;
+    const c = decor('raincanvas'); if (!c) return;
     const {g, w, h} = fit(c), fs = 12, cols = Math.ceil(w / fs);
     while (drops.length < cols) drops.push(Math.random() * -h / fs);
     g.fillStyle = 'rgba(8,10,9,.22)'; g.fillRect(0, 0, w, h);
@@ -87,7 +96,9 @@
   let sweep = 0;
   const spot = id => { let x = 7; for (const ch of String(id)) x = (x * 31 + ch.charCodeAt(0)) >>> 0; return {a: (x % 360) * Math.PI / 180, r: .3 + (x % 55) / 100}; };
   function radar() {
-    const c = seen('radarcanvas'); if (!c) return;
+    if (!seen('radarcanvas')) return;
+    const blips = [...(S ? S.devices.map(d => ({id: d.id, name: d.label, on: d.connected})) : []), ...(S && S.remote ? S.remote.phones.map(p => ({id: p.id, name: p.name, on: Date.now() - p.lastSeenAt < 5 * 60e3})) : [])];
+    const c = decor('radarcanvas', JSON.stringify(blips)); if (!c) return;
     const {g, w, h} = fit(c), R = Math.min(w, h) / 2 - 8, cx = w / 2, cy = h / 2;
     g.fillStyle = '#050706'; g.fillRect(0, 0, w, h);
     g.strokeStyle = 'rgba(92,229,154,.22)'; g.lineWidth = 1;
@@ -97,12 +108,11 @@
     const cone = g.createConicGradient(sweep - Math.PI * .5, cx, cy);
     cone.addColorStop(0, 'rgba(92,229,154,0)'); cone.addColorStop(.75, 'rgba(92,229,154,0)'); cone.addColorStop(.995, 'rgba(92,229,154,.38)'); cone.addColorStop(1, 'rgba(92,229,154,0)');
     g.fillStyle = cone; g.beginPath(); g.arc(cx, cy, R, 0, 7); g.fill();
-    const blips = [...(S ? S.devices.map(d => ({id: d.id, name: d.label, on: d.connected})) : []), ...(S && S.remote ? S.remote.phones.map(p => ({id: p.id, name: p.name, on: Date.now() - p.lastSeenAt < 5 * 60e3})) : [])];
     g.font = '10px ' + VOICE; g.textBaseline = 'middle';
     for (const b of blips) {
       const s = spot(b.id), x = cx + Math.cos(s.a) * R * s.r, y = cy + Math.sin(s.a) * R * s.r;
       const since = ((sweep - s.a) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2), glow = Math.max(.25, 1 - since / (Math.PI * 2));
-      const col = b.on ? '92,229,154' : '245,181,68';
+      const col = rgb(b.on ? COLORS.green : COLORS.sand);
       g.fillStyle = 'rgba(' + col + ',' + glow + ')'; g.shadowColor = 'rgba(' + col + ',.9)'; g.shadowBlur = 8 * glow;
       g.fillRect(Math.round(x) - 3, Math.round(y) - 3, 6, 6); g.shadowBlur = 0;
       g.fillStyle = 'rgba(237,237,237,' + (.35 + glow * .5) + ')'; g.fillText(String(b.name || '').slice(0, 14), x + 7, y);
@@ -113,8 +123,10 @@
   // ------------------------------------------------------------------ Signal: a scope line, livelier while Falcor works
   let phase = 0, amp = .3;
   function scope() {
-    const c = seen('scopecanvas'); if (!c) return;
-    const {g, w, h} = fit(c), busy = !!(S && S.devices.some(d => d.running || d.control)), live = !!(S && S.videos && S.videos.length);
+    if (!seen('scopecanvas')) return;
+    const busy = !!(S && S.devices.some(d => d.running || d.control)), live = !!(S && S.videos && S.videos.length);
+    const c = decor('scopecanvas', busy + ':' + live); if (!c) return;
+    const {g, w, h} = fit(c);
     amp += ((busy ? .85 : live ? .45 : .15) - amp) * .08; phase += .22;
     g.fillStyle = '#050706'; g.fillRect(0, 0, w, h);
     g.strokeStyle = 'rgba(92,229,154,.10)'; g.lineWidth = 1;

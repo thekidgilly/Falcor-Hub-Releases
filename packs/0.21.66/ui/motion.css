@@ -259,6 +259,16 @@ input[type=range] { accent-color: var(--accent); }
 .panel, .card, .tile { border-radius: var(--r2); }
 .card { box-shadow: var(--depth-panel); }
 .card, .appcard, .gametile { transition: border-color var(--motion-fast), background-color var(--motion-fast), box-shadow var(--motion-fast); }
+/* Tiny hardware lights and a single pixel settle when a tab is selected. No new idle loops. */
+.led.on { box-shadow: 0 0 6px color-mix(in srgb, var(--green) 28%, transparent); }
+.led.active, #led-auto.on, #autopilot .led.on { box-shadow: 0 0 6px var(--glow-accent); }
+.led.warn { box-shadow: 0 0 5px color-mix(in srgb, var(--sand) 24%, transparent); }
+.tabs button.on .ico, .tabbar button.on .ico { color: var(--accent); filter: drop-shadow(0 0 3px var(--glow-accent)); animation: pixel-select var(--motion-base) steps(3, end) both; }
+@keyframes pixel-select { from { transform: translateY(2px); opacity: .65; } to { transform: none; opacity: 1; } }
+.gametile:focus-visible, .appcard:focus-visible { border-color: var(--accent); background-color: var(--panel-2); }
+.tabbar button:focus-visible { outline-offset: -4px; }
+.nt:focus-within .nclose { opacity: 1; }
+@media (hover: none) { .nt .nclose { opacity: 1; } }
 .logo { animation: none; }
 .logo .eye { animation: none; }
 .logo.live .eye { animation: blink 3s steps(1) infinite; }

@@ -1,12 +1,12 @@
 {
-  "version": "0.21.65",
-  "notes": "Automation starts open Hub's live mirror; Sandbox windows match Hub styling; phone UI has a larger mirror, improved narrow-screen layouts, and lighter preview refresh.",
-  "publishedAt": "2026-10-23T16:40:08.122Z",
+  "version": "0.21.66",
+  "notes": "Faster Companion Sandbox selection and dragging; lighter live previews; shared desktop frame encoding; exact mirror tap coordinates; cancelled obsolete screen requests and refined touch controls.",
+  "publishedAt": "2026-10-23T17:08:55.581Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "52e8018d9a42a8c5f7768db6df31df7899da32e91073e7cf3f83cb4a0c7adc27",
-      "size": 1221278
+      "sha256": "37e4e98d65ca0d5f26b867b4fc359a1c3d1d24ec22ab03cf963164b85cb858ea",
+      "size": 1221683
     },
     {
       "path": "dist/preload.js",
@@ -34,14 +34,14 @@
       "size": 26196
     },
     {
-      "path": "remote-ui/assets/index-1TQrt-q3.css",
-      "sha256": "25b03117b17791d08febff60b1264ea52470db68880ee1694534457e76b3d7ba",
-      "size": 115321
+      "path": "remote-ui/assets/index-B_W3EfO_.css",
+      "sha256": "535a064306919da7b0c1537687e86271383821b8e7ecb087862960fb6ef5b65e",
+      "size": 116208
     },
     {
-      "path": "remote-ui/assets/index-Ct3d3smC.js",
-      "sha256": "23cbf9e95e44ab87272272fd746df6f481d9945579320a8422eaea84fd3b127e",
-      "size": 280836
+      "path": "remote-ui/assets/index-DjszVTBQ.js",
+      "sha256": "a3e34894e8fd2a41b34a7c76487fd3f8c8cf1dcfdb83a583c9f323b40d8e1402",
+      "size": 283229
     },
     {
       "path": "remote-ui/fonts/DepartureMono-OFL.txt",
@@ -70,7 +70,7 @@
     },
     {
       "path": "remote-ui/index.html",
-      "sha256": "e87d29b41d050888b179667062a2cef1a675ae64128c42caea20893ed9a65122",
+      "sha256": "8e9ac17fcc1386ef64992cd071179e777a962261c8543de6ef923499548e8974",
       "size": 3885
     },
     {
@@ -85,8 +85,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "1315e69bb1f9545ecbcd289746b9af1d41f1c2aff5714d938f468df0497b3241",
-      "size": 152498
+      "sha256": "34508cd6f23a1187138676fa7511badcebcca457b4334e93453fd486d9ef12db",
+      "size": 151561
     },
     {
       "path": "ui/app.png",
@@ -140,8 +140,13 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "86de89cc5dba5227bca8d627d173954ccc0261be2e7f27bf736fdad79557aed9",
-      "size": 70852
+      "sha256": "8f3fdec58043233d110516ae66125d2ebb9f33c71eea8fbc4e1322f006c1faa7",
+      "size": 70894
+    },
+    {
+      "path": "ui/mirror-capture.js",
+      "sha256": "27e9cc799a25a462cecbc6ff3d7a681b8c31d963c44e2041f5bc6f798a6de0b4",
+      "size": 1419
     },
     {
       "path": "ui/motion.css",
@@ -185,8 +190,8 @@
     },
     {
       "path": "ui/sandbox-workspace.css",
-      "sha256": "0a275ebce21ea1755a9211e56ff4f4aded25e5acfc38706ce5bbe0d269d368d7",
-      "size": 14488
+      "sha256": "3ad3730288996b5ee68b13186d03dcbbdf54d939b76e736fa0e6ef73e80308a1",
+      "size": 14804
     },
     {
       "path": "ui/sandbox-workspace.js",
@@ -195,8 +200,8 @@
     },
     {
       "path": "ui/sandbox.js",
-      "sha256": "10919f991b63671c21926c82ad0d605af0a0e303360e04e95ef4caf9552815f5",
-      "size": 132024
+      "sha256": "06d48d28798fc6fa3ea259931821a188d2088c14ab216f2bc4b8fcb21ad333f9",
+      "size": 131845
     },
     {
       "path": "ui/sequence-icons.css",
