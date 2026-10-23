@@ -57,19 +57,20 @@
   const windows = new Map();
   $('sbcenter').addEventListener('pointerdown', () => { if ($('sbcenter').parentElement === grid) $('sbcenter').style.zIndex = String(++top); });
   const size = () => ({w: Math.max(1, grid.clientWidth - parseFloat(getComputedStyle(grid).getPropertyValue('--phone-reserve') || '0')), h: Math.max(1, grid.clientHeight)});
+  const headSpace = () => head.offsetParent ? Math.max(0, Math.min(grid.clientHeight / 2, head.offsetTop + head.offsetHeight)) : 0;
   function defaults(id) {
-    const {w, h} = size(), gap = 10, half = (w - gap * 3) / 2;
+    const {w, h: full} = size(), gap = 10, half = (w - gap * 3) / 2, t = headSpace(), h = full - t;
     const narrow = w < 760;
     const map = {
-      sbbuildtools: {x: gap, y: gap, w: narrow ? w - 2 * gap : half, h: 104},
-      sbchaintools: {x: narrow ? gap : half + 2 * gap, y: narrow ? 124 : gap, w: narrow ? w - 2 * gap : half, h: 104},
-      sbplayback: {x: gap, y: narrow ? 238 : 124, w: w - 2 * gap, h: narrow ? 130 : 98},
-      sblib: {x: gap, y: narrow ? 378 : 232, w: 260, h: Math.max(220, Math.min(420, h - (narrow ? 388 : 242)))},
-      sbinsp: {x: Math.max(gap, w - 340), y: Math.min(290, h / 3), w: 330, h: Math.min(440, h * .65)},
-      sbviewtools: {x: gap, y: Math.max(gap, h - 180), w: 420, h: 130},
-      sbhelptools: {x: Math.max(gap, w - 270), y: Math.max(gap, h - 150), w: 260, h: 100},
-      sbteachtools: {x: gap, y: Math.min(290, h / 3), w: 350, h: 240},
-      sbinsights: {x: Math.max(gap, w - (narrow ? 310 : 350)), y: narrow ? 378 : 232, w: narrow ? 300 : 340, h: Math.max(180, Math.min(460, h - (narrow ? 388 : 242)))},
+      sbbuildtools: {x: gap, y: t + gap, w: narrow ? w - 2 * gap : half, h: 104},
+      sbchaintools: {x: narrow ? gap : half + 2 * gap, y: t + (narrow ? 124 : gap), w: narrow ? w - 2 * gap : half, h: 104},
+      sbplayback: {x: gap, y: t + (narrow ? 238 : 124), w: w - 2 * gap, h: narrow ? 130 : 98},
+      sblib: {x: gap, y: t + (narrow ? 378 : 232), w: 260, h: Math.max(220, Math.min(420, h - (narrow ? 388 : 242)))},
+      sbinsp: {x: Math.max(gap, w - 340), y: t + Math.min(290, h / 3), w: 330, h: Math.min(440, h * .65)},
+      sbviewtools: {x: gap, y: Math.max(t + gap, full - 180), w: 420, h: 130},
+      sbhelptools: {x: Math.max(gap, w - 270), y: Math.max(t + gap, full - 150), w: 260, h: 100},
+      sbteachtools: {x: gap, y: t + Math.min(290, h / 3), w: 350, h: 240},
+      sbinsights: {x: Math.max(gap, w - (narrow ? 310 : 350)), y: t + (narrow ? 378 : 232), w: narrow ? 300 : 340, h: Math.max(180, Math.min(460, h - (narrow ? 388 : 242)))},
     };
     return map[id];
   }
@@ -93,11 +94,13 @@
         if (r) r.h = defaults(d.id).h / h;
         compactOnLoad = false; keep();
       }
-      put(el, maxed === d.id ? {x: 0, y: 0, w, h} : bounded(r ? {x: r.x * w, y: r.y * h, w: r.w * w, h: r.h * h} : defaults(d.id), d));
+      put(el, maxed === d.id ? {x: 0, y: headSpace(), w, h: h - headSpace()} : bounded(r ? {x: r.x * w, y: r.y * h, w: r.w * w, h: r.h * h} : defaults(d.id), d));
       el.classList.toggle('maxed', maxed === d.id);
       const button = el.querySelector('[data-toolmax]'); button.title = (maxed === d.id ? 'Restore ' : 'Maximize ') + d.name;
       htmlOnce(button, icon(maxed === d.id ? 'restore' : 'max'));
     }
+    const space = headSpace() + 'px';
+    if (grid.parentElement.style.getPropertyValue('--head-space') !== space) grid.parentElement.style.setProperty('--head-space', space);
     const clearance = Math.max(0, Math.min(h - 130, w < 760 ? 378 : 232)) + 'px';
     if (grid.style.getPropertyValue('--tool-clearance') !== clearance) grid.style.setProperty('--tool-clearance', clearance);
     grid.classList.toggle('tools-locked', saved.locked);

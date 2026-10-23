@@ -18,14 +18,8 @@ async function call(name, args) {
   try { return await window.hub.call(name, args); }
   catch (e) { toast(errText(e), 'bad'); throw e; }
 }
-// Toasts: blue done, sand attention, red errors (errors stay until closed). No layout shift.
-function toast(msg, kind = 'ok') {
-  const t = P.el('<div class="toast ' + (kind === 'bad' ? 'bad' : kind === 'warn' ? 'warn' : '') + '"><span class="led ' + (kind === 'bad' ? 'bad' : kind === 'warn' ? 'warn' : 'on') + '"></span><span>' + esc(msg) + '</span><button class="ghost small" title="Close">×</button></div>');
-  t.querySelector('button').onclick = () => P.motion.dismiss(t);
-  $('toasts').appendChild(t);
-  while ($('toasts').children.length > 4) $('toasts').firstElementChild.remove();
-  if (kind !== 'bad') setTimeout(() => P.motion.dismiss(t), kind === 'warn' ? 7000 : 4000);
-}
+// Notifications: typed see-through lines (blue prompt done, sand attention, red errors), gone after a few seconds.
+function toast(msg, kind = 'ok') { P.notify($('toasts'), String(msg), kind, {max: 4}); }
 const flash = (m, bad) => toast(m, bad ? 'bad' : 'ok');
 // −/+ pixel buttons for number inputs (the browser's spinners are hidden).
 function numbers(root = document) {

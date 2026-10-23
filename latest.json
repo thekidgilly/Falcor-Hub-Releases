@@ -1,12 +1,12 @@
 {
-  "version": "0.21.63",
-  "notes": "Subtle pixel status glows and selected-tab feedback. Faster phone UI by skipping hidden panels and updating only the recording clock. Stable counters, reduced-motion canvas decor, immediate font fallback and clearer notification dismissal.",
-  "publishedAt": "2026-10-23T14:37:12.090Z",
+  "version": "0.21.64",
+  "notes": "Chains stop at disabled recorded controls. Completion checks must actually pass after the final action; skipped checks cannot report success. Screenshot verification tolerates minor animation while requiring two fresh confirmations. Taught chains require reliable final evidence. Schedules support an optional precise end time.",
+  "publishedAt": "2026-10-23T16:03:44.102Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "4296348c23bdb8e056d08aea97d1ad504aa8a492c50d799caf9a831cce3dd7ac",
-      "size": 1218669
+      "sha256": "b2bfd16c9be140685db91413ad562b59b91d6c9b6159091023b3169f148cad7e",
+      "size": 1221278
     },
     {
       "path": "dist/preload.js",
@@ -165,8 +165,8 @@
     },
     {
       "path": "ui/queue.js",
-      "sha256": "448d63197fd7afab236556a5566214b73f5479409c6d65ba3a42f6cca6e52e95",
-      "size": 56733
+      "sha256": "aa5b7a935f526381cbf9a87331618da366ab2ba2cbf71d18489f8c0cc0c9383f",
+      "size": 56939
     },
     {
       "path": "ui/sandbox-menu.css",
