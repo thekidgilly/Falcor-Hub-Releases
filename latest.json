@@ -1,11 +1,11 @@
 {
-  "version": "0.21.74",
-  "notes": "Use the mirrored phone directly in Hub and Sandbox. Removed manual-control buttons and tan banner. Sandbox records blocks only when Build is explicitly selected.",
-  "publishedAt": "2026-10-24T00:32:39.728Z",
+  "version": "0.21.75",
+  "notes": "Sandbox Build: faster rendering, immediate pending feedback, more accurate short swipes, visible newly recorded blocks. Small pixel crosshair over the Hub and Sandbox phone mirror.",
+  "publishedAt": "2026-10-24T01:03:06.405Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "38d8a9e0bb7d0bf0efa7b0e31784e9e189f7cba260ab63b6ae332360c2aee100",
+      "sha256": "6b9b9ea21cc4466a7a018c6ed047d8935c191282e2154ddc3d85125a433bb0be",
       "size": 1233267
     },
     {
@@ -85,8 +85,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "cdc88b7bd8d83fbdeda0bff5f04477a54d79a1b6d3ad866ee7a390a80b8cd6e0",
-      "size": 151487
+      "sha256": "8b031a2468aadb605be433dad2f89db612396ccaa44e9e6b0c92ddcfb27d5e6c",
+      "size": 151621
     },
     {
       "path": "ui/app.png",
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "62f00cb15833968e47b84c3ff478efce0022938be3e28b6ab14d7daa701c1ca4",
-      "size": 70865
+      "sha256": "d31427599ec21f940405d3635653ef686d819ea8a0ef53231e80b1fea5962d6a",
+      "size": 70898
     },
     {
       "path": "ui/mirror-capture.js",
@@ -200,8 +200,8 @@
     },
     {
       "path": "ui/sandbox.js",
-      "sha256": "4e3f636221b833ecd4be40325a2e50e0081856ac32d9ea1eace4430d77b1032e",
-      "size": 131651
+      "sha256": "8fcf26a1320f5dc146b95a221b573a3e049a507f5b247403e1d92b5af87dedc6",
+      "size": 133384
     },
     {
       "path": "ui/sequence-icons.css",
@@ -210,8 +210,8 @@
     },
     {
       "path": "ui/style.css",
-      "sha256": "3d8f96d31a26b055e881aa6713bc07872e65d4b63b2a4a1c0b63308321ae80ae",
-      "size": 152448
+      "sha256": "6401492332eb481b2060f868e4c3405ac27769bf5154f90e4dee4fa19102404a",
+      "size": 152949
     },
     {
       "path": "ui/tokens.css",
