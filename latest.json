@@ -1,11 +1,11 @@
 {
-  "version": "0.21.73",
-  "notes": "Sandbox: release phone control directly; consolidated Chain editor and Workspace panels; tidier phone controls. Hub widgets unchanged.",
-  "publishedAt": "2026-10-23T23:58:37.696Z",
+  "version": "0.21.74",
+  "notes": "Use the mirrored phone directly in Hub and Sandbox. Removed manual-control buttons and tan banner. Sandbox records blocks only when Build is explicitly selected.",
+  "publishedAt": "2026-10-24T00:32:39.728Z",
   "files": [
     {
       "path": "dist/main.js",
-      "sha256": "283382cf9c227813e88de3da98e1ff6b8b18aa734520f0d38365c28cf984cb73",
+      "sha256": "38d8a9e0bb7d0bf0efa7b0e31784e9e189f7cba260ab63b6ae332360c2aee100",
       "size": 1233267
     },
     {
@@ -85,8 +85,8 @@
     },
     {
       "path": "ui/app.js",
-      "sha256": "3e7ec57d436f4025550e0311dcb0c97cfbdc05ccffa94902621e3ef8102187ab",
-      "size": 151929
+      "sha256": "cdc88b7bd8d83fbdeda0bff5f04477a54d79a1b6d3ad866ee7a390a80b8cd6e0",
+      "size": 151487
     },
     {
       "path": "ui/app.png",
@@ -140,8 +140,8 @@
     },
     {
       "path": "ui/index.html",
-      "sha256": "ad58f725630ecbe999eda334e60ede11eaf89ee02d795ce8e030302e7c612166",
-      "size": 71196
+      "sha256": "62f00cb15833968e47b84c3ff478efce0022938be3e28b6ab14d7daa701c1ca4",
+      "size": 70865
     },
     {
       "path": "ui/mirror-capture.js",
@@ -190,8 +190,8 @@
     },
     {
       "path": "ui/sandbox-workspace.css",
-      "sha256": "22d4d88eaf5a443da57ca448634b3000e8c336e5e2b2dfe5350eb0c54538b31a",
-      "size": 15923
+      "sha256": "3a009a48a56e36d0591a6a50b695fe9a4bd2f7df4a8324c1b1830f5ac0c6a071",
+      "size": 15877
     },
     {
       "path": "ui/sandbox-workspace.js",
@@ -200,8 +200,8 @@
     },
     {
       "path": "ui/sandbox.js",
-      "sha256": "c2c60259d7e48802c1628fe940cb83c952debc0cb00ea0f4e672246a8a5490de",
-      "size": 132659
+      "sha256": "4e3f636221b833ecd4be40325a2e50e0081856ac32d9ea1eace4430d77b1032e",
+      "size": 131651
     },
     {
       "path": "ui/sequence-icons.css",

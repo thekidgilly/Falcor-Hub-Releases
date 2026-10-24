@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; font-src 'self'">
+<title>Falcor.Hub</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="motion.css">
+<link rel="stylesheet" href="sandbox-workspace.css">
+</head>
+<body>
+<div id="boot-screen" class="boot-screen" aria-hidden="true"></div>
+<header class="titlebar">
+  <div class="embers"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="brand"><span class="logo" id="logo"><img src="dragon.png" alt=""><i class="eye"></i></span><div><h1>FALCOR.HUB</h1><p class="eyebrow">Workspace</p></div></div>
+  <div class="strip" id="strip">
+    <button class="sys" data-go="phone"><span class="led" id="led-phone"></span><span id="sys-phone">Phone</span></button>
+    <button class="sys" data-go="phone"><span class="led" id="led-auto"></span><span id="sys-auto">Queue</span></button>
+    <button class="sys" data-go="settings:ai"><span class="led" id="led-kimi"></span><span id="sys-kimi">API</span></button>
+    <button class="sys" data-go="settings:phoneapp"><span class="led" id="led-remote"></span><span id="sys-remote">Remote</span></button>
+  </div>
+  <button class="bell" id="bell" title="Notifications" aria-haspopup="true" aria-expanded="false"><svg class="ico"><use href="#i-bell"></use></svg><b class="bdg" id="bellcount" hidden></b></button>
+  <button class="stopbtn" id="stop" title="Emergency Stop: every phone stops and Autopilot turns off (Ctrl+Shift+X)"><svg class="ico"><use href="#i-stop"></use></svg>Stop</button>
+</header>
+<div class="bellpanel" id="bellpanel" role="dialog" aria-label="Notifications" hidden>
+  <div class="bphead"><p class="eyebrow">// NOTIFICATIONS</p><span class="grow"></span><button class="ghost small" id="bellread">Mark all read</button><button class="ghost small" id="bellclear">Clear all</button></div>
+  <div class="bpupdate" id="bellupdate" hidden><span class="ni"><svg class="ico"><use href="#i-update"></use></svg></span><span class="nb"><span class="nx" id="noticetext"></span></span><button class="primary small" id="updatebtn">Restart to update</button></div>
+  <ul class="bplist" id="belllist"></ul>
+</div>
+<div class="ebar" id="ebar" hidden><span class="led bad"></span><span>Emergency Stop is on. Autopilot and tasks are stopped.</span><button id="clear">Clear</button></div>
+<div class="tabrow">
+<nav class="tabs" id="tabs">
+  <button data-tab="profile" title="Key 1"><svg class="ico"><use href="#i-user"></use></svg>Profile</button>
+  <button data-tab="phone" title="Key 2" class="on"><svg class="ico"><use href="#i-phone"></use></svg>Hub</button>
+  <button data-tab="games" title="Key 3"><svg class="ico"><use href="#i-game"></use></svg>Library</button>
+  <button data-tab="sandbox" title="Key 4"><svg class="ico"><use href="#i-sandbox"></use></svg>Sandbox<span class="badge" id="badge-sandbox" hidden></span></button>
+  <button data-tab="settings" title="Key 5"><svg class="ico"><use href="#i-settings"></use></svg>Settings</button>
+  <span class="tabline" id="tabline"></span>
+</nav>
+<div class="deskmenu" id="deskmenu" hidden>
+  <button class="small ghost" id="deskwins" aria-haspopup="menu" aria-expanded="false" title="Show or hide windows on the Phone tab"><svg class="ico"><use href="#i-windows"></use></svg>Windows<svg class="ico caret"><use href="#i-chevron"></use></svg></button>
+  <button class="small ghost" id="desklayout" aria-haspopup="menu" aria-expanded="false" title="Arrange the windows"><svg class="ico"><use href="#i-layout"></use></svg>Layout<svg class="ico caret"><use href="#i-chevron"></use></svg></button>
+  <button class="small ghost icon" id="desklock" aria-pressed="false" title="Lock the layout: windows stay where they are"><svg class="ico"><use href="#i-lock"></use></svg></button>
+</div>
+</div>
+<div class="deskpop" id="deskpop" role="menu" aria-label="Phone tab windows" hidden></div>
+
+<main>
+  <!-- PHONE -->
+  <section data-pane="phone" class="pane">
+    <div class="crhead pagehead"><div><p class="eyebrow">// HUB</p><h2>The Mainframe</h2></div></div>
+    <!-- The desk: every panel is a window the owner moves, resizes, hides and shows again (desk.js). -->
+    <div class="phonegrid desk" id="phonegrid" hidden>
+      <section class="win" data-win="mirror" aria-label="Phone screen">
+        <header class="winbar"><span class="wintitle">// PHONE SCREEN</span></header>
+        <div class="winbody mirrorcol">
+          <div class="stage" id="stage">
+            <div class="device" id="device">
+              <div class="brackets"><i></i><i></i><i></i><i></i></div>
+              <span class="devtag" id="devtag" hidden></span>
+              <span class="speaker"></span>
+              <div class="screen" id="mirrorbox" tabindex="0">
+                <img id="mirror" alt="The phone's screen" draggable="false"><canvas id="video" hidden></canvas>
+                <div class="overlay" id="overlay"></div><div class="sbpins" id="sbpins" hidden></div><span class="offtag" id="offtag" hidden>OFFLINE REFERENCE</span>
+                <div class="waiting" id="mirrorwait" role="status">
+                  <b id="mirrorstatus">Waiting for the phone screen...</b><span class="muted small" id="mirrorhelp"></span>
+                  <details id="setup" hidden><summary>Connection help</summary><ol class="checks" id="checks"></ol><p class="muted small">Use a USB data cable. Enable USB debugging in Developer options and allow this computer on the phone. Wake and unlock it yourself; Falcor never bypasses its lock.</p></details>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="toolbar" id="toolbar" role="group" aria-label="Phone controls">
+            <div class="phone-navigation" role="group" aria-label="Navigation matching the phone">
+              <button class="icon" data-key="APP_SWITCH" title="Recent tasks" aria-label="Recent tasks"><svg class="ico"><use href="#i-apps"></use></svg></button>
+              <button class="icon" data-key="HOME" title="Home" aria-label="Home"><svg class="ico"><use href="#i-home"></use></svg></button>
+              <button class="icon" data-key="BACK" title="Back" aria-label="Back"><svg class="ico"><use href="#i-back"></use></svg></button>
+            </div>
+            <div class="automation-controls" role="group" aria-label="Automation"><span id="automationstatus" role="status">Autopilot off</span><button class="primary" id="autostart" disabled><svg class="ico"><use href="#i-play"></use></svg>Start Autopilot</button><button class="danger" id="autostop" disabled><svg class="ico"><use href="#i-stop"></use></svg>Stop</button></div>
+            <div class="phone-tools" role="group" aria-label="Phone tools">
+              <button id="phonecap" title="Read the offer page open on the phone"><svg class="ico"><use href="#i-camera"></use></svg><span id="phonecaplbl">Capture</span></button>
+            </div>
+            <div class="phone-utilities" role="group" aria-label="More phone tools">
+              <button class="icon" id="kbd" title="Type into the phone" aria-label="Type into the phone"><svg class="ico"><use href="#i-keyboard"></use></svg></button>
+              <button class="icon" id="viewer" title="Open second display" aria-label="Open second display"><svg class="ico"><use href="#i-popout"></use></svg></button>
+              <button class="icon" id="askfalcor" title="Ask Falcor" aria-label="Ask Falcor"><svg class="ico"><use href="#i-chat"></use></svg></button>
+            </div>
+          </div><p class="hint" id="hint" hidden>Click tap · drag swipe · hold press · wheel scroll</p>
+          <form class="typeform" id="typeform" hidden><input id="typetext" placeholder="Type into the phone" maxlength="500" autocomplete="off"><button>Send</button></form>
+        </div>
+      </section>
+      <section class="win" data-win="device" aria-label="Device">
+        <header class="winbar"><span class="wintitle">// DEVICE</span></header>
+        <div class="winbody"><div class="devpanel" id="devicepanel">
+          <div class="top"><h2><svg class="ico"><use href="#i-phone"></use></svg><span id="devname">Phone</span></h2><span class="state" id="devstate"><span class="led"></span><span></span></span></div>
+          <dl class="spec" id="devinfo"><dt>Model</dt><dd id="d-model"></dd><dt>Android</dt><dd id="d-android"></dd><dt>App in front</dt><dd id="d-app"></dd><dt id="d-batt-l">Battery</dt><dd id="d-batt"></dd><dt>Control</dt><dd id="d-control"></dd></dl>
+          <select id="devpick" hidden></select>
+        </div></div>
+      </section>
+      <section class="win" data-win="current" aria-label="Current activity">
+        <header class="winbar"><span class="wintitle">// CURRENT ACTIVITY</span><span class="winx qmode" id="qmode"></span></header>
+        <div class="winbody"><div id="mission"><div id="missionbody"></div></div></div>
+      </section>
+      <section class="win" data-win="queue" aria-label="Today's queue">
+        <header class="winbar"><span class="wintitle">// TODAY'S QUEUE</span><span class="winx muted qsum" id="qsum"></span></header>
+        <div class="winbody fill"><div class="queue" id="queuepanel">
+
+          <div class="qbar"><div class="seg" id="qviews"><button data-v="today" class="on">Today</button><button data-v="tomorrow">Tomorrow</button><button data-v="upcoming">Upcoming</button><button data-v="history">History</button></div></div>
+          <ol class="qlist" id="qlist"></ol>
+          <div class="qnotes" id="qnotes"></div>
+        </div></div>
+      </section>
+      <section class="win" data-win="log" aria-label="Activity log">
+        <header class="winbar"><span class="wintitle">// ACTIVITY LOG</span></header>
+        <div class="winbody fill"><div class="console" id="logpanel">
+          <div class="seg" id="logfilter"><button data-f="all" class="on">All</button><button data-f="FALCOR">Falcor</button><button data-f="YOU">Me</button><button data-f="problems">Problems</button></div>
+          <ul class="log" id="log"></ul>
+        </div></div>
+      </section>
+      <!-- Shown from the Windows menu. -->
+      <section class="win" data-win="needs" aria-label="Needs you" hidden>
+        <header class="winbar"><span class="wintitle">// NEEDS YOU</span><b class="winx wincount" id="needscount" hidden></b></header>
+        <div class="winbody"><ul class="needs" id="needslist"></ul></div>
+      </section>
+      <section class="win" data-win="apps" aria-label="Apps" hidden>
+        <header class="winbar"><span class="wintitle">// APPS</span><span class="winx muted" id="appscount"></span></header>
+        <div class="winbody fill"><div class="appsbox">
+          <div class="appsbar"><label class="search"><svg class="ico"><use href="#i-search"></use></svg><input id="appsq" placeholder="Search the phone's apps" autocomplete="off" aria-label="Search the phone's apps"></label><button class="small icon" id="appsrefresh" title="Read the phone's app list again"><svg class="ico"><use href="#i-update"></use></svg></button></div>
+          <ul class="launch" id="appslist"></ul>
+        </div></div>
+      </section>
+      <section class="win" data-win="creations" aria-label="Creations" hidden>
+        <header class="winbar"><span class="wintitle">// CREATIONS</span><span class="winx muted" id="crwcount"></span></header>
+        <div class="winbody fill"><div class="crwbox">
+          <ul class="crw" id="crwlist"></ul>
+          <div class="winfoot"><button class="small ghost" data-go="tasks"><svg class="ico"><use href="#i-tasks"></use></svg>All creations</button><button class="small ghost" data-go="sandbox"><svg class="ico"><use href="#i-plus"></use></svg>New in Sandbox</button></div>
+        </div></div>
+      </section>
+      <section class="win" data-win="today" aria-label="Today" hidden>
+        <header class="winbar"><span class="wintitle">// TODAY</span><span class="winx muted" id="todaydate"></span></header>
+        <div class="winbody"><div class="todaybox"><div id="todaybody"></div><div class="winfoot"><button class="small ghost" data-go="stats"><svg class="ico"><use href="#i-stats"></use></svg>Open Activity</button></div></div></div>
+      </section>
+      <section class="win" data-win="link" aria-label="Connection" hidden>
+        <header class="winbar"><span class="wintitle">// CONNECTION</span></header>
+        <div class="winbody"><div class="linkbox">
+          <dl class="spec" id="linkspec"></dl>
+          <div class="row"><button class="small" id="linkviewer" title="Open a second display of the phone in its own window"><svg class="ico"><use href="#i-popout"></use></svg>Second display</button><button class="small" id="linkmirror" title="Start the live mirror again"><svg class="ico"><use href="#i-update"></use></svg>Restart mirror</button><button class="small" id="linkapps" title="Read the phone's app list again"><svg class="ico"><use href="#i-apps"></use></svg>Refresh apps</button></div>
+        </div></div>
+      </section>
+      <section class="win" data-win="ticker" aria-label="LED sign" hidden>
+        <header class="winbar"><span class="wintitle">// LED SIGN</span><button class="ghost small icon" id="tkedit" title="Change the message"><svg class="ico"><use href="#i-edit"></use></svg></button></header>
+        <div class="winbody"><div class="ledbox"><canvas class="ledsign" id="tkcanvas"></canvas>
+          <form class="tkform" id="tkform" hidden><input id="tktext" maxlength="160" autocomplete="off" placeholder="Type what the sign says"><span class="tkcolors" id="tkcolors"></span><select id="tkspeed" title="Speed"><option value="1">Slow</option><option value="2">Steady</option><option value="3">Fast</option></select><button class="small primary">Show</button></form>
+        </div></div>
+      </section>
+      <section class="win" data-win="rain" aria-label="Data rain" hidden>
+        <header class="winbar"><span class="wintitle">// DATA RAIN</span></header>
+        <div class="winbody"><canvas class="decor" id="raincanvas"></canvas></div>
+      </section>
+      <section class="win" data-win="radar" aria-label="Radar" hidden>
+        <header class="winbar"><span class="wintitle">// RADAR</span><span class="winx muted" id="radarcount"></span></header>
+        <div class="winbody"><canvas class="decor" id="radarcanvas"></canvas></div>
+      </section>
+      <section class="win" data-win="scope" aria-label="Signal" hidden>
+        <header class="winbar"><span class="wintitle">// SIGNAL</span><span class="winx muted" id="scopehz"></span></header>
+        <div class="winbody"><canvas class="decor" id="scopecanvas"></canvas></div>
+      </section>
+      <section class="win" data-win="clock" aria-label="Clock" hidden>
+        <header class="winbar"><span class="wintitle">// CLOCK</span></header>
+        <div class="winbody"><div class="clockbox"><b class="clockt" id="clockt"></b><span class="clockd" id="clockd"></span><span class="clockn" id="clockn"></span></div></div>
+      </section>
+      <section class="win" data-win="spend" aria-label="AI meter" hidden>
+        <header class="winbar"><span class="wintitle">// AI METER</span><span class="winx muted" id="spendmonth"></span></header>
+        <div class="winbody"><div class="spendbox" id="spendbox"></div></div>
+      </section>
+      <section class="win" data-win="vitals" aria-label="Phone vitals" hidden>
+        <header class="winbar"><span class="wintitle">// PHONE VITALS</span></header>
+        <div class="winbody"><div class="vitalsbox" id="vitalsbox"></div></div>
+      </section>
+      <div class="deskguides" aria-hidden="true"><i class="gx" id="deskgx" hidden></i><i class="gy" id="deskgy" hidden></i></div>
+    </div>
+  </section>
+
+  <!-- SANDBOX -->
+  <section data-pane="sandbox" class="pane sandbox" hidden>
+    <div class="sbhome" id="sbhome" hidden>
+      <div class="crhead pagehead"><div><p class="eyebrow">// SANDBOX</p><h2>Build and teach your runs</h2><p class="muted small">Build runs from blocks, or press Teach and show Falcor on the phone.</p></div></div>
+      <div class="sbhometop"><div class="seg" id="sbhometabs"><button data-home="create"><svg class="ico"><use href="#i-plus"></use></svg>Create</button><button data-home="mine"><svg class="ico"><use href="#i-sandbox"></use></svg>Drafts <span id="sbminecount"></span></button></div></div>
+      <div class="sbhomebody" id="sbhomebody"></div>
+    </div>
+    <div class="sbhead" id="sbhead">
+      <button class="small ghost" id="sbtohome" title="Back to Drafts"><svg class="ico"><use href="#i-back"></use></svg>Drafts</button>
+      <div class="sbname"><svg class="ico"><use href="#i-sandbox"></use></svg><input id="sbtitle" maxlength="80" placeholder="No chain open" aria-label="Chain name"><span class="dirty" id="sbdirty" title="Unsaved changes" hidden></span><span class="muted small" id="sbrev"></span></div>
+      <select id="sbdev" title="The phone it runs on"></select>
+      <span class="grow"></span>
+      <div class="sbacts"><div class="sbtoolgroup" role="group" aria-label="Workspace view"><span>View</span><button class="small" id="sbfocus" aria-pressed="false">Focus</button></div>
+        <div class="sbtoolgroup" role="group" aria-label="Build and edit blocks"><span>Build</span><button class="small" id="sbpanels" aria-expanded="false" aria-controls="sblib" title="Choose an action to add to your chain">Add blocks</button><button class="small" id="sbsettings" aria-expanded="false" aria-controls="sbinsp" title="Edit the selected block, or chain settings when nothing is selected">Block details</button>
+        <button class="small" id="sbai" title="Describe a chain or custom block for Falcor to build"><svg class="ico"><use href="#i-chat"></use></svg>Build with Falcor</button>
+        <button class="small icon" id="sbundo" title="Undo (Ctrl+Z)"><svg class="ico"><use href="#i-undo"></use></svg></button>
+        <button class="small icon" id="sbredo" title="Redo (Ctrl+Y)"><svg class="ico"><use href="#i-redo"></use></svg></button></div>
+        <div class="sbtoolgroup" role="group" aria-label="Save and manage chains"><span>Chain</span>
+        <button class="small" id="sbnew" title="New chain (Ctrl+N)"><svg class="ico"><use href="#i-plus"></use></svg>New</button>
+        <button class="small" id="sbopen" title="Drafts and published (Ctrl+O)"><svg class="ico"><use href="#i-book"></use></svg>Open</button>
+        <button class="small" id="sbsave" title="Save this draft without publishing (Ctrl+S)"><svg class="ico"><use href="#i-check"></use></svg>Save draft</button>
+        <button class="small" id="sbsaveas" title="Save a separate copy as a new draft">Save a copy</button>
+        <button class="small pubbtn" id="sbpublish" title="Put it in the Library, where it can be scheduled"><svg class="ico"><use href="#i-check"></use></svg>Publish to Library</button>
+        </div><div class="sbtoolgroup" role="group" aria-label="Sandbox preferences and help"><span>Help</span>
+        <button class="small icon" id="sbprefs" title="Sandbox settings"><svg class="ico"><use href="#i-settings"></use></svg></button>
+        <button class="small icon" id="sbhelp" title="Help and shortcuts (?)"><svg class="ico"><use href="#i-help"></use></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="teachstrip" id="rec" hidden>
+          <span class="led rec"></span><b id="rectitle">TEACHING</b><span class="timer" id="rectime">0:00</span><span class="muted small" id="recinfo"></span>
+          <span class="grow"></span>
+          <form class="markform" id="markform"><input id="marknote" placeholder="Note (optional)" maxlength="200" autocomplete="off"><button class="icon" title="Mark this moment"><svg class="ico"><use href="#i-flag"></use></svg></button></form>
+          <button class="icon" id="recpause" title="Pause"><svg class="ico"><use href="#i-pause"></use></svg></button>
+          <button class="icon danger" id="recstop" title="Stop and save"><svg class="ico"><use href="#i-stop"></use></svg></button>
+        </div>
+    <div class="sbgrid" id="sbgrid">
+      <aside class="panel sblib" id="sblib">
+        <div class="top"><p class="eyebrow">// BLOCKS</p><span class="row"><button class="ghost small icon popbtn" data-pop="sblib" data-poptitle="Blocks" title="Pop out to its own window (put it on another monitor)"><svg class="ico"><use href="#i-popout"></use></svg></button><button class="ghost small icon" id="sblibfold" title="Close blocks"><svg class="ico"><use href="#i-close"></use></svg></button></span></div>
+        <input id="sblibq" placeholder="Search blocks" autocomplete="off">
+        <div class="cats" id="sbcats"></div>
+        <div class="liblist" id="sbliblist"></div>
+      </aside>
+      <div class="sbcenter win" id="sbcenter">
+        <div class="sbphonebar winbar" id="sbphonebar" tabindex="0" role="group" aria-label="Phone window. When unlocked, arrow keys move it; Shift and arrows resize it.">
+          <span class="wingrip" aria-hidden="true"></span><b class="wintitle">// PHONE</b><span class="grow"></span><span class="winbtns">
+            <button class="small icon" id="sbphonelock" aria-pressed="true" title="Unlock phone window"><svg class="ico"><use href="#i-lock"></use></svg></button>
+            <button class="small icon" id="sbphonedock" title="Dock phone on the right"><svg class="ico"><use href="#i-restore"></use></svg></button>
+            <button class="small icon" id="sbphonemax" title="Maximize phone window"><svg class="ico"><use href="#i-max"></use></svg></button>
+            <button class="small icon popbtn" data-pop="sbcenter" data-poptitle="Sandbox phone" title="Pop phone out to its own window"><svg class="ico"><use href="#i-popout"></use></svg></button>
+          </span>
+        </div>
+        <div class="sbmodes">
+          <div class="seg" id="sbmodes">
+            <button data-mode="build" class="on" title="Use the phone and add each action as a block"><svg class="ico"><use href="#i-plus"></use></svg>Build</button>
+            <button data-mode="view" title="Look only (V)"><svg class="ico"><use href="#i-eye"></use></svg>View</button>
+            <button data-mode="control" title="Touch the phone yourself (C)"><svg class="ico"><use href="#i-control"></use></svg>Use phone</button>
+            <button data-mode="target" title="Click the mirror to set the selected step's point (P)"><svg class="ico"><use href="#i-target"></use></svg>Pick target</button>
+            <button data-mode="gesture" title="Drag on the mirror to draw a swipe or path (G)"><svg class="ico"><use href="#i-swipe"></use></svg>Pick gesture</button>
+            <button data-mode="run" title="A run is playing" disabled><svg class="ico"><use href="#i-play"></use></svg>Run</button>
+          </div>
+          <button class="sbteachbtn" id="sbteach" title="Use the phone on the mirror while Falcor watches; End Teach builds a run from it (R)"><svg class="ico"><use href="#i-rec"></use></svg><span id="sbteachlbl">Teach</span></button>
+          <div class="sbchips" id="sbchips"></div>
+          <span class="grow"></span>
+          <button class="small icon" data-sbkey="BACK" title="Back"><svg class="ico"><use href="#i-back"></use></svg></button>
+          <button class="small icon" data-sbkey="HOME" title="Home"><svg class="ico"><use href="#i-home"></use></svg></button>
+          <button class="small icon" data-sbkey="APP_SWITCH" title="Recent apps"><svg class="ico"><use href="#i-apps"></use></svg></button>
+          <button class="small icon" id="sbgridbtn" title="Grid over the mirror"><svg class="ico"><use href="#i-grid"></use></svg></button>
+        </div>
+        <div class="sbstage" id="sbstage"><div class="sbempty" id="sbnophone" hidden><svg class="ico big"><use href="#i-usb"></use></svg><b>No phone</b><span class="muted small">Plug in the phone (see the Phone tab). You can still build a chain.</span></div></div>
+        <p class="hint" id="sbhint"></p>
+      </div>
+      <aside class="panel sbinsp" id="sbinsp">
+        <!-- End Teach: the analysis as a progress bar, then what Falcor saw and the run it built (sandbox.js#endTeach) -->
+        <div class="panel sbsheetpanel rise sbtaught" id="sbtaught" hidden></div>
+        <form class="panel teachform sbsheetpanel rise" id="teachform" hidden>
+          <p class="eyebrow">// TEACH FALCOR</p>
+          <h2>Teach Falcor</h2>
+          <p class="muted small">Play the app here on the mirror. Falcor records the screens, their text and where you touch. Password, card, ID and code screens are never recorded.</p>
+          <p class="small">App in front: <b id="teachapp"></b> <code id="teachpkg"></code></p>
+          <label>Call it<input id="teachname" maxlength="80" required></label>
+          <label>What are you about to show? (optional)<input id="teachintent" maxlength="300" placeholder="e.g. the daily check-in, how to finish a level"></label>
+          <label class="check"><input type="checkbox" id="teachcustom"> Save it as a custom task: Falcor repeats these taps until it ends the way you show</label>
+          <div class="customopts" id="customopts" hidden>
+            <div class="row"><label>Rounds<input id="customtimes" type="number" min="1" max="50" value="1"></label><label>Runs<select id="customrepeat"><option value="once">once</option><option value="daily">every day</option><option value="every">every … minutes</option></select></label><label>Minutes<input id="customevery" type="number" min="15" max="1440" value="30" title="With every … minutes: how often (15 minutes at most often)"></label></div>
+            <label>Stop early when the screen says (optional)<input id="customuntil" maxlength="80" placeholder="e.g. No energy left"></label>
+            <label class="check"><input type="checkbox" id="customhome" checked> Go back to the phone's home screen when done</label>
+          </div>
+          <div class="sbinto" id="teachsb" hidden>
+            <label class="check"><input type="checkbox" id="teachsbon" checked> Add what I show to <b id="teachsbname"></b> as blocks</label>
+            <div class="row"><label class="check"><input type="checkbox" id="teachsblaunch" checked> Start by opening the app</label><label class="check"><input type="checkbox" id="teachsbwaits"> Keep my pauses as Wait blocks</label><label class="check"><input type="checkbox" id="teachsbcheck" checked> End with a check of the last screen</label></div>
+          </div>
+          <div class="row"><button class="primary"><svg class="ico"><use href="#i-rec"></use></svg>Start recording</button><button type="button" id="teachcancel">Cancel</button></div>
+        </form>
+        <div class="top"><p class="eyebrow" id="sbinsptitle">// CHAIN</p><span class="row"><div class="seg" id="sbinsptabs"><button data-t="basic" class="on">Basic</button><button data-t="advanced">Advanced</button></div><button class="ghost small icon popbtn" data-pop="sbinsp" data-poptitle="Step settings" title="Pop out to its own window (put it on another monitor)"><svg class="ico"><use href="#i-popout"></use></svg></button><button class="ghost small icon" id="sbinspclose" title="Close settings"><svg class="ico"><use href="#i-close"></use></svg></button></span></div>
+        <div class="inspbody" id="sbinspbody"></div>
+      </aside>
+    <div class="sbtl" id="sbtl">
+      <div class="top">
+        <div class="seg" id="sbviews"><button data-v="flow" class="on">Flow</button><button data-v="tree">Tree</button><button data-v="log">Run log</button></div>
+        <span class="muted small" id="sbsum"></span>
+        <span class="grow"></span>
+      </div>
+      <div class="sbplayback" id="sbplayback" role="group" aria-label="Chain player">
+        <div class="sbplayerheading"><b>Chain player</b><span class="small muted">Runs on your phone · Pause holds your place · Stop returns to the start</span></div>
+        <div class="sbtransport">
+          <button class="small primary" id="sbplay" title="Run this chain on the selected phone"><svg class="ico"><use href="#i-play"></use></svg>Play chain</button>
+          <button class="small" id="sbpause" disabled title="Hold at the current chain step"><svg class="ico"><use href="#i-pause"></use></svg>Pause</button>
+          <button class="small" id="sbplaystop" disabled title="Stop this chain and reset the player. Phone actions are not undone."><svg class="ico"><use href="#i-stop"></use></svg>Stop / reset</button>
+          <span class="small" id="sbplaystate" role="status">Ready to play</span>
+          <progress id="sbprogress" max="1" value="0" aria-label="Chain position"></progress>
+          <button class="small" id="sbtest" title="Run only the selected step (T)"><svg class="ico"><use href="#i-target"></use></svg>Test selected block</button>
+          <details class="sbplayeroptions"><summary>Run options</summary><button class="small" id="sbskip" title="Skip the step that needs attention" hidden>Skip this step</button><button class="small" id="sbafter" title="Finish the current group or loop, then stop" hidden>Stop after group</button></details>
+        </div>
+        <div class="sbrun" id="sbrun" hidden><span class="led"></span><b id="sbrunstate"></b><span class="muted small" id="sbrunstep"></span><span class="muted small timer" id="sbruntime"></span></div>
+      </div>
+      <div class="sbcanvas" id="sbcanvas">
+        <div class="steps flow" id="sbsteps" tabindex="0" aria-label="Chain workspace. Mouse wheel or pinch to zoom; drag empty space to pan."><div id="sbcontent"></div></div>
+        <div class="sbintro" id="sbintro" hidden><div><b>Your chain starts here.</b><p>Use the phone in Build mode: each tap, swipe or key automatically adds a block to this grid. Or choose Add blocks, or write an idea with Build with Falcor.</p></div></div>
+      </div>
+      <div class="runlog" id="sblog" hidden></div>
+      <div class="sbcanvasnav" role="group" aria-label="Workspace zoom">
+        <span class="muted small">Wheel or pinch to zoom · drag grid to pan</span>
+        <button class="small" id="sbzoomout" aria-label="Zoom out">−</button>
+        <button class="small" id="sbzoomreset" title="Reset zoom and return to the first block">100%</button>
+        <button class="small" id="sbzoomin" aria-label="Zoom in">+</button>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <!-- GAMES -->
+  <section data-pane="games" class="pane" hidden>
+    <div id="gamesview">
+      <div class="toolrow"><div class="libhead"><p class="eyebrow">// LIBRARY</p><h2>Your games and apps</h2><p class="muted small">Every game, app and creation, with what each one pays and where it stands.</p></div><span class="grow"></span><button class="primary" id="capgame" title="Read the offer page open in your earning app on the phone"><svg class="ico"><use href="#i-camera"></use></svg>Capture</button><button id="offeradd"><svg class="ico"><use href="#i-reward"></use></svg>Add offer</button><button id="gamenew"><svg class="ico"><use href="#i-plus"></use></svg>New task</button></div>
+      <div class="toolrow libbar"><div class="seg" id="libfilter"><button data-f="all" class="on">All</button><button data-f="games">Games</button><button data-f="apps">Apps</button><button data-f="creations">Creations</button><button data-f="active">Active</button><button data-f="completed">Completed</button><button data-f="expired">Expired</button></div><span class="grow"></span><label class="inline small muted">Sort<select id="libsort"><option value="updated">Recently updated</option><option value="deadline">Deadline</option><option value="reward">Advertised reward</option><option value="progress">Progress</option></select></label></div>
+      <div class="panel capbox" id="capbox" hidden>
+        <div class="caphead"><span class="gicon" id="capart"></span><div class="grow"><p class="eyebrow">// CAPTURE · <span id="capsrc"></span></p><h3 id="capname">Reading…</h3><p class="small" id="capline"></p></div>
+          <div class="capstats"><span><em>SCREENS</em><b id="capscreens">0</b></span><span><em>MILESTONES</em><b id="capcount">0</b></span></div></div>
+        <div class="capprog" id="capprog" hidden><div class="capbar" id="capbar"></div><div class="capprogrow"><span class="small" id="capprogline"></span><span class="grow"></span><b id="cappct">0%</b><button type="button" class="small" id="capstop">Stop</button></div></div>
+        <ol class="ladder mini" id="caplast"></ol>
+        <div class="row" id="capacts"><button type="button" class="primary" id="capauto" title="Falcor scrolls the offer page from top to bottom and reads the game, its picture, every milestone and reward, the total and the deadline"><svg class="ico"><use href="#i-ai"></use></svg>Auto-capture game details</button><button type="button" id="capdone"><svg class="ico"><use href="#i-check"></use></svg>Review</button><button type="button" class="ghost" id="capnext" title="Read the screen as it is now on the phone (after you scrolled it yourself)"><svg class="ico"><use href="#i-eye"></use></svg>Read this screen</button><button type="button" class="ghost" id="capcancel">Cancel</button><span class="muted small">Auto-capture scrolls the page under your control and reads it all. Nothing is saved until you check it.</span></div>
+      </div>
+      <form class="panel offerform" id="offerform" hidden>
+        <p class="eyebrow">// OFFER FROM AN EARNING APP</p>
+        <div class="row" id="offerstart"><button type="button" class="primary" id="offercapture"><svg class="ico"><use href="#i-camera"></use></svg>Capture from the phone</button><button type="button" id="offerhand"><svg class="ico"><use href="#i-edit"></use></svg>Enter by hand</button><span class="muted small">Open the game's offer in your earning app on the phone, then Capture.</span></div>
+        <div id="offerfields" hidden>
+          <p class="muted small" id="offerwhere"></p>
+          <div class="offerdiff" id="offerdiff" hidden></div>
+          <div class="grid">
+            <label>Earning app<input name="source" maxlength="60" required placeholder="Your earning app…"></label>
+            <label>Game<input name="game" maxlength="80" required></label>
+            <div class="ofphone"><span class="lbl">On the phone</span><span id="offerphone"></span></div>
+            <label>Deadline<select name="dlkind"><option value="unknown">Not shown</option><option value="fixed">Ends in a number of days</option><option value="duration">Within days after I start it</option></select></label>
+            <label data-dl="days">Days<input name="days" type="number" min="0" max="366" step="any" placeholder="days"></label>
+            <label data-dl="started">I started it on<input name="started" type="date"></label>
+            <label>The app says: up to<input name="total" type="number" min="0" step="any" placeholder="optional"></label>
+            <label>Unit<input name="totalunit" maxlength="24" placeholder="points, coins, usd"></label>
+          </div>
+          <p class="eyebrow" data-gap>// MILESTONES <span class="muted" id="offercount"></span></p>
+          <div class="mrows" id="offerrows"></div>
+          <div class="row"><button type="button" class="small ghost" id="offerrow"><svg class="ico"><use href="#i-plus"></use></svg>Milestone</button></div>
+          <div class="row"><button class="primary" id="offersave">Save offer</button><button type="button" id="offercancel">Cancel</button></div>
+        </div>
+      </form>
+      <div class="gamegrid" id="gamegrid"></div>
+    </div>
+    <div class="gamepage" id="gamepage" hidden>
+      <div class="toolrow"><button id="gameback"><svg class="ico"><use href="#i-back"></use></svg>All games</button></div>
+      <div class="panel gamehead">
+        <span class="gicon big" id="gpicon"></span>
+        <div class="gtitle"><p class="eyebrow">// GAME</p><h2 id="gpname"></h2><p class="muted small" id="gpmeta"></p></div>
+        <div class="gstats" id="gpstats"></div>
+        <div class="row gacts">
+          <button id="gpopen" title="Open it on the phone and take control"><svg class="ico"><use href="#i-phone"></use></svg>Open game</button>
+          <button id="gpteach" title="Play it your way: Falcor records and learns from you (no time to fill, nothing else to press)"><svg class="ico"><use href="#i-rec"></use></svg>Teach Falcor</button>
+          <button id="gpoptions" title="The reward ladder, earnings, tasks, your notes, what Falcor learned and the web research"><svg class="ico"><use href="#i-settings"></use></svg>Options</button>
+          <details class="gmore" id="gpmore"><summary title="Offer, tasks and the rest">More<svg class="ico caret"><use href="#i-chevron"></use></svg></summary>
+            <div class="gmenu">
+              <p class="eyebrow">// OFFER</p>
+              <button id="gpofferedit" title="Correct the offer: names, amounts, deadline, stages"><svg class="ico"><use href="#i-edit"></use></svg>Edit offer</button>
+              <button id="gpofferrefresh" title="Open the offer page in the earning app on the phone, then read it again and see what changed"><svg class="ico"><use href="#i-update"></use></svg>Refresh offer</button>
+              <p class="eyebrow">// TASKS BY HAND</p>
+              <button id="gpplay" title="Play now: Falcor runs this game's task now (the queue does not start)"><svg class="ico"><use href="#i-play"></use></svg>Run its task now</button>
+              <button id="gpsched" title="Put it in the Daily Queue at a time"><svg class="ico"><use href="#i-calendar"></use></svg>Schedule its task</button>
+              <button id="gpauto" title="Change what Falcor does in this game"><svg class="ico"><use href="#i-edit"></use></svg>Edit automation</button>
+              <button id="gptask"><svg class="ico"><use href="#i-plus"></use></svg>Add a task</button>
+              <p class="eyebrow">// GAME</p>
+              <button id="gpguide" title="The guide in Knowledge"><svg class="ico"><use href="#i-book"></use></svg>Guide</button>
+              <button id="gpchat" title="Ask Falcor about this game"><svg class="ico"><use href="#i-chat"></use></svg>Ask Falcor</button>
+              <button class="danger" id="gpremove" title="Remove this game from Games"><svg class="ico"><use href="#i-trash"></use></svg>Remove game</button>
+            </div></details>
+        </div>
+      </div>
+      <div id="gpprep"></div>
+      <div class="gpauto" id="gpautoline" hidden></div>
+      <div class="panel gptrain" id="gptrain" hidden></div>
+      <!-- The game's page as a bento (the owner, 2026-10-21): the playbook large on the left; what is happening, what Falcor
+           knows and ads stacked on the right; the details (ladder, earnings, tasks, notes, lessons, research) in Options. -->
+      <div class="gpbento"><div class="gpmain">
+      <div class="panel gpap" id="gpap">
+        <div class="gpplan" id="gpplan" hidden></div>
+        <div class="gpaphead" id="gpaphead"><p class="eyebrow">// GAME AUTOPILOT <span class="gpai" id="gpai"></span></p>
+          <div class="row"><span class="row" id="gpgoalbox"><select id="gpgoal" title="What Falcor plays toward"></select><span id="gplevelbox" hidden><input id="gplevel" type="number" min="1" max="100000" placeholder="level" title="The level to reach"></span></span>
+            <button class="primary" id="gpapstart" title="Falcor plays this game toward the goal now, then comes back by itself until it is verified"><svg class="ico"><use href="#i-play"></use></svg>Start Autopilot</button>
+            <button id="gpappause" title="Stop for now; nothing comes back by itself until you start it again" hidden><svg class="ico"><use href="#i-pause"></use></svg>Pause</button>
+            <button class="danger" id="gpapstop" title="End it: the run stops and its returns are cancelled" hidden><svg class="ico"><use href="#i-stop"></use></svg>Stop Autopilot</button></div></div>
+        <div id="gpapbody"></div>
+      </div>
+      </div><div class="gpside">
+      <div class="panel" id="gpactbox"><p class="eyebrow">// ACTIVITY</p><div id="gpact"></div></div>
+      <div class="panel" id="gpknow"><p class="eyebrow">// WHAT FALCOR KNOWS</p><div id="gpknowbody"></div></div>
+      <div class="panel" id="gpads"><p class="eyebrow">// REWARDED ADS</p><div id="gpadsbody"></div></div>
+      </div></div>
+      <div class="gpdrawerwrap" id="gpdrawer" hidden><aside class="panel gpdrawer" role="dialog" aria-label="Game options">
+      <div class="top gpdrawerhead"><div><p class="eyebrow">// OPTIONS</p><h2 id="gpdrawername">More about this game</h2></div><button class="icon" id="gpdrawerclose" title="Close" aria-label="Close"><svg class="ico"><use href="#i-close"></use></svg></button></div>
+      <div class="panel" id="gpofferbox" hidden><p class="eyebrow">// REWARD LADDER</p><p class="muted small">A goal reached in the game is not money: credited and paid out are. Set a stage from its menu; "observed" came from the earning app's page, "you" from you, "Falcor" from the game's level.</p><div id="gpoffers"></div></div>
+      <div class="panel" id="gpweb" hidden><p class="eyebrow">// FROM THE WEB</p><div id="gpwebbody"></div></div>
+      <div class="panel" id="gpnotes"><p class="eyebrow">// YOUR NOTES FOR FALCOR</p><p class="muted small">How to play this game, in your words. Falcor reads them on every move and they win over anything it learned. One tip per note: a screen and what to do there.</p><div id="gpnotelist"></div><form class="row" id="gpnoteform"><input id="gpnotetext" maxlength="300" placeholder="e.g. On the sign-in screen pick Guest" autocomplete="off"><button class="small primary" type="submit">Add note</button></form></div>
+      <div class="panel" id="gpearnbox"><p class="eyebrow">// EARNINGS IN THE GAME</p><p class="muted small">Per unit, never added across units. Collected means the game showed it claimed or credited; pending means the game says it is on its way.</p><div id="gpearn"></div><div id="gphist"></div></div>
+      <div class="panel" id="gptasksbox"><p class="eyebrow">// TASKS IN THIS GAME</p><div class="tasklist" id="gptasks"></div></div>
+      <div class="panel" id="gptierbox" hidden><p class="eyebrow">// WHAT FALCOR LEARNED</p><p class="muted small">Steps and rewards Falcor saw while you played it (Teach Falcor).</p><div id="gptiers"></div></div>
+      </aside></div>
+    </div>
+  </section>
+
+  <!-- TASKS -->
+  <section data-pane="tasks" class="pane crpane" hidden>
+    <div class="crhead">
+      <button class="ghost" data-go="games" title="Back to the Library"><svg class="ico"><use href="#i-back"></use></svg>Library</button>
+      <div><p class="eyebrow">// CREATIONS</p><h2>Creations</h2><p class="muted small">Your custom automations, built in Sandbox.</p></div>
+      <span class="grow"></span>
+      <div class="seg" id="crview" role="tablist" aria-label="Creations or other automations"><button data-v="creations" class="on" role="tab" aria-selected="true">Creations <span class="cnt" id="crcount"></span></button><button data-v="other" role="tab" aria-selected="false">Other automations <span class="cnt" id="crothercount"></span></button></div>
+    </div>
+    <div id="crmain">
+      <div class="toolrow">
+        <label class="search crsearch"><svg class="ico"><use href="#i-search"></use></svg><input id="crsearch" placeholder="Search creations" autocomplete="off" aria-label="Search creations"></label>
+        <div class="seg" id="crfilter" aria-label="Filter creations"><button data-f="all" class="on">All</button><button data-f="fav">Favorites</button><button data-f="scheduled">Scheduled</button><button data-f="attention">Needs attention</button></div>
+        <span class="grow"></span>
+        <button class="primary" id="crnew"><svg class="ico"><use href="#i-plus"></use></svg>New in Sandbox</button>
+      </div>
+      <div class="crgrid" id="crlist" aria-live="polite"></div>
+    </div>
+    <div id="crdetail" hidden></div>
+    <div id="crother" hidden>
+    <div class="toolrow">
+      <div class="seg" id="taskfilter"><button data-f="all" class="on">All</button><button data-f="needs">Needs me</button><button data-f="scheduled">Scheduled</button><button data-f="done">Done</button></div>
+      <span class="grow"></span>
+      <button class="primary" id="newtask"><svg class="ico"><use href="#i-plus"></use></svg>New task</button>
+    </div>
+    <div class="tasklist" id="tasklist"></div>
+    </div>
+  </section>
+  <aside class="drawer" id="drawer" hidden>
+    <div class="drawerhead"><div><p class="eyebrow">// NEW TASK · STEP <span id="dstep">1</span> OF 4</p><h2 id="dtitle">Pick the app</h2></div><button class="icon" id="dclose" title="Close"><svg class="ico"><use href="#i-close"></use></svg></button></div>
+    <div class="steps4" id="dsteps"><i class="on"></i><i></i><i></i><i></i></div>
+    <div class="dpage" data-step="1"><label class="search"><svg class="ico"><use href="#i-search"></use></svg><input id="appsearch" placeholder="Search apps" autocomplete="off"></label><ul class="applist" id="applist"></ul><button type="button" id="refreshapps" class="ghost small">Refresh the phone's app list</button></div>
+    <div class="dpage" data-step="2" hidden><div class="typecards" id="typecards">
+      <button data-type="daily_checkin"><svg class="ico big"><use href="#i-checkin"></use></svg><b>Daily check-in</b><span>Claim something once a day</span></button>
+      <button data-type="game_level"><svg class="ico big"><use href="#i-game"></use></svg><b>Game to a level</b><span>Play until it reaches a level</span></button>
+      <button data-type="free_signup"><svg class="ico big"><use href="#i-signup"></use></svg><b>Free signup</b><span>A $0 offer, with your consent</span></button>
+      <button data-type="reward_monitor"><svg class="ico big"><use href="#i-reward"></use></svg><b>Reward balance</b><span>Check a balance daily</span></button>
+    </div></div>
+    <form class="dpage grid" data-step="3" id="taskform" hidden>
+      <label class="wide">What should it do?<input name="objective" placeholder="Collect the daily coins" maxlength="300" required></label>
+      <label data-for="game_level">Target level<input name="targetLevel" type="number" min="1" max="100000"></label>
+      <label>Reward (as the offer says)<input name="advertised" type="number" min="0" step="any" placeholder="optional"></label>
+      <label>Unit<input name="unit" placeholder="points, coins, usd" maxlength="24"></label>
+      <label data-for="free_signup" class="wide">Signup details (one per line, name=value; a password as vault:name)<textarea name="fields" rows="3" placeholder="email=me@example.com&#10;password=vault:freequest"></textarea></label>
+      <label>Name (optional)<input name="appLabel" maxlength="80"></label>
+    </form>
+    <div class="dpage" data-step="4" hidden><div class="review" id="review"></div></div>
+    <p class="safety small"><svg class="ico"><use href="#i-lock"></use></svg>Every app needs your approval before Falcor touches it. Payments, cards, codes sent to you and ID checks always come back to you.</p>
+    <div class="row drawerfoot"><button id="dback">Back</button><span class="grow"></span><button class="primary" id="dnext">Next</button></div>
+  </aside>
+
+  <!-- FALCOR (chat) -->
+  <section data-pane="falcor" class="pane" hidden>
+    <div class="chatgrid" id="chatgrid">
+      <div class="panel threads">
+        <div class="thhead"><span class="favatar sm"><img src="dragon.png" alt=""></span><div><b>Falcor</b><span>Keeper of the Hub</span></div></div>
+        <button class="primary" id="newchat" title="Start a new chat with Falcor"><svg class="ico"><use href="#i-plus"></use></svg>New chat</button>
+        <label class="thsearch"><svg class="ico"><use href="#i-search"></use></svg><input id="threadsearch" placeholder="Search chats" autocomplete="off"></label>
+        <ul class="threadlist" id="threadlist"></ul>
+      </div>
+      <div class="panel convo">
+        <div class="convohead"><div class="top"><span class="favatar xs" id="chatavatar"><img src="dragon.png" alt=""></span><div class="ctitle"><h2 id="chattitle">New chat</h2><span class="csub" id="chatsub">Falcor · your conductor</span></div><button class="icon" id="docknew" title="New chat"><svg class="ico"><use href="#i-plus"></use></svg></button><button class="icon" id="chatsize" title="Full page"><svg class="ico"><use href="#i-max"></use></svg></button><button class="icon" id="dockclose" title="Close"><svg class="ico"><use href="#i-close"></use></svg></button></div></div>
+        <div class="msgs" id="msgs"><div id="chatintro"></div><div class="msglist" id="msglist"></div></div>
+        <div class="chips" id="quick"></div>
+        <form class="composer" id="composer">
+          <div class="focusrow"><span class="focuschip" id="focuschip" hidden><svg class="ico"><use href="#i-book"></use></svg><span id="focusname"></span><button type="button" id="focusclear" title="Stop focusing">×</button></span><button type="button" class="ghost small" id="atbtn">@ app</button><ul class="atmenu" id="atmenu" hidden></ul></div>
+          <div class="row"><textarea id="chattext" rows="2" maxlength="2000" placeholder="Ask Falcor anything, or say what to do. Enter sends · Shift+Enter new line"></textarea><button class="primary icon big" title="Send"><svg class="ico"><use href="#i-send"></use></svg></button></div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- FALCOR, floating: a square with his picture, dragged anywhere; a press opens the small chat (the same conversation
+       panel, moved here), whose Full page button opens the chat page above. -->
+  <button id="fbtn" class="fbtn" title="Falcor · press to chat, drag to move (Ctrl+K)" aria-label="Chat with Falcor"><img src="dragon.png" alt=""><span class="badge" id="badge-falcor" hidden></span></button>
+  <div id="fdock" class="panel fdock" hidden role="dialog" aria-label="Falcor chat"></div>
+
+  <!-- KNOWLEDGE -->
+  <section data-pane="knowledge" class="pane" hidden>
+    <div class="toolrow"><button id="learnback"><svg class="ico"><use href="#i-back"></use></svg><span id="learnbackname">Back</span></button><span class="grow"></span><span class="muted small">What Falcor learned about this app, from watching you play it</span></div>
+    <div class="learngrid">
+      <div class="learnmain" id="learnmain">
+        <div class="panel guidehead" id="guidecard" hidden>
+          <p class="eyebrow">// GUIDE</p>
+          <div class="top"><h2 id="guidename"></h2><span class="row">
+            <button class="icon" id="guiderename" title="Rename"><svg class="ico"><use href="#i-edit"></use></svg></button>
+            <button id="guideedit">Edit</button><button id="guidesave" class="primary" hidden>Save changes</button>
+            <button class="icon" id="guideexport" title="Export"><svg class="ico"><use href="#i-export"></use></svg></button>
+            <button class="icon danger" id="guidedelete" title="Delete"><svg class="ico"><use href="#i-trash"></use></svg></button>
+            <button class="icon" id="guidechat" title="Talk about it with Falcor"><svg class="ico"><use href="#i-chat"></use></svg></button></span></div>
+          <p class="muted small" id="guidemeta"></p>
+          <p class="legend small"><span class="dot seen"></span>seen on screen <span class="dot ai"></span>worked out by AI</p>
+        </div>
+        <div id="guide"></div>
+        <div class="panel" id="sessioncard" hidden><p class="eyebrow">// SESSIONS</p><div id="sessions"></div></div>
+        <div class="panel empty" id="learnempty" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROFILE (profile.js) -->
+  <section data-pane="profile" class="pane profpane" hidden>
+    <div class="crhead pagehead"><div><p class="eyebrow">// PROFILE</p><h2>Your legend</h2><p class="muted small">Who you are, what you are playing and what Falcor has done for you.</p></div></div>
+    <div class="profbento">
+      <div class="panel profhero" id="profhero">
+        <div class="profcover" aria-hidden="true"><i class="pcfx"></i></div>
+        <div class="profheroin">
+          <button class="profavatar" id="profavatar" title="Change your picture"><img id="profimg" alt="" hidden><span id="profinit">?</span><i class="profcam"><svg class="ico"><use href="#i-camera"></use></svg></i></button>
+          <input type="file" id="proffile" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+          <div class="profwho"><input class="profnameline" id="profname" aria-label="Display name" maxlength="60" placeholder="Your name" autocomplete="off">
+            <label class="profhandle"><span aria-hidden="true">//</span><input id="profusername" aria-label="Falcor username" maxlength="42" placeholder="username" autocomplete="off" spellcheck="false"></label><span class="muted small" id="profsaved" role="status"></span>
+            <div class="profrank"><b id="profrank">Hatchling</b><i class="profbar"><u id="profbar"></u></i><span class="muted small" id="profnext"></span></div></div>
+          <span class="grow"></span>
+          <div class="profheroact"><span class="muted small" id="profsince"></span><button class="small" id="profcustom" aria-expanded="false"><svg class="ico"><use href="#i-edit"></use></svg>Customize</button></div>
+        </div>
+        <div class="profcust" id="profcustpanel" hidden>
+          <div><p class="eyebrow">// ACCENT</p><div class="pcrow" id="pcaccent"></div></div>
+          <div><p class="eyebrow">// FRAME</p><div class="pcrow" id="pcframe"></div></div>
+          <div><p class="eyebrow">// BANNER</p><div class="pcrow" id="pccover"></div></div>
+          <div><p class="eyebrow">// PICTURE</p><div class="pcrow"><button class="small" id="profpicnew"><svg class="ico"><use href="#i-camera"></use></svg>Choose</button><button class="small ghost" id="profpicdel" hidden>Remove</button></div></div><button class="small primary pcdone" id="profcustdone">Done</button>
+        </div>
+      </div>
+      <div class="panel profact"><div class="top"><p class="eyebrow">// ACTIVE NOW</p><button class="small ghost" data-go="games">Library</button></div><div class="profactive" id="profactive"></div></div>
+      <div class="panel profrec"><p class="eyebrow">// YOUR RECORD</p><div class="proftiles" id="proftiles"></div><div class="profearn" id="profearn"></div></div>
+      <div class="panel profwork"><p class="eyebrow">// YOUR WORKSHOP</p><div class="proftiles" id="profwork"></div></div>
+      <div class="panel profrecs"><p class="eyebrow">// RECOMMENDED FOR YOU</p><div class="profrecl" id="profrecs"></div></div>
+    </div>
+  </section>
+  <!-- SETTINGS -->
+  <section data-pane="settings" class="pane" hidden>
+    <div class="crhead pagehead"><div><p class="eyebrow">// SETTINGS</p><h2>Tune your Hub</h2><p class="muted small">Falcor's AI, the phone app, activity, secrets and updates.</p></div></div>
+    <div class="settingsgrid">
+      <nav class="submenu" id="submenu">
+        <button data-sub="ai" class="on"><svg class="ico"><use href="#i-ai"></use></svg>AI</button>
+        <button data-sub="phoneapp"><svg class="ico"><use href="#i-wifi"></use></svg>Phone app</button>
+        <button data-sub="activity"><svg class="ico"><use href="#i-stats"></use></svg>Activity</button>
+        <button data-sub="secrets"><svg class="ico"><use href="#i-lock"></use></svg>Secrets</button>
+        <button data-sub="updates"><svg class="ico"><use href="#i-update"></use></svg>Updates</button>
+        <button data-sub="about"><svg class="ico"><use href="#i-book"></use></svg>About</button>
+      </nav>
+      <div>
+        <div class="panel actpanel" data-sub="activity" hidden>
+          <p class="eyebrow">// ACTIVITY</p>
+          <div class="top"><h2>Everything that ran</h2><span class="muted small" id="actusage"></span></div>
+          <div class="toolrow">
+            <div class="seg" id="actfilter" aria-label="Filter by outcome"><button data-o="all" class="on">All</button><button data-o="completed">Done</button><button data-o="attention">Needs you</button><button data-o="failed">Failed</button><button data-o="stopped">Stopped</button><button data-o="interrupted">Interrupted</button></div>
+            <label class="small actdate">From <input type="date" id="actfrom" aria-label="From date"></label><label class="small actdate">To <input type="date" id="actto" aria-label="To date"></label>
+            <label class="check small"><input type="checkbox" id="acttests"> Previews and tests</label>
+          </div>
+          <div class="actlist" id="actlist" aria-live="polite"></div>
+          <div class="actmore"><button class="small" id="actmore" hidden>Load more</button><p class="muted small" id="actnote"></p></div>
+        </div>        <div class="panel aicc" data-sub="ai">
+          <p class="eyebrow">// AI CONTROL CENTER</p>
+          <div class="top"><h2>Falcor's AI</h2><span class="state" id="aistate"><span class="led"></span><span></span></span></div>
+          <p class="muted small">Connect the AI services you use, pick which model plays your games and which one chats. Keys are sealed on this computer and each one only ever goes to its own provider.</p>
+          <nav class="aiseg" id="aiseg" role="tablist"><button data-ai="providers" class="on" role="tab">Providers</button><button data-ai="library" role="tab">Model Library</button><button data-ai="routing" role="tab">Intelligent Routing</button><button data-ai="usage" role="tab">Usage and Limits</button></nav>
+          <section data-aip="providers">
+            <div class="aicards" id="aicards"></div>
+            <div class="row"><button class="primary" id="aiadd"><svg class="ico"><use href="#i-plus"></use></svg>Add provider</button></div>
+            <div class="aidrawer" id="aidrawer" hidden></div>
+          </section>
+          <section data-aip="library" hidden>
+            <div class="aifilters"><input id="libq" type="search" placeholder="Search models"><select id="libprov"><option value="">All providers</option></select>
+              <label class="small"><input type="checkbox" data-cap="vision"> Vision</label><label class="small"><input type="checkbox" data-cap="tools"> Tools</label><label class="small"><input type="checkbox" data-cap="json"> JSON</label><label class="small"><input type="checkbox" data-cap="local"> Local</label>
+              <label class="small"><input type="checkbox" id="libavail" checked> Hide unavailable</label><label class="small"><input type="checkbox" id="libchat" checked> Chat models only</label></div>
+            <ul class="ailib" id="ailib"></ul>
+            <p class="muted small" id="libnote"></p>
+          </section>
+          <section data-aip="routing" hidden>
+            <div class="airec" id="airec"></div>
+            <div id="aisimple">
+              <div class="aicard big"><p class="eyebrow">// PRIMARY GAMING AI</p><div class="aipick"><input id="gamq" type="search" placeholder="Search compatible models"><select id="gamsel" size="5"></select></div><div class="small" id="gaminfo"></div>
+                <p class="small muted" id="gamsummary"></p><div class="row"><button class="primary" id="gamuse"><svg class="ico"><use href="#i-check"></use></svg>Use for Gaming</button></div></div>
+              <div class="aicard"><p class="eyebrow">// FALCOR CHAT AI</p><div class="aipick"><select id="chatsel"></select></div><div class="row"><button id="chatuse">Use for Falcor Chat</button></div></div>
+            </div>
+            <label class="row small"><input type="checkbox" id="aiadv"> Advanced Routing: choose the model (and an optional fallback) for each operation</label>
+            <div id="aiadvbox" hidden>
+              <ul class="rows airoutes" id="airoutes"></ul>
+              <div class="row"><button class="primary" id="advsave">Save routing</button><button id="advcancel">Cancel</button><button id="advreset" title="Back to what you had before (connections and keys stay)">Restore defaults</button><span class="muted small" id="advmsg"></span></div>
+              <label class="row small"><input type="checkbox" id="showunavail"> Show models that cannot be picked, with the reason</label>
+            </div>
+          </section>
+          <section data-aip="usage" hidden>
+            <div class="meter" id="limitmeter"></div>
+            <form class="row" id="limitform"><label class="small muted">Monthly limit, all providers ($)</label><input id="limit" type="number" min="0" step="0.5" placeholder="no limit"><button>Save limit</button></form>
+            <p class="muted small">At a limit, Falcor asks before sending more for teaching or chat, and Autopilot hands new screens to you. A provider's own budget works the same way. Costs come from verified prices only; a model without one shows Unknown.</p>
+            <div id="aiusage"></div>
+          </section>
+        </div>
+        <div class="panel" data-sub="phoneapp" hidden>
+          <p class="eyebrow">// PHONE APP</p>
+          <h2>Your everyday phone (Falcor.Hub Remote)</h2>
+          <p class="muted small">Falcor.Hub Remote on your own phone starts Autopilot, approves tasks, chats with Falcor and has Stop. It works on the same Wi-Fi as this computer.</p>
+          <div class="row"><button class="primary" id="pair"><svg class="ico"><use href="#i-wifi"></use></svg>Pair a phone</button></div>
+          <div class="terminal" id="pairbox" hidden>
+            <div class="qrframe" id="qrframe"><img id="qr" alt="Pairing QR code"><div class="qrdone" id="qrdone" hidden><svg class="ico huge"><use href="#i-check"></use></svg></div></div>
+            <div class="pairinfo"><p class="eyebrow">// PAIRING CODE</p><div class="digits" id="paircode"></div><p class="small">Address: <code id="pairurl"></code></p><div class="countdown"><i id="paircount"></i></div><p class="muted small" id="pairexp"></p></div>
+          </div>
+          <ul class="rows" id="remotes"></ul>
+        </div>
+        <div class="panel" data-sub="secrets" hidden>
+          <p class="eyebrow">// SECRETS</p>
+          <h2>Signup secrets</h2>
+          <p class="muted small">A password a signup needs, kept sealed here. Use it in a task as vault:name. It never leaves this computer and is never shown.</p>
+          <form class="row" id="secretform"><input name="name" placeholder="name" required><input name="value" type="password" placeholder="value" required><button>Save</button></form>
+          <ul class="rows" id="secrets"></ul>
+        </div>
+        <div class="panel" data-sub="updates" hidden>
+          <p class="eyebrow">// UPDATES</p>
+          <div class="top"><h2 id="aboutver">Falcor.Hub</h2><span class="state" id="updstate"><span class="led"></span><span></span></span></div>
+          <button id="updcheck"><svg class="ico"><use href="#i-update"></use></svg>Check for updates</button>
+          <p class="eyebrow" data-gap>// WHAT'S NEW</p>
+          <div id="history"></div>
+        </div>
+        <div class="panel keeperabout" data-sub="about" hidden>
+          <div class="keeperhero">
+            <div class="keeperportrait"><img src="dragon.png" alt="Falcor, Keeper of the Hub"><span class="keeperseal">THE KEEPER IS IN</span></div>
+            <div class="keepergreeting"><p class="eyebrow">// FALCOR.HUB · A HIDDEN SIDE QUEST</p><h2>Well now. A visitor.</h2><p>Most come here looking for a version number.<br>You found a dragon's hall instead.</p><div class="keeperbadges"><span><i class="led on"></i>Keeper awake</span><span><svg class="ico"><use href="#i-book"></use></svg>Lore inside</span></div></div>
+          </div>
+          <div class="keeperbody">
+            <div class="keeperchapters">
+              <details class="keeperchapter origin" open><summary><span class="chapternum">01</span><span><b>The last dragon who stayed</b><small>From the Lay of the Keeper</small></span></summary><div class="chapterbody">
+                <p>Before the first screen glowed, the old dragons knew the hidden paths of every game: the door with treasure behind it, the tempting shortcut that was really a trap, the victory earned by one more patient try.</p>
+                <p>One by one, they went to their long sleep. Falcor stayed. He built a hall for everything worth remembering: a Library for discoveries, a Sandbox for little spells, and a place beside the glass where he could learn from you.</p>
+                <p>Dragons usually collect gold. This one collects <em>the way you do things</em>. A tap, a pause, a clever little routine. Show him once, and another path is written into the hall.</p>
+              </div></details>
+              <details class="keeperchapter" open><summary><span class="chapternum">02</span><span><b>The old laws still hold</b><small>Even dragons have house rules</small></span></summary><div class="chapterbody"><ul class="keeperlaws">
+                <li><svg class="ico"><use href="#i-control"></use></svg><span><b>Your hand chooses.</b>The Keeper follows your permission, not his curiosity.</span></li>
+                <li><svg class="ico"><use href="#i-lock"></use></svg><span><b>Your keys stay yours.</b>A good dragon guards a vault. He does not gossip about it.</span></li>
+                <li><svg class="ico"><use href="#i-stop"></use></svg><span><b>One word stills the hall.</b>Say <em>stop</em>, and every wing folds.</span></li>
+              </ul></div></details>
+              <details class="keeperchapter" open><summary><span class="chapternum">03</span><span><b>Notes from the margins</b><small>Not technically an instruction manual</small></span></summary><div class="chapterbody">
+                <p>The Keeper insists he does not have favorites. The carefully sorted shelf of your best chains suggests otherwise.</p>
+                <p>He also denies sleeping beside the warmest window in the Hub. The tiny claw marks are, apparently, a rendering artifact.</p>
+                <p class="keeperwhisper">If a dragon says "one more run," check the clock.</p>
+              </div></details>
+            </div>
+            <p class="loresign keepersign">You were not on the visitor list.<br>He kept a place for you anyway.<span>— a line added to the ledger, just now</span></p>
+            <div class="loreextras">
+              <button class="lorelink" data-go="lore"><svg class="ico"><use href="#i-book"></use></svg><span><b>Sealed archive</b><small>Explore the Keeper's private ledger</small></span><svg class="ico arrow"><use href="#i-chevron"></use></svg></button>
+              <details class="loreegg"><summary><svg class="ico"><use href="#i-edit"></use></svg><span><b>A note from the Keeper</b><small>Unfold a message left just for you</small></span></summary><p>The Keeper says the hall has no clocks. He still knows when you have been away too long.</p></details>
+            </div>
+          </div>
+          <p class="muted small keeperbuild" id="about"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section data-pane="lore" class="pane" hidden>
+    <div class="crhead pagehead archivehead"><div><p class="eyebrow">// SEALED ARCHIVE · ACCESS GRANTED</p><h2>Below the Hall</h2><p class="muted small">A few leaves from the Keeper's private ledger.</p></div><button class="ghost" data-go="settings:about"><svg class="ico"><use href="#i-back"></use></svg>Back to About</button></div>
+    <article class="panel lore lorearchive">
+      <p class="lorehead">The first light in the workshop</p>
+      <p>Before the Hub had windows, it was a workbench: one phone, one careful hand, and a dragon learning the difference between a button that opens a door and one that asks too much. The first rule was written before the first run: the hand chooses; the Keeper follows.</p>
+      <p>So the hall was built with a place for every kind of memory. A screen may be observed, but a secret stays veiled. A lesson may be kept, but only because its maker asked. A chain may be repeated, but never beyond the owner's word. These are not locks on the door. They are the shape of the door itself.</p>
+      <p>When the phone is near, the Keeper can watch its glass and carry out a run. When it is far, the hall waits without pretending it can reach. The Library remembers what you made; the Sandbox is where you teach it; and the red word <b>stop</b> is never more than one call away.</p>
+      <p>Every new block is another mark in the margin. Some are small: a pause, a tap, a name typed carefully. Together they become a path that belongs to you, held here on your computer and ready when you are.</p>
+      <p class="loresign">The archive keeps no prophecy. Only what you chose to teach.<span>— from the Keeper's ledger, undated</span></p>
+      <details class="loreegg" id="loremargin"><summary>Filed under: “Do not wake”</summary><p>There is no sleeping dragon beneath the floor. There is, however, a very old button that says Stop. The Keeper insists this is a much better arrangement.</p></details>
+    </article>
+  </section>
+</main>
+<div class="modal" id="after" hidden>
+  <div class="panel costpanel">
+    <p class="eyebrow">// WRITE THE GUIDE</p>
+    <h2>Guide for <span id="aftername"></span></h2>
+    <p class="small learned" id="afterlearned" hidden></p>
+    <div id="afterbody"><p class="small" id="afterest">Working out what it costs…</p><div class="meter" id="aftermeter"></div></div>
+    <div class="thinkingbox" id="afterwork" hidden><span class="load10"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span id="afterworktext">Falcor is studying the screens…</span></div>
+    <div class="row"><button class="primary" id="afterfull"><svg class="ico"><use href="#i-ai"></use></svg>Write guide</button><button id="aftertext">Text only (cheaper)</button><button id="afterlocal" title="Free: built on this computer from the recording, no AI">Save without AI</button><span class="grow"></span><button id="afterclose">Cancel</button></div>
+  </div>
+</div>
+<div class="modal crsheet" id="crsheet" hidden><div class="panel sheetbody" id="crsheetbody" role="dialog" aria-modal="true" aria-labelledby="crsheettitle" tabindex="-1"></div></div>
+<div class="modal sbsheet" id="sbsheet" hidden><div class="panel sheetbody" id="sbsheetbody"></div></div>
+<div class="modal sbsheet" id="qsheet" hidden><div class="panel sheetbody qsheetbody" id="qsheetbody"></div></div>
+<div class="qmenu" id="qmenu" hidden></div>
+<footer class="statusbar" id="statusbar"></footer>
+<div class="toasts" id="toasts"></div>
+<script src="pixel.js"></script>
+<script src="mirror-capture.js"></script>
+<script src="app.js"></script>
+<script src="sandbox.js"></script>
+<script src="sandbox-workspace.js"></script>
+<script src="ai.js"></script>
+<script src="creations.js"></script>
+<script src="queue.js"></script>
+<script src="desk.js"></script>
+<script src="popout.js"></script>
+<script src="sandbox-windows.js"></script>
+<script src="widgets.js"></script>
+<script src="profile.js"></script>
+</body>
+</html>
